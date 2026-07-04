@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "required": ["figure_id", "type", "purpose", "source", "output", "caption", "label"],
+  "properties": {
+    "figure_id": {"type": "string"},
+    "type": {"type": "string"},
+    "purpose": {"type": "string"},
+    "source": {
+      "type": "object",
+      "properties": {
+        "type": {"enum": ["conceptual", "data", "experiment"]},
+        "path": {"type": "string"}
+      }
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "format": {"enum": ["pdf", "png", "svg", "eps", "tex"]}
+      }
+    },
+    "caption": {"type": "string"},
+    "label": {"type": "string"}
+  }
+}

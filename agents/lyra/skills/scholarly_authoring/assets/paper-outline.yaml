@@ -1,0 +1,18 @@
+project_slug: todo-project
+profile: ieee
+working_title: TODO
+contribution: TODO
+sections:
+  - Introduction
+  - Background and Related Work
+  - Problem Statement
+  - System Architecture
+  - Methodology
+  - Implementation
+  - Evaluation
+  - Discussion
+  - Limitations and Future Work
+  - Conclusion
+figures: []
+tables: []
+citations_required: []
