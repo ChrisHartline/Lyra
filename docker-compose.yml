@@ -1,0 +1,20 @@
+services:
+  lyra-db:
+    image: pgvector/pgvector:pg16
+    container_name: lyra-pgvector
+    environment:
+      POSTGRES_DB: lyra
+      POSTGRES_USER: lyra
+      POSTGRES_PASSWORD: lyra
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lyra -d lyra"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - lyra_pgdata:/var/lib/postgresql/data
+
+volumes:
+  lyra_pgdata:
