@@ -77,22 +77,35 @@ class CorpusService:
             "was_deduped": result.was_deduped,
         }
 
-    def search_memories(self, query: str, limit: int = 5, approved_only: bool = True) -> dict[str, Any]:
+    def search_memories(
+        self,
+        query: str,
+        limit: int = 5,
+        approved_only: bool = True,
+        ledger: str | None = None,
+    ) -> dict[str, Any]:
         qvec = self.embedding_service.embed_texts([query])[0]
         vector = _vector_literal(qvec)
         approved_filter = "AND approved = true" if approved_only else ""
+        ledger_filter = "AND metadata->>'ledger' = %s" if ledger else ""
         sql = f"""
             SELECT id, content, memory_type, salience, metadata, approved,
                    1 - (embedding <=> %s::vector) AS score
             FROM memories
             WHERE embedding IS NOT NULL
               {approved_filter}
+              {ledger_filter}
             ORDER BY embedding <=> %s::vector
             LIMIT %s
         """
         with self.connection_factory() as conn:
             with conn.cursor() as cur:
-                cur.execute(sql, (vector, vector, limit))
+                params: tuple[Any, ...]
+                if ledger:
+                    params = (vector, ledger, vector, limit)
+                else:
+                    params = (vector, vector, limit)
+                cur.execute(sql, params)
                 rows = cur.fetchall()
         results = []
         for row in rows:
@@ -155,6 +168,7 @@ class MCPToolRouter:
                 query=arguments["query"],
                 limit=int(arguments.get("limit", 5)),
                 approved_only=bool(arguments.get("approved_only", True)),
+                ledger=arguments.get("ledger"),
             )
         if name == "propose_memory":
             return self.service.propose_memory(

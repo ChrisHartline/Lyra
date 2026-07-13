@@ -7,6 +7,7 @@ Semantic retrieval over memory records (optionally approved-only).
 - `query` (string, required)
 - `limit` (integer, optional, default `5`)
 - `approved_only` (boolean, optional, default `true`)
+- `ledger` (string, optional) - `biography`, `story`, or `campaign`
 
 ## Output
 - `query`
