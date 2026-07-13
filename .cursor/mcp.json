@@ -1,5 +1,11 @@
 {
   "mcpServers": {
+    "lyra-corpus": {
+      "command": "venv\\Scripts\\python",
+      "args": [
+        "mcp/server/main.py"
+      ]
+    },
     "linear": {
       "command": "npx",
       "args": [
