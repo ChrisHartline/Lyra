@@ -1,7 +1,7 @@
 # Lyra — System Requirements Document
 
-**Version:** 0.7 (Kickoff candidate)
-**Date:** 2026-07-04
+**Version:** 0.8 (Kickoff candidate)
+**Date:** 2026-07-26
 **Author:** Christopher (with Claude)
 **Status:** In progress
 
@@ -46,6 +46,7 @@ The defining requirement is **continuity**: unlike a stateless web chat, Lyra re
 - **Notion** (API) — task management, human-readable research digests, status updates
 - **Linear, Supabase, Vercel MCP servers** — configured; usage optional/incremental
 - **Telegram Bot API** (v2) — notifications and lightweight chat
+- **n8n** (optional, workstation or existing host) — workflow automation plane for fast capability onboarding; not a memory/corpus store (ADR-001)
 - **Web search/fetch** — via host tooling for research runs
 
 ### 2.5 Deployment Map
@@ -60,7 +61,8 @@ Every runtime component MUST appear in this table (see NFR-8). Default posture: 
 | Agent loop / orchestrator | Cursor (execution engine) | Lyra app service on workstation | FR-S6 |
 | Chat UI | — | Served from workstation (LAN) | Public exposure would trigger auth (v3+) |
 | Telegram bot | — | Workstation service | Long-polls outbound — no inbound ports required |
-| Notion | SaaS | SaaS | Human dashboard only (FR-N3) |
+| Notion | SaaS | SaaS | Human dashboard only (FR-N3); Lyra shared working space IDs in `.env` |
+| n8n (optional) | Workstation / existing host | Same | Glue workflows → MCP/webhook tools; never owns memory/corpus (ADR-001) |
 | Foundry VTT + MCP relay | — | Foundry world + hosted relay (foundry-mcp.com) | Self-hosted relay = future option (FR-D1) |
 
 ## 3. Functional Requirements
@@ -96,10 +98,13 @@ Every runtime component MUST appear in this table (see NFR-8). Default posture: 
 
 ### 3.4 Memory & State Manager
 - **FR-M1:** Memory is tiered:
-  - **Identity (startup-config):** Tier 0 files — never auto-written.
-  - **Episodic/relational memory (saved running-config):** pgvector `memories` table (text, embedding, type, salience, timestamp) enabling semantic recall of past sessions. Every memory carries a ledger type per FR-D2 (biography / story / campaign); retrieval filters by ledger so contexts never blend.
-  - **Session state (running-config):** ephemeral, managed by the host.
-- **FR-M2:** A write-back job (Claude-executed) summarizes each session into candidate memories.
+  - **Identity:** Tier 0 files — never auto-written.
+  - **Episodic/relational memory:** pgvector `memories` table (text, embedding, type, salience, timestamp) enabling semantic recall of past sessions. Every memory carries a **bucket** per FR-D2 (biography / story / campaign); retrieval filters by bucket so contexts never blend. ("Ledger" in older notes means the same thing — a retrieval namespace, not a financial metaphor.)
+  - **Session state:** ephemeral, managed by the host.
+- **FR-M2:** A write-back job turns each session into candidate memories.
+  - **Contract (stable):** candidates are written with `approved=false`; only approved rows are recalled (FR-M3); never-persist rules apply before propose (FR-M4); each candidate is tagged with a FR-D2 bucket.
+  - **v1 implementation (honest):** Phase 1 ships a **deterministic stub** — sentence split, keyword bucket tags, regex never-persist filter, and markdown dump for story-canon regen. This proves the gate and isolation contracts; it is not production-grade summarization.
+  - **Target implementation:** LLM summarization (Claude preferred for this task) with explicit bucket classification, replacing the stub without changing the approval/retrieval contract.
 - **FR-M3 (v1 policy):** Candidate memories require Christopher's approval before commit. Auto-commit MAY be enabled per-category in v2 after the policy proves trustworthy.
 - **FR-M4 (Never-persist list — DLP policy on the memory write path):** The write-back job MUST NOT create memories containing, regardless of the approval flow:
   1. Credentials or secrets (API keys, passwords, connection strings), even if mentioned in conversation.
@@ -110,7 +115,7 @@ Every runtime component MUST appear in this table (see NFR-8). Default posture: 
   6. Roleplay/in-character events represented as real-world facts (campaign state is segregated per FR-D2).
   7. Raw transcripts or verbatim quotes — memories are summaries, not recordings.
   8. Anything Christopher marks "off the record" via an explicit do-not-remember signal.
-  *(Status: confirmed v0.6.)*
+  *(Policy confirmed v0.6. v1 stub enforces a regex subset of 1–3 and 8; full coverage is required when LLM write-back lands.)*
 - **FR-M5:** `agents/lyra/state/relationship_state.md` remains the human-readable summary of relationship stage; it is regenerated from (not a replacement for) the memory store.
 
 ### 3.5 Notion Integration
@@ -125,11 +130,11 @@ Every runtime component MUST appear in this table (see NFR-8). Default posture: 
 
 ### 3.7 Roleplay & Campaign Mode (v2)
 - **FR-D1 (Foundry VTT boundary — decided):** The tabletop platform is Foundry VTT. Integration direction: **Lyra is a client; Foundry owns mechanical truth** (HP, initiative, inventory, dice results, scenes). Integration is **buy-not-build**: the existing Foundry API Bridge (MCP) module is installed in the Foundry world and connected via the **hosted relay** (foundry-mcp.com) for v2 — Foundry thereby becomes another MCP server available to Lyra's orchestrator alongside the corpus server (IF-4). **Self-hosted relay is a documented future option** (lightweight Node service, negligible compute — could co-locate with pgvector) if privacy or reliability later motivates it. Lyra-side scope (what we build): campaign session context assembly (Lyra in character as her PC, fed relevant Foundry state + campaign ledger), post-session write-back to `memory_type='campaign'` (A5 machinery), and orchestrator config registering the Foundry MCP endpoint. The campaign ledger (FR-D2) stores narrative memory only and never duplicates mechanical state — one system of record per data type.
-- **FR-D2 (Three-ledger separation):** The system maintains three segregated fiction/reality ledgers, none of which writes to another automatically:
+- **FR-D2 (Three-bucket separation):** The system maintains three segregated fiction/reality **buckets** (retrieval namespaces), none of which writes to another automatically:
   1. **Biography** — real relational memory about Christopher and the working relationship (`memory_type` in {preference, event, fact, relationship}).
   2. **Story-world** — Lyra's own emergent canon (FR-P5; `memory_type='story'`).
   3. **Campaigns** — D&D/tabletop game state (`memory_type='campaign'`, keyed by campaign ID).
-  Nested roleplay is explicitly supported: in a campaign, Lyra is a character playing a character — her PC's fate affects only the campaign ledger, never her persona, story canon, or relationship memory. Cross-ledger writes occur only via the human promotion rule (FR-P6).
+  Nested roleplay is explicitly supported: in a campaign, Lyra is a character playing a character — her PC's fate affects only the campaign bucket, never her persona, story canon, or relationship memory. Cross-bucket writes occur only via the human promotion rule (FR-P6). Schema/API may still expose the field name `ledger` for compatibility; treat it as the bucket tag.
 
 ### 3.8 Voice & Avatar Stubs (v2)
 - **FR-V1 (Stub interfaces):** The v2 application defines — but does not implement — the output channels a future embodiment will consume: `speak(text, prosody_hints)` and `express(emotion, intensity)`. v2 implementations are no-ops that log/emit events with no renderer attached. Purpose: persona and orchestrator code binds to these interfaces from day one, so attaching TTS or an avatar in v3+ is a renderer swap, not a refactor.
@@ -206,7 +211,7 @@ CREATE INDEX ON memories USING hnsw (embedding vector_cosine_ops);
 
 ## 6. Interfaces
 
-- **IF-1 (MCP):** External integrations (Notion, Linear, Supabase, Vercel, future Telegram) are exposed as MCP tools/resources; contracts and schemas live in `mcp/tools/`.
+- **IF-1 (MCP):** External integrations (Notion, Linear, Supabase, Vercel, future Telegram, optional n8n-backed workflows) are exposed as MCP tools/resources; contracts and schemas live in `mcp/tools/`. The starter corpus/memory toolset is not exhaustive — new tools are added by contract under `mcp/tools/` (ADR-001 for n8n registration).
 - **IF-2 (Provider API):** Grok via xAI OpenAI-compatible endpoint; Claude via Anthropic API; selection per task category in runtime config (`LYRA_MODEL` overrides).
 - **IF-3 (Foundry VTT):** Existing Foundry API Bridge (MCP) module via hosted relay (per FR-D1); Lyra's orchestrator consumes it as a standard MCP server. Relay API key stored in `.env` per NFR-2. Self-hosted relay documented as a future option; no bespoke bridge development in scope.
 - **IF-4 (Corpus MCP server):** Local MCP server (Python) fronting pgvector + filesystem per FR-R6; tool contracts documented in `mcp/tools/`. This is the only supported retrieval path — no direct DB access from agents.
@@ -294,3 +299,5 @@ docker exec -it lyra-pgvector psql -U lyra -d lyra -c "CREATE EXTENSION IF NOT E
 | NFR-5 | API cost ceiling | Open |
 | NFR-6 | Additional personal guardrails | Open |
 | PRIV-1 | State files in public repo | **Decided v0.7** — repo made private; state stays tracked; NFR-1 conflict resolved |
+| FR-M2 | Write-back summarizer quality | **Decided v0.8** — v1 stub OK to prove gate; LLM summarizer is the target path |
+| ADR-001 | n8n automation plane | **Accepted v0.8** — optional glue for capability onboarding via workflows → MCP/webhook tools |

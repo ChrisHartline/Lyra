@@ -86,7 +86,11 @@ class IngestPipeline:
         self.raw_root.mkdir(parents=True, exist_ok=True)
 
     def ingest_url(self, url: str, title: str | None = None) -> IngestResult:
-        resp = requests.get(url, timeout=30)
+        headers = {
+            "User-Agent": "LyraBot/0.1 (+https://github.com/ChrisHartline/Lyra; research-ingest)",
+            "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+        }
+        resp = requests.get(url, headers=headers, timeout=30)
         resp.raise_for_status()
         body = _strip_html(resp.text)
         resolved_title = title or url

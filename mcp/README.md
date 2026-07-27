@@ -23,3 +23,6 @@ This repository uses a local-first MCP content structure.
 - Keep each prompt/resource/tool focused on one concern.
 - Add a short header to every file with purpose and required inputs.
 - Never store live secrets in MCP content files.
+
+## Adding tools (including n8n workflows)
+The four corpus/memory tools are a starter set, not a closed API. To onboard a capability via n8n, follow ADR-001 (`docs/adr/001-n8n-automation-plane.md`): workflow → webhook → `mcp/tools/<name>.md` contract → thin MCP handler → mocked pytest. Prefer named tools for stable workflows; use a generic `run_n8n_workflow` only while experimenting.

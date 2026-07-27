@@ -75,7 +75,8 @@ class MemoryService:
     connection_factory: Callable[[], psycopg.Connection] = connect
 
     def summarize_transcript(self, transcript: str) -> list[CandidateMemory]:
-        # Lightweight deterministic write-back summary logic for v1.
+        # v1 stub (SRS FR-M2): deterministic sentence split + keyword buckets.
+        # Target path is LLM summarization; keep approval/never-persist contracts stable.
         raw_segments = re.split(r"[.\n]+", transcript)
         candidates: list[CandidateMemory] = []
         seen: set[str] = set()
