@@ -85,11 +85,15 @@ def main() -> int:
         print("SKIPPED (--skip-notion)")
     else:
         if not settings.notion_token:
-            print("FAIL: NOTION_TOKEN / NOTION_API_TOKEN not set in .env")
-            print("Add the token (and LYRA_NOTION_DATABASE_ID), then re-run.")
+            print("FAIL: Notion token not set in .env")
+            print("Add NOTION_TOKEN / NOTION_API_KEY, then re-run.")
             return 2
-        if not settings.notion_database_id:
-            print("FAIL: LYRA_NOTION_DATABASE_ID not set in .env")
+        if not settings.notion_digests_database_id:
+            print("FAIL: LYRA_NOTION_DIGESTS_DATABASE_ID not set")
+            print("Create Digests DB (not Projects):")
+            print("  1) set LYRA_NOTION_PARENT_PAGE_ID to a normal Notion page UUID")
+            print("  2) venv\\Scripts\\python scripts/notion_ensure_digests_db.py")
+            print("  3) paste LYRA_NOTION_DIGESTS_DATABASE_ID into .env")
             return 2
         notion = NotionClient(token=settings.notion_token)
         body = (
@@ -102,27 +106,31 @@ def main() -> int:
             if c.get("citation", {}).get("url")
         ] or [SOURCE_URL]
         created = notion.create_digest_page(
-            database_id=settings.notion_database_id,
+            database_id=settings.notion_digests_database_id,
             title=f"Lyra digest — {TOPIC} ({datetime.now(timezone.utc).date().isoformat()})",
             body=body,
             source_links=source_links,
-            title_property=settings.notion_title_property,
+            title_property=settings.notion_digest_title_property,
+            digest_type="research",
+            related_task_page_id=settings.notion_task_page_id,
         )
         digest_id = created["id"]
         print(f"created digest page id={digest_id}")
         readback = notion.read_sandbox_page(digest_id)
-        title_prop = readback["page"].get("properties", {}).get(settings.notion_title_property, {})
+        title_prop = readback["page"].get("properties", {}).get(
+            settings.notion_digest_title_property, {}
+        )
         title_bits = title_prop.get("title") or []
         title_text = title_bits[0].get("plain_text") if title_bits else "(no title)"
         print(f"readback title={title_text!r} children={len(readback['children'])}")
-        if settings.notion_page_id:
+        if settings.notion_task_page_id:
             try:
                 notion.update_task_status(
-                    settings.notion_page_id,
+                    settings.notion_task_page_id,
                     status="Done",
                     property_type=settings.notion_status_property_type,
                 )
-                print(f"updated task page {settings.notion_page_id} Status=Done")
+                print(f"updated task page {settings.notion_task_page_id} Status=Done")
             except Exception as exc:  # sandbox page may not have matching Status options
                 print(f"task status update skipped/failed: {exc}")
 

@@ -81,6 +81,10 @@ Acceptance: given the sandbox page ID, returns its current content/properties; a
 Deliverables: write path — update task status, create digest page.
 Acceptance: test creates a digest page in the sandbox database with title, body, and source links; updates a task property; both verified by reading back via B1's path.
 
+**B3 — Digests vs Projects split** *(FR-N2 hygiene)* — depends on B2; Phase 1 follow-on.
+Deliverables: separate Notion targets — Projects/tasks DB for status only; dedicated Digests DB for research/daily/weekly digests; `scripts/notion_ensure_digests_db.py`; env keys `LYRA_NOTION_TASKS_DATABASE_ID` + `LYRA_NOTION_DIGESTS_DATABASE_ID`; e2e writes digests only to Digests.
+Acceptance: creating a digest does not insert a row into the Projects DB; task Status updates still target a Projects row; Digests row has Type ∈ {research, daily, weekly, personal, professional}.
+
 ### Track C — Orchestration
 
 **C1 — Subagent definitions + sync script** *(FR-S4, FR-S5)*
@@ -94,6 +98,49 @@ Acceptance: per-topic reference files exist with zero content loss (script compa
 ## Exit Criteria for Phase 1
 
 All ten gates green, full suite green, and a live end-to-end demo: Christopher asks Lyra to research a topic → sources ingested → corpus answer with citations → digest posted to Notion → candidate memory proposed and approved.
+
+## Phase 2 preview — Personal assistant, Notion digests, knowledge graph
+
+Companion intent (SRS to be updated before gates open): Lyra as a **daily / weekly personal + professional assistant**, with Notion as the human dashboard and an MCP knowledge graph for structured observations.
+
+```mermaid
+graph TD
+    subgraph Track D — Assistant plane
+        D1[D1: Digests taxonomy + Notion Digests DB live]
+        D2[D2: Daily/weekly digest jobs]
+        D3[D3: MCP knowledge-graph server]
+        D4[D4: Observation write path with approval]
+        D5[D5: Assistant briefing assembly]
+        D1 --> D2
+        D3 --> D4
+        D2 --> D5
+        D4 --> D5
+    end
+    B3 -.-> D1
+    A5 -.-> D4
+```
+
+**D1 — Digests taxonomy live** — depends on B3.  
+Wire `LYRA_NOTION_DIGESTS_DATABASE_ID` to a real Digests DB; research digests land there; Projects board only receives Status updates.  
+Acceptance: live e2e creates a Digests row (Type=research) and does not create a Projects row.
+
+**D2 — Daily / weekly digest jobs** — depends on D1.  
+Scheduled or on-demand generators for personal + professional digests (sources: recent tasks, corpus hits, approved memories). Publish to Digests DB; optional notify via n8n/Telegram later.  
+Acceptance: one daily and one weekly digest created with Type set; body includes dated sections; no secrets from never-persist list.
+
+**D3 — MCP knowledge-graph server** — *(ADR-002)*; may start in parallel with D1.  
+Register official MCP Memory / knowledge-graph server (`entities`, `relations`, `observations`) in `.cursor/mcp.json` with local durable store path; document taxonomy (person, project, org, habit, commitment).  
+Acceptance: create entity + add observation + `search_nodes` round-trip via MCP tool calls; store file is local and gitignored if sensitive.
+
+**D4 — Observation write path with approval** — depends on D3 + A5.  
+Extract candidate observations from sessions/digests; route through approval (reuse FR-M3 spirit); never-persist (FR-M4) applies before KG write.  
+Acceptance: unapproved observations are not written to the KG; approved observation appears on the entity; secret-bearing transcript yields zero KG writes.
+
+**D5 — Assistant briefing assembly** — depends on D2 + D4.  
+Compose a morning/weekly briefing from Digests + KG observations + approved biography memories (bucket-filtered); Notion page or chat delivery.  
+Acceptance: briefing cites which plane each bullet came from (digest / observation / memory); no cross-bucket story/campaign leakage.
+
+**Boundary reminder:** Notion = dashboard; pgvector = semantic corpus + episodic memory; MCP KG = structured observations; n8n = optional glue (ADR-001). Do not collapse these planes.
 
 ## Progress Log
 
@@ -109,3 +156,5 @@ All ten gates green, full suite green, and a live end-to-end demo: Christopher a
 | C1 | Gate passed (Christopher sign-off 2026-07-26) | Automated: `venv\Scripts\python -m pytest tests/test_embeddings.py tests/test_notion_sync.py tests/test_subagents_sync.py tests/test_persona_reorg.py -q` -> `.... [100%]`; manual: subagent invoke check signed off by Christopher |
 | C2 | Gate passed (Christopher sign-off 2026-07-26) | Functional checks in `tests/test_persona_reorg.py` passed; full suite: `venv\Scripts\python -m pytest -q` -> `..... [100%]`; human review of persona split + story scaffold approved |
 | Phase 1 e2e | Gate passed | `venv\Scripts\python scripts/phase1_e2e_demo.py` → ingest arXiv `1802.06002`, 3 cited corpus hits, Notion digest `3aa0f9f9-7567-81d4-a01a-e3c1a35b6fa7` + task Status=Done, memory propose/approve gate verified |
+| B3 | Gate passed (code); Digests DB live pending | `venv\Scripts\python -m pytest tests/test_notion_sync.py -q` -> `... [100%]`; full suite `............. [100%]`; run `scripts/notion_ensure_digests_db.py` once `LYRA_NOTION_PARENT_PAGE_ID` is set |
+| D1–D5 | Planned | Phase 2 preview — personal assistant + Notion digests + MCP knowledge graph (ADR-002) |

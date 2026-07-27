@@ -99,19 +99,30 @@ class NotionClient:
         body: str,
         source_links: list[str],
         title_property: str = "Name",
+        digest_type: str | None = None,
+        related_task_page_id: str | None = None,
     ) -> dict:
+        """Create a digest row in the Digests database (not the Projects/tasks board)."""
         children: list[dict[str, Any]] = [_paragraph_block(body)]
         if source_links:
             children.append(_paragraph_block("Sources:"))
             children.extend(_bulleted_link_block(link) for link in source_links)
 
+        properties: dict[str, Any] = {
+            title_property: {
+                "title": _rich_text(title),
+            }
+        }
+        if digest_type:
+            properties["Type"] = {"select": {"name": digest_type}}
+        if related_task_page_id:
+            properties["Related task"] = {
+                "rich_text": _rich_text(related_task_page_id),
+            }
+
         payload = {
             "parent": {"database_id": database_id},
-            "properties": {
-                title_property: {
-                    "title": _rich_text(title),
-                }
-            },
+            "properties": properties,
             "children": children,
         }
         resp = requests.post(
@@ -128,6 +139,61 @@ class NotionClient:
                 detail = resp.text[:300]
             raise requests.HTTPError(
                 f"{resp.status_code} Client Error creating Notion page: {detail}",
+                response=resp,
+            )
+        return resp.json()
+
+    def ensure_digests_database(self, parent_page_id: str, title: str = "Lyra Digests") -> dict:
+        """Create a Digests database under parent_page_id if needed (idempotent by title search)."""
+        # Search for an existing DB with this title first.
+        search = requests.post(
+            "https://api.notion.com/v1/search",
+            headers=self._headers,
+            json={"query": title, "filter": {"value": "database", "property": "object"}},
+            timeout=30,
+        )
+        search.raise_for_status()
+        for result in search.json().get("results", []):
+            titles = result.get("title") or []
+            plain = "".join(t.get("plain_text", "") for t in titles)
+            if plain.strip().lower() == title.strip().lower():
+                return result
+
+        payload = {
+            "parent": {"type": "page_id", "page_id": parent_page_id},
+            "title": [{"type": "text", "text": {"content": title}}],
+            "properties": {
+                "Name": {"title": {}},
+                "Type": {
+                    "select": {
+                        "options": [
+                            {"name": "research", "color": "blue"},
+                            {"name": "daily", "color": "green"},
+                            {"name": "weekly", "color": "purple"},
+                            {"name": "personal", "color": "yellow"},
+                            {"name": "professional", "color": "orange"},
+                        ]
+                    }
+                },
+                "Date": {"date": {}},
+                "Related task": {"rich_text": {}},
+                "Sources": {"url": {}},
+            },
+        }
+        resp = requests.post(
+            "https://api.notion.com/v1/databases",
+            headers=self._headers,
+            json=payload,
+            timeout=30,
+        )
+        if not resp.ok:
+            detail = ""
+            try:
+                detail = resp.json().get("message", "")
+            except Exception:
+                detail = resp.text[:300]
+            raise requests.HTTPError(
+                f"{resp.status_code} Client Error creating Digests database: {detail}",
                 response=resp,
             )
         return resp.json()

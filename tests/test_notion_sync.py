@@ -181,3 +181,69 @@ def test_b2_create_digest_and_update_task_verified_by_readback():
 
     task_read = client.read_sandbox_page(task_page_id)
     assert task_read["page"]["properties"]["Status"]["status"]["name"] == "Done"
+
+
+@responses.activate
+def test_b3_ensure_digests_database_and_typed_digest():
+    client = NotionClient(token="test-token")
+    parent_page_id = "parent-page-id"
+    digests_db_id = "digests-db-id"
+
+    responses.add(
+        responses.POST,
+        "https://api.notion.com/v1/search",
+        json={"results": []},
+        status=200,
+    )
+
+    def _create_db_callback(request):
+        payload = json.loads(request.body)
+        assert payload["parent"]["page_id"] == parent_page_id
+        assert "Name" in payload["properties"]
+        assert "Type" in payload["properties"]
+        return (200, {}, json.dumps({"id": digests_db_id, "object": "database", "title": [{"plain_text": "Lyra Digests"}]}))
+
+    responses.add_callback(
+        responses.POST,
+        "https://api.notion.com/v1/databases",
+        callback=_create_db_callback,
+        content_type="application/json",
+    )
+
+    created_db = client.ensure_digests_database(parent_page_id)
+    assert created_db["id"] == digests_db_id
+
+    def _create_digest_callback(request):
+        payload = json.loads(request.body)
+        assert payload["parent"]["database_id"] == digests_db_id
+        assert payload["properties"]["Type"]["select"]["name"] == "research"
+        assert payload["properties"]["Name"]["title"][0]["plain_text"].startswith("Digest")
+        return (
+            200,
+            {},
+            json.dumps(
+                {
+                    "id": "digest-row-id",
+                    "parent": {"database_id": digests_db_id},
+                    "properties": {"Name": {"title": [{"plain_text": "Digest"}]}},
+                }
+            ),
+        )
+
+    responses.add_callback(
+        responses.POST,
+        "https://api.notion.com/v1/pages",
+        callback=_create_digest_callback,
+        content_type="application/json",
+    )
+
+    row = client.create_digest_page(
+        database_id=digests_db_id,
+        title="Digest",
+        body="Body",
+        source_links=["https://example.com"],
+        title_property="Name",
+        digest_type="research",
+    )
+    assert row["id"] == "digest-row-id"
+    assert row["parent"]["database_id"] == digests_db_id
