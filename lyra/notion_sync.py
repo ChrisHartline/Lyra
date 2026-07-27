@@ -69,12 +69,20 @@ class NotionClient:
         children = self.get_block_children(page_id)
         return {"page": page, "children": children.get("results", [])}
 
-    def update_task_status(self, page_id: str, status: str, property_name: str = "Status") -> dict:
-        payload = {
-            "properties": {
-                property_name: {"select": {"name": status}},
-            }
-        }
+    def update_task_status(
+        self,
+        page_id: str,
+        status: str,
+        property_name: str = "Status",
+        property_type: str = "status",
+    ) -> dict:
+        if property_type == "status":
+            prop_value: dict[str, Any] = {"status": {"name": status}}
+        elif property_type == "select":
+            prop_value = {"select": {"name": status}}
+        else:
+            raise ValueError(f"Unsupported property_type: {property_type}")
+        payload = {"properties": {property_name: prop_value}}
         resp = requests.patch(
             f"https://api.notion.com/v1/pages/{page_id}",
             headers=self._headers,
@@ -112,5 +120,14 @@ class NotionClient:
             json=payload,
             timeout=30,
         )
-        resp.raise_for_status()
+        if not resp.ok:
+            detail = ""
+            try:
+                detail = resp.json().get("message", "")
+            except Exception:
+                detail = resp.text[:300]
+            raise requests.HTTPError(
+                f"{resp.status_code} Client Error creating Notion page: {detail}",
+                response=resp,
+            )
         return resp.json()

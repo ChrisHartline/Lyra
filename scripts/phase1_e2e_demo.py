@@ -106,19 +106,24 @@ def main() -> int:
             title=f"Lyra digest — {TOPIC} ({datetime.now(timezone.utc).date().isoformat()})",
             body=body,
             source_links=source_links,
+            title_property=settings.notion_title_property,
         )
         digest_id = created["id"]
         print(f"created digest page id={digest_id}")
         readback = notion.read_sandbox_page(digest_id)
-        title_prop = readback["page"].get("properties", {}).get("Name", {})
+        title_prop = readback["page"].get("properties", {}).get(settings.notion_title_property, {})
         title_bits = title_prop.get("title") or []
         title_text = title_bits[0].get("plain_text") if title_bits else "(no title)"
         print(f"readback title={title_text!r} children={len(readback['children'])}")
         if settings.notion_page_id:
             try:
-                notion.update_task_status(settings.notion_page_id, status="Done")
+                notion.update_task_status(
+                    settings.notion_page_id,
+                    status="Done",
+                    property_type=settings.notion_status_property_type,
+                )
                 print(f"updated task page {settings.notion_page_id} Status=Done")
-            except Exception as exc:  # sandbox page may not have Status select
+            except Exception as exc:  # sandbox page may not have matching Status options
                 print(f"task status update skipped/failed: {exc}")
 
     _banner("4) propose + approve memory")

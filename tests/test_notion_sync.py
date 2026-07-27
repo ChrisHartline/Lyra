@@ -144,14 +144,14 @@ def test_b2_create_digest_and_update_task_verified_by_readback():
 
     def _update_task_callback(request):
         payload = json.loads(request.body)
-        assert payload["properties"]["Status"]["select"]["name"] == "Done"
+        assert payload["properties"]["Status"]["status"]["name"] == "Done"
         return (
             200,
             {},
             json.dumps(
                 {
                     "id": task_page_id,
-                    "properties": {"Status": {"select": {"name": "Done"}}},
+                    "properties": {"Status": {"status": {"name": "Done"}}},
                 }
             ),
         )
@@ -164,12 +164,12 @@ def test_b2_create_digest_and_update_task_verified_by_readback():
     )
 
     updated = client.update_task_status(task_page_id, status="Done")
-    assert updated["properties"]["Status"]["select"]["name"] == "Done"
+    assert updated["properties"]["Status"]["status"]["name"] == "Done"
 
     responses.add(
         responses.GET,
         f"https://api.notion.com/v1/pages/{task_page_id}",
-        json={"id": task_page_id, "properties": {"Status": {"select": {"name": "Done"}}}},
+        json={"id": task_page_id, "properties": {"Status": {"status": {"name": "Done"}}}},
         status=200,
     )
     responses.add(
@@ -180,4 +180,4 @@ def test_b2_create_digest_and_update_task_verified_by_readback():
     )
 
     task_read = client.read_sandbox_page(task_page_id)
-    assert task_read["page"]["properties"]["Status"]["select"]["name"] == "Done"
+    assert task_read["page"]["properties"]["Status"]["status"]["name"] == "Done"
