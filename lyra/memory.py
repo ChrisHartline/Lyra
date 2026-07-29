@@ -77,7 +77,7 @@ class MemoryService:
     def summarize_transcript(self, transcript: str) -> list[CandidateMemory]:
         # v1 stub (SRS FR-M2): deterministic sentence split + keyword buckets.
         # Target path is LLM summarization; keep approval/never-persist contracts stable.
-        raw_segments = re.split(r"[.\n]+", transcript)
+        raw_segments = re.split(r"\.(?:\s+|$)|\n+", transcript)
         candidates: list[CandidateMemory] = []
         seen: set[str] = set()
 

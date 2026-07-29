@@ -136,6 +136,30 @@ def test_d4_secret_bearing_transcript_produces_zero_candidates_or_writes(ensure_
             assert cur.fetchone()[0] == 0
 
 
+def test_d4_story_and_campaign_content_never_becomes_kg_candidates(ensure_db):
+    _reset_tables()
+    writer = RecordingGraphWriter()
+    service = ObservationService(
+        embedding_service=FakeEmbedder(),
+        graph_writer=writer,
+        connection_factory=_conn,
+    )
+
+    proposed = service.propose_observations(
+        "We reviewed the D.Eng task roadmap for this week. "
+        "Lyra repaired the ship phase regulator and stabilized the coils. "
+        "In campaign combat we rolled initiative against an orc patrol.",
+        entity_name="Christopher",
+        entity_type="person",
+    )
+
+    assert len(proposed) == 1
+    assert "task roadmap" in proposed[0]["content"]
+    assert all("ship" not in item["content"].lower() for item in proposed)
+    assert all("campaign" not in item["content"].lower() for item in proposed)
+    assert writer.writes == []
+
+
 @pytest.mark.skipif(shutil.which("npx") is None, reason="npx not available on PATH")
 def test_d4_approved_observation_appears_on_entity(ensure_db):
     _reset_tables()

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,7 +13,7 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 
 from .db import connect
 from .embeddings import EmbeddingService
-from .memory import _contains_sensitive, _normalize_sentence, _vector_literal
+from .memory import MemoryService, _vector_literal
 
 
 class KnowledgeGraphWriter(Protocol):
@@ -102,18 +101,15 @@ class ObservationService:
         entity_type: str,
         source_type: str = "session",
     ) -> list[dict[str, Any]]:
-        raw_segments = re.split(r"[.\n]+", text)
-        contents: list[str] = []
-        seen: set[str] = set()
-        for segment in raw_segments:
-            content = _normalize_sentence(segment)
-            if len(content) < 16 or _contains_sensitive(content):
-                continue
-            canonical = content.lower()
-            if canonical in seen:
-                continue
-            seen.add(canonical)
-            contents.append(content)
+        memory_service = MemoryService(
+            embedding_service=self.embedding_service,
+            connection_factory=self.connection_factory,
+        )
+        contents = [
+            candidate.content.removeprefix("Session note: ")
+            for candidate in memory_service.summarize_transcript(text)
+            if candidate.ledger == "biography"
+        ]
 
         if not contents:
             return []
