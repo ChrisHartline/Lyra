@@ -247,3 +247,19 @@ def test_b3_ensure_digests_database_and_typed_digest():
     )
     assert row["id"] == "digest-row-id"
     assert row["parent"]["database_id"] == digests_db_id
+
+
+@responses.activate
+def test_d1_query_database_used_to_prove_no_projects_row_created():
+    client = NotionClient(token="test-token")
+    tasks_db_id = "tasks-db-id"
+
+    responses.add(
+        responses.POST,
+        f"https://api.notion.com/v1/databases/{tasks_db_id}/query",
+        json={"results": [{"id": "task-1"}, {"id": "task-2"}]},
+        status=200,
+    )
+
+    result = client.query_database(tasks_db_id)
+    assert [r["id"] for r in result["results"]] == ["task-1", "task-2"]

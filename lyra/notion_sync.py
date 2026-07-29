@@ -55,6 +55,16 @@ class NotionClient:
         resp.raise_for_status()
         return resp.json()
 
+    def query_database(self, database_id: str, page_size: int = 100) -> dict:
+        resp = requests.post(
+            f"https://api.notion.com/v1/databases/{database_id}/query",
+            headers=self._headers,
+            json={"page_size": page_size},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
     def get_block_children(self, block_id: str) -> dict:
         resp = requests.get(
             f"https://api.notion.com/v1/blocks/{block_id}/children?page_size=100",
