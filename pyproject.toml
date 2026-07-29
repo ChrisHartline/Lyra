@@ -22,7 +22,8 @@ dependencies = [
 dev = [
   "pytest>=8.2",
   "pytest-cov>=5.0",
-  "responses>=0.25"
+  "responses>=0.25",
+  "mcp>=1.2"
 ]
 
 [tool.pytest.ini_options]

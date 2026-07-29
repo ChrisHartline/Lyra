@@ -7,3 +7,7 @@ __pycache__/
 .pytest_cache/
 data/
 lyra.egg-info/
+
+# D3: local KG store holds real personal observations (not fiction, not
+# corpus/episodic memory) -- never commit the live graph, only its scaffold.
+agents/lyra/state/knowledge_graph/memory.jsonl
