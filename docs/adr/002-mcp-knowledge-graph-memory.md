@@ -1,6 +1,6 @@
 # ADR-002 — MCP knowledge graph alongside pgvector memory
 
-**Status:** Accepted; D3 (server registration + round-trip proof) implemented 2026-07-29  
+**Status:** Accepted; D3 server registration and D4 approval-gated write path implemented 2026-07-29  
 **Date:** 2026-07-26  
 **SRS sections affected:** §3.4 (Memory), IF-1; related FR-N* (Notion digests), personal-assistant digests
 

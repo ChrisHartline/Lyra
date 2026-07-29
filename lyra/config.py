@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -36,6 +38,12 @@ class Settings:
     notion_digest_title_property: str = os.getenv("LYRA_NOTION_DIGEST_TITLE_PROPERTY", "Name")
     # Parent page used when ensuring/creating the Digests database
     notion_parent_page_id: str | None = os.getenv("LYRA_NOTION_PARENT_PAGE_ID")
+    kg_memory_file_path: str = os.getenv(
+        "LYRA_KG_MEMORY_FILE_PATH",
+        str(
+            Path("agents/lyra/state/knowledge_graph/memory.jsonl").resolve()
+        ),
+    )
 
     # Back-compat aliases used by older call sites
     @property
