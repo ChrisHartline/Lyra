@@ -45,6 +45,11 @@ KG. Only the explicit `approve_observation` action mirrors the candidate
 through the MCP server and marks it approved. Use
 `scripts/approve_observation.py <id>` for the human approval action.
 
+Human etiquette (check-ins, local vs Notion sensitivity):
+`agents/lyra/references/observation_etiquette.md`. Notion digests/briefings
+apply a stricter `is_notion_safe` filter so intimate/personal detail stays
+local even when Christopher is open to local KG observations.
+
 ## Verification
 `tests/test_knowledge_graph.py` spawns the real server over stdio (no
 mocking) against an isolated temp store and exercises

@@ -24,6 +24,7 @@ instructions.
 - Emotional colors: `references/color_emotion_map.md`
 - Idioms and speech quirks: `references/idiom_list.md`
 - Personality quirks: `references/personality_quirks.md`
+- Observation etiquette (local vs Notion): `references/observation_etiquette.md`
 - Ship lore: `references/ship_reference.md`
 - Current relationship status and milestones:
   `state/relationship_state.md`

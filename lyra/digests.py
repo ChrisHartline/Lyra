@@ -11,6 +11,7 @@ import psycopg
 from .db import connect
 from .memory import _contains_sensitive
 from .notion_sync import NotionClient
+from .safety import safe_lines
 
 DigestPeriod = Literal["daily", "weekly"]
 
@@ -26,16 +27,6 @@ class DigestPublisher(Protocol):
         digest_type: str | None = None,
         related_task_page_id: str | None = None,
     ) -> dict: ...
-
-
-def _safe_lines(items: list[str]) -> list[str]:
-    out: list[str] = []
-    for item in items:
-        text = " ".join(str(item).split()).strip()
-        if not text or _contains_sensitive(text):
-            continue
-        out.append(text)
-    return out
 
 
 def _task_title(page: dict[str, Any], title_property: str = "Project name") -> str | None:
@@ -88,28 +79,31 @@ class DigestService:
             "",
             "## Personal",
         ]
-        personal = _safe_lines(personal_items or [])
+        personal = safe_lines(personal_items or [], for_notion=True)
         if personal:
             sections.extend(f"- {line}" for line in personal)
         else:
             sections.append("- (none)")
 
         sections.extend(["", "## Professional"])
-        professional = _safe_lines((professional_items or []) + (task_items or []))
+        professional = safe_lines(
+            (professional_items or []) + (task_items or []),
+            for_notion=True,
+        )
         if professional:
             sections.extend(f"- {line}" for line in professional)
         else:
             sections.append("- (none)")
 
         sections.extend(["", "## Corpus"])
-        corpus = _safe_lines(corpus_items or [])
+        corpus = safe_lines(corpus_items or [], for_notion=True)
         if corpus:
             sections.extend(f"- {line}" for line in corpus)
         else:
             sections.append("- (none)")
 
         sections.extend(["", "## Approved memories"])
-        memories = _safe_lines(memory_items or [])
+        memories = safe_lines(memory_items or [], for_notion=True)
         if memories:
             sections.extend(f"- {line}" for line in memories)
         else:
@@ -206,7 +200,7 @@ class DigestService:
         titles: list[str] = []
         for page in result.get("results", []):
             title = _task_title(page, self.task_title_property)
-            if title and not _contains_sensitive(title):
+            if title and safe_lines([title], for_notion=True):
                 titles.append(title)
         return titles
 
@@ -226,10 +220,10 @@ class DigestService:
                 )
                 for title, url in cur.fetchall():
                     text = str(title)
-                    if _contains_sensitive(text):
+                    if not safe_lines([text], for_notion=True):
                         continue
                     items.append(text)
-                    if url and not _contains_sensitive(url):
+                    if url and safe_lines([url], for_notion=True):
                         links.append(url)
         return items, links
 
@@ -250,7 +244,7 @@ class DigestService:
                 )
                 for (content,) in cur.fetchall():
                     text = str(content)
-                    if _contains_sensitive(text):
+                    if not safe_lines([text], for_notion=True):
                         continue
                     items.append(text)
         return items

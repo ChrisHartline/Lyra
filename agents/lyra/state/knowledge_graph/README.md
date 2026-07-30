@@ -8,6 +8,7 @@ relations, and observations about Christopher and his projects, not fiction,
 and is never checked into version control.
 
 - Tool contracts + entity taxonomy: `mcp/tools/knowledge_graph.md`
+- Observation etiquette: `agents/lyra/references/observation_etiquette.md`
 - Design decision: `docs/adr/002-mcp-knowledge-graph-memory.md`
 - Env var controlling the path: `LYRA_KG_MEMORY_FILE_PATH` (must be an
   **absolute** path — the server resolves relative paths against its own

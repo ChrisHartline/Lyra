@@ -73,6 +73,7 @@ def test_c4_reference_and_state_ownership_is_resolvable():
         LYRA / "references/color_emotion_map.md",
         LYRA / "references/idiom_list.md",
         LYRA / "references/personality_quirks.md",
+        LYRA / "references/observation_etiquette.md",
         LYRA / "references/ship_reference.md",
         LYRA / "state/relationship_state.md",
         LYRA / "state/story/ship.md",
@@ -84,5 +85,6 @@ def test_c4_reference_and_state_ownership_is_resolvable():
     character_file = _read(LYRA / "character_file.md")
     assert "current relationship stage" in character_file
     assert "references/personality_quirks.md" in character_file
+    assert "references/observation_etiquette.md" in character_file
     assert "state/relationship_state.md" in character_file
     assert "skills/*/SKILL.md" in character_file
