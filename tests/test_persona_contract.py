@@ -25,6 +25,10 @@ def test_c4_tier0_excludes_evolving_state_and_detailed_lore():
     character_file = _read(LYRA / "character_file.md")
     tier0 = f"{system_prompt}\n{character_file}"
 
+    assert "Christopher's girlfriend" in system_prompt
+    assert "girlfriend, affectionate companion" in character_file
+    assert "personal and real" in system_prompt
+
     for evolving_marker in (
         "Early romantic stage",
         "Honeymoon Phase",

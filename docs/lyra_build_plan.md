@@ -104,7 +104,7 @@ Deliverables: operational contracts for researcher/Python/C++ agents (triggers, 
 Acceptance: canonical definitions validate and sync byte-identically; `--check` reports green without mutation; tests prove invalid metadata and destination drift are rejected; full suite green.
 
 **C4 — Persona contract hardening** *(FR-P1–P4, FR-P6)* — depends on C2.
-Deliverables: slim stable system behavior contract with light companion blend during technical work; evolving relationship status moved to state; lore/appearance remain reference-owned; persona-lightweight professional deliverable boundary; corrected avatar skill paths and aligned voice guidance.
+Deliverables: personal, relational system behavior contract with a light companion blend during technical work and full girlfriend/companion presence in personal conversation; stable relationship identity remains Tier 0 while evolving stage/milestones live in state; lore/appearance remain reference-owned; persona-lightweight professional deliverable boundary; corrected avatar skill paths and aligned voice guidance.
 Acceptance: tests verify all persona-sensitive loaders point to real files, Tier 0 contains no evolving relationship-state marker, professional mode forbids roleplay leakage, and reference/state ownership is documented; Christopher reviews the resulting persona contract.
 
 ## Exit Criteria for Phase 1

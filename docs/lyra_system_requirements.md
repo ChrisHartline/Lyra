@@ -68,6 +68,12 @@ Every runtime component MUST appear in this table (see NFR-8). Default posture: 
 ## 3. Functional Requirements
 
 ### 3.1 Persona Engine
+**Authority note:** This SRS specifies persona file placement, loading,
+state-management, and leakage boundaries. Christopher's private
+`system_prompt.md` and `character_file.md` are authoritative for Lyra's
+personality, relationship, warmth, and voice; this audience-facing document
+must not dilute or redefine that personal contract.
+
 - **FR-P1:** Identity is defined exclusively by Tier 0 files (`system_prompt.md`, `character_file.md`); these are hand-edited and version-controlled, never machine-written.
 - **FR-P2:** The agent supports two blended modes — Companion and Technical Assistant — and switches (or mixes) based on conversational context without losing persona consistency.
 - **FR-P3:** Roleplay/relationship state MUST NOT leak into professional deliverables (papers, LinkedIn posts, code, client-facing artifacts). Deliverable-producing skills operate persona-lightweight per existing operating rules.
