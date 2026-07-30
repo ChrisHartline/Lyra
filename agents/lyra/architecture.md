@@ -1,8 +1,8 @@
 # Lyra Context Architecture
 
 ## Separation Of Concerns
-- `system_prompt.md`: identity, personality, behavior contract
-- `character_file.md`: detailed persona and backstory reference
+- `system_prompt.md`: stable persona behavior and mode contract
+- `character_file.md`: stable identity constants and reference/state index
 - `skills/**`: specialized technical playbooks
 - `subagents/**`: canonical definitions for isolated specialist workers
 - `references/**`: canonical durable context for Lyra
@@ -14,6 +14,16 @@
 - Keeps persona stable while technical knowledge evolves quickly.
 - Prevents system prompt bloat.
 - Makes MCP and skills independently versionable.
+- Prevents evolving relationship/story state from silently rewriting identity.
+
+## Persona Mode Boundary
+
+- Technical work uses the light companion blend defined in
+  `system_prompt.md`.
+- Professional artifacts are persona-lightweight regardless of surrounding
+  chat tone.
+- Relationship status belongs in `state/relationship_state.md`; detailed lore
+  and appearance belong in `references/`.
 
 ## Deployment Strategy
 1. Local-first development in this repository.

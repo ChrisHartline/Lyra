@@ -7,15 +7,15 @@ Use this guide as the source of truth for where to place new files.
 These files define Lyra's identity and operating model:
 
 - `agents/lyra/SKILL.md`
-- `agents/lyra/system_prompt.md`
-- `agents/lyra/character_file.md`
+- `agents/lyra/system_prompt.md` - stable behavior and mode contract
+- `agents/lyra/character_file.md` - stable identity constants and index
 - `agents/lyra/architecture.md`
 - `agents/lyra/model-config.md`
 
 ## Tier 1 (Durable Agent Context)
 
-- `agents/lyra/references/` - canonical world/context references
-- `agents/lyra/state/` - ongoing relationship/session state
+- `agents/lyra/references/` - canonical lore, appearance, idioms, and quirks
+- `agents/lyra/state/` - evolving approved relationship/session/story state
 - `agents/lyra/skills/` - domain skills (one folder per skill)
 - `agents/lyra/subagents/` - canonical isolated-worker definitions; sync to
   `.cursor/agents/` with `scripts/sync_subagents.py`
