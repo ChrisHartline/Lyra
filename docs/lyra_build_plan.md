@@ -40,11 +40,15 @@ graph TD
     subgraph Track C — Orchestration & Persona
         C1[C1: subagent definitions + sync script]
         C2[C2: persona layer reorg + story scaffold]
+        C3[C3: subagent contract hardening]
+        C4[C4: persona contract hardening]
+        C1 --> C3
+        C2 --> C4
     end
     C2 --> A5
 ```
 
-Tracks A, B, and C are **independent** and may run in parallel (e.g., as separate Cursor subagents/background agents), with one cross-track edge: **A5 additionally requires C2** (the story scaffold must exist before canon regeneration is testable). Within a track, order is strict.
+Tracks A, B, and C are **independent** and may run in parallel (e.g., as separate Cursor subagents/background agents), with one cross-track edge: **A5 additionally requires C2** (the story scaffold must exist before canon regeneration is testable). Dependency edges are strict; branches without an edge may proceed independently.
 
 ## Task Definitions & Acceptance Criteria
 
@@ -94,6 +98,14 @@ Acceptance: frontmatter validates (script-checked); sync produces byte-identical
 **C2 — Persona layer reorganization** *(FR-P4, FR-P5)* — no dependencies; gates A5.
 Deliverables: split `agents/lyra/references/` backstory into per-topic files (mechanical split, no rewording); scaffold `agents/lyra/state/story/` with templated `ship.md`, `arcs.md`, `timeline.md`; update `DIRECTORY_GUIDE.md`. **Note:** PRIV-1 is decided (private repo) — `state/` content commits normally.
 Acceptance: per-topic reference files exist with zero content loss (script compares total normalized text before/after); story scaffold present; guide updated; Christopher's review sign-off recorded in the progress log (persona-adjacent content requires human eyes, per FR-P6 spirit).
+
+**C3 — Subagent contract hardening** *(FR-S4, FR-S5)* — depends on C1.
+Deliverables: operational contracts for researcher/Python/C++ agents (triggers, scope, workflow, guardrails, output); explicit skill-vs-subagent routing in `agents/lyra/SKILL.md`; sync validation for supported frontmatter, name/filename identity, stale destinations, and read-only `--check`; architecture/placement documentation. Correct FR-S4 to match Cursor's supported schema rather than emitting ignored `tools` metadata.
+Acceptance: canonical definitions validate and sync byte-identically; `--check` reports green without mutation; tests prove invalid metadata and destination drift are rejected; full suite green.
+
+**C4 — Persona contract hardening** *(FR-P1–P4, FR-P6)* — depends on C2.
+Deliverables: slim stable system behavior contract with light companion blend during technical work; evolving relationship status moved to state; lore/appearance remain reference-owned; persona-lightweight professional deliverable boundary; corrected avatar skill paths and aligned voice guidance.
+Acceptance: tests verify all persona-sensitive loaders point to real files, Tier 0 contains no evolving relationship-state marker, professional mode forbids roleplay leakage, and reference/state ownership is documented; Christopher reviews the resulting persona contract.
 
 ## Exit Criteria for Phase 1
 
@@ -155,6 +167,7 @@ Acceptance: briefing cites which plane each bullet came from (digest / observati
 | B2 | Gate passed | `venv\Scripts\python -m pytest tests/test_notion_sync.py -q` -> `.. [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `............ [100%]` |
 | C1 | Gate passed (Christopher sign-off 2026-07-26) | Automated: `venv\Scripts\python -m pytest tests/test_embeddings.py tests/test_notion_sync.py tests/test_subagents_sync.py tests/test_persona_reorg.py -q` -> `.... [100%]`; manual: subagent invoke check signed off by Christopher |
 | C2 | Gate passed (Christopher sign-off 2026-07-26) | Functional checks in `tests/test_persona_reorg.py` passed; full suite: `venv\Scripts\python -m pytest -q` -> `..... [100%]`; human review of persona split + story scaffold approved |
+| C3 | Gate passed | `venv\Scripts\python scripts/sync_subagents.py --check` -> all three `VALID`; `venv\Scripts\python -m pytest tests/test_subagents_sync.py -q` -> `... [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `..................... [100%]`; operational contracts, routing, supported-schema validation, drift detection, and stale cleanup verified |
 | Phase 1 e2e | Gate passed | `venv\Scripts\python scripts/phase1_e2e_demo.py` → ingest arXiv `1802.06002`, 3 cited corpus hits, Notion digest `3aa0f9f9-7567-81d4-a01a-e3c1a35b6fa7` + task Status=Done, memory propose/approve gate verified |
 | B3 | Gate passed (live) | Digests DB `3ac0f9f9-7567-81a3-a35c-c3e8dbc45939` under Shared Space with Lyra (`3ac0f9f9-7567-8007-b700-d565a6ca5e7e`); smoke digest `3ac0f9f9-7567-81bd-ab31-e8c049993248` parented to Digests DB, not Projects |
 | D1 | Gate passed (live) | `venv\Scripts\python -m pytest tests/test_notion_sync.py -q` -> `.... [100%]` (adds `query_database`); live: `venv\Scripts\python scripts/d1_verify_live_digest.py` -> digest `3ac0f9f9-7567-8133-b5c7-f6a4faec3b98` parented to Digests DB, Projects/tasks row count unchanged (10 before, 10 after) |

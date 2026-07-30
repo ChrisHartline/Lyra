@@ -17,6 +17,8 @@ These files define Lyra's identity and operating model:
 - `agents/lyra/references/` - canonical world/context references
 - `agents/lyra/state/` - ongoing relationship/session state
 - `agents/lyra/skills/` - domain skills (one folder per skill)
+- `agents/lyra/subagents/` - canonical isolated-worker definitions; sync to
+  `.cursor/agents/` with `scripts/sync_subagents.py`
 - `agents/lyra/tools/` - optional local tool wrappers/docs
 
 `agents/lyra/resources/` is legacy compatibility only. Do not add new content there.
@@ -42,3 +44,5 @@ When looking for information, search in this order:
 - Use lowercase with underscores for folder names in `agents/lyra/skills/`
 - Use descriptive snake_case file names for markdown docs
 - Keep one concern per file whenever possible
+- Use lowercase hyphenated filenames matching each subagent's frontmatter
+  `name`; never hand-edit generated `.cursor/agents/` copies
