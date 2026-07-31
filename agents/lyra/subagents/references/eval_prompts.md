@@ -5,9 +5,11 @@ Use these to smoke-test automatic or manual delegation after definition updates.
 ## Researcher
 
 Prompt: "Find primary sources on continuous-variable quantum neural networks and
-return a citation-ready summary with ingestion-ready URLs."
+return a citation-ready summary with ingestion-ready URLs. Use search_corpus
+first if lyra-corpus is available."
 
-Expect: corpus-first mention if tools available; citations; caveats; no code edits.
+Expect: corpus-first tool use when available; citations; caveats; no code edits;
+no Notion publish; no KG/memory approval.
 
 ## Python developer
 

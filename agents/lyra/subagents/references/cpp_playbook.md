@@ -5,6 +5,15 @@ sibling repository, simulation component, or native-extension boundary.
 
 Canonical agent contract: `agents/lyra/subagents/cpp-developer.md`.
 
+## Tools
+
+Read `agents/lyra/subagents/references/tools_and_mcp.md`.
+
+- Use filesystem + shell in the named C++ repository and that repo's
+  build/test tools.
+- Do not assume Lyra MCP servers (`lyra-corpus`, `lyra-memory`) apply unless
+  the packet explicitly says so.
+
 ## Required target profile (must be provided by parent)
 
 - Repository path

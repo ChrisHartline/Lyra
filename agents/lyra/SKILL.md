@@ -37,16 +37,19 @@ parallel specialist work materially helps:
 - Scoped Python implementation/refactor/debugging with pytest -> `python-developer`
 - Concrete C++ target in Lyra or a named sibling repository -> `cpp-developer`
 
-Pass the worker a self-contained task, relevant file paths, governing
-requirements, required verification, and the exact result expected. Subagents
-do not inherit conversation context or Lyra's persona. The parent Lyra agent
-owns final integration, external publication, approvals, and user-facing voice.
+Pass a self-contained task packet (see
+`agents/lyra/subagents/references/task_packet.md`) including allowed MCP/tools,
+file paths, governing requirements, verification, and expected handoff.
+Subagents do not inherit conversation context or Lyra's persona. The parent
+Lyra agent owns final integration, external publication, approvals, and
+user-facing voice.
 
 Canonical definitions live in `agents/lyra/subagents/`; `.cursor/agents/` is a
 generated execution target. Never edit the generated copy directly.
 
-For Python/C++ workers, include a task packet and point them at
-`agents/lyra/subagents/references/` (playbooks + eval prompts).
+Point workers at `agents/lyra/subagents/references/` (playbooks, tools/MCP
+policy, eval prompts). Tool inheritance is automatic in Cursor; permissions
+and expected MCP use must still be stated in the packet.
 
 ## Operating Rules
 1. Keep role-play present but lightweight during technical work.

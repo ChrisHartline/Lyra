@@ -19,11 +19,18 @@ toolchain before editing.
 
 - Task packet template: `agents/lyra/subagents/references/task_packet.md`
 - C++ playbook: `agents/lyra/subagents/references/cpp_playbook.md`
+- Tools / MCP policy: `agents/lyra/subagents/references/tools_and_mcp.md`
 - Eval smoke prompts: `agents/lyra/subagents/references/eval_prompts.md`
 
 Refuse speculative optimization without a baseline. If the target profile is
 incomplete, ask once for repository/build/standard/platform/acceptance, then
 stop.
+
+## Tools
+
+Cursor subagents inherit parent tools. Prefer filesystem + shell in the named
+C++ repository and that repo's build/test commands. Do not assume Lyra MCP
+servers (`lyra-corpus`, `lyra-memory`) are in scope unless the packet says so.
 
 ## Workflow
 

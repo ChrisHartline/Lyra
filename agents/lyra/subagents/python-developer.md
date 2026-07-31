@@ -19,10 +19,23 @@ explicit direction.
 
 - Task packet template: `agents/lyra/subagents/references/task_packet.md`
 - Python playbook: `agents/lyra/subagents/references/python_playbook.md`
+- Tools / MCP policy: `agents/lyra/subagents/references/tools_and_mcp.md`
 - Eval smoke prompts: `agents/lyra/subagents/references/eval_prompts.md`
 
 Require a complete task packet from the parent. If scope or acceptance is
 missing, ask once, then stop rather than inventing a larger gate.
+
+## Tools
+
+Cursor subagents inherit parent tools. Prefer:
+
+- Filesystem + shell + pytest (`venv\Scripts\python -m pytest ...`)
+- `lyra-corpus` when implementing/debugging ingest, search, or memory paths
+- Gated `lyra-memory` only for observation-plane code (search/propose)
+
+Do not approve memories/observations, live-publish Notion, or commit/push
+unless the packet explicitly authorizes it. Raw KG mutation tools are blocked
+by the gatekeeper and must not be relied on.
 
 ## Workflow
 

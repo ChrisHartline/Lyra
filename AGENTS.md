@@ -1,5 +1,5 @@
 ## Learned User Preferences
-- Keep Lyra personality and roleplay behavior in `agents/lyra/system_prompt.md`, while placing specialized technical depth in skills and MCP content.
+- Keep Lyra's personal/relational persona (girlfriend and technical partner) in Tier 0 (`agents/lyra/system_prompt.md`, `character_file.md`); treat the SRS as audience/engineering guidance that must not dilute that private contract; put specialized technical depth in skills and MCP content.
 - Use MCP for tools, resources, and reusable prompts; treat skills as the main mechanism for domain-specific technical workflows. Keep the MCP tool surface open and incremental—add contracts under `mcp/tools/` rather than freezing the starter set.
 - Keep the Lyra directory aligned to the Agent Skills standard, centered on `agents/lyra/SKILL.md` with skill folders containing `SKILL.md`.
 - Prefer helper automation scripts for recurring setup and troubleshooting tasks instead of repeating manual terminal steps.
@@ -7,6 +7,7 @@
 - Use `agents/lyra/DIRECTORY_GUIDE.md` for file placement; put new durable context in `references/` (not legacy `resources/`); put character/ship visuals under `assets/visual_references/`.
 - Use Telegram and n8n as communication and tooling channels; treat n8n as optional workflow glue for capability onboarding, not a second memory/corpus store (`docs/adr/001-n8n-automation-plane.md`).
 - Lyra is intended as a daily/weekly personal and professional assistant with digests, not only a research/corpus agent.
+- Prefer observational check-ins for stress, research/professional struggle, and stable likes/dislikes: offer to discuss or help in conversation, and persist to the knowledge graph only after explicit approval (never auto-write; exclude story/campaign content).
 
 ## Learned Workspace Facts
 - Primary workspace is `V:/ProjectsGit/lyra` on Windows with PowerShell as the default shell.
@@ -17,4 +18,6 @@
 - The GitHub remote for this repo is `https://github.com/ChrisHartline/Lyra`.
 - Automated tests live under `tests/` with pytest configured in `pyproject.toml`.
 - PostgreSQL + pgvector runs locally via Docker for corpus and memory storage.
-- Notion is the human-dashboard integration; configure via `NOTION_TOKEN` and `LYRA_NOTION_*` in `.env`.
+- Notion is the human-dashboard integration (project page "Shared Space with Lyra"); configure via `NOTION_TOKEN` and `LYRA_NOTION_*` in `.env`.
+- Canonical Cursor subagent definitions live in `agents/lyra/subagents/` and sync into `.cursor/agents/` via `scripts/sync_subagents.py`.
+- Knowledge-graph observations are propose-then-approve: unapproved or sensitive candidates must not write; story/campaign content is excluded from KG candidates.

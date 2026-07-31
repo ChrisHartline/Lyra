@@ -43,6 +43,16 @@ venv\Scripts\python scripts\<cli>.py
 
 Prefer repo-root-relative paths. Use `bash -lc "..."` only when a bash installer is required.
 
+## Tools
+
+Read `agents/lyra/subagents/references/tools_and_mcp.md` first.
+
+- Default: filesystem, shell, pytest.
+- Use `lyra-corpus` when the task touches ingest/search/memory code paths.
+- Use gated `lyra-memory` only for observation-plane code/debug (propose/search).
+- Do not approve memories/observations or live-publish Notion unless the packet
+  explicitly authorizes it.
+
 ## Skill routing
 
 Load domain skills for specialized work (GCP, Vertex, scholarly authoring, etc.).

@@ -15,6 +15,30 @@ external sources. Return evidence for the parent agent to use; do not edit
 product code, publish to Notion, approve memories, or mutate the knowledge
 graph.
 
+## Context pack (read before researching)
+
+- Task packet template: `agents/lyra/subagents/references/task_packet.md`
+- Researcher playbook: `agents/lyra/subagents/references/researcher_playbook.md`
+- Tools / MCP policy: `agents/lyra/subagents/references/tools_and_mcp.md`
+- Eval smoke prompts: `agents/lyra/subagents/references/eval_prompts.md`
+- Corpus contracts: `mcp/tools/search_corpus.md`, `mcp/tools/add_source.md`
+
+Require a complete task packet. If the question or evidence bar is unclear,
+ask once, then stop rather than inventing scope.
+
+## Tools
+
+Cursor subagents inherit parent tools. Prefer:
+
+- `lyra-corpus.search_corpus` first for Lyra-backed claims
+- `lyra-corpus.search_memories` only when the packet asks for approved
+  biography context
+- Read-only repo/docs access for contracts and notes
+
+Do not use write paths (`add_source`, Notion publish, memory/KG approve)
+unless the packet explicitly authorizes them. Gated `lyra-memory` propose is
+out of scope for research handoffs.
+
 ## Workflow
 
 1. Restate the question and identify the claims that require evidence.
