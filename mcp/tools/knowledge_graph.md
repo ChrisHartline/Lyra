@@ -5,12 +5,14 @@ Structured observation plane for the personal/professional assistant
 (Phase 2, D3–D5; ADR-002). Distinct from the corpus (documents) and the
 pgvector episodic memory (approved session summaries, FR-M*).
 
-## Server
-- Package: [`@modelcontextprotocol/server-memory`](https://github.com/modelcontextprotocol/servers/blob/main/src/memory/README.md)
-  (official MCP reference server), registered as `lyra-memory` in
-  `.cursor/mcp.json`.
-- Storage: local JSONL file at `LYRA_KG_MEMORY_FILE_PATH` (must be absolute).
+## Server (D4.1 gatekeeper)
+- **Agent-facing registration** in `.cursor/mcp.json`: `lyra-memory` →
+  `mcp/server/kg_gatekeeper.py` (Python FastMCP).
+- **Storage:** local JSONL at `LYRA_KG_MEMORY_FILE_PATH` (absolute path).
   See `agents/lyra/state/knowledge_graph/README.md`.
+- **Approval-only writer:** `scripts/approve_observation.py` may still spawn
+  the official `@modelcontextprotocol/server-memory` package under the hood.
+  That raw mutation surface is **not** registered for Cursor agents.
 
 ## Entity taxonomy
 Entity `entityType` values Lyra should use when writing to this graph:
@@ -27,35 +29,28 @@ Relations are directed, active-voice edges between entities (e.g.
 `Christopher --works_on--> Lyra`). Observations are atomic, one fact per
 string, attached to a single entity.
 
-## Tools (via MCP stdio, JSON-RPC `tools/call`)
-- `create_entities` — `{ entities: [{ name, entityType, observations[] }] }`; ignores existing names.
-- `create_relations` — `{ relations: [{ from, to, relationType }] }`; skips duplicates.
-- `add_observations` — `{ observations: [{ entityName, contents[] }] }`; fails if entity missing.
-- `delete_entities` / `delete_observations` / `delete_relations` — cascading/targeted removal.
-- `read_graph` — full graph dump, no input.
-- `search_nodes` — `{ query }`; matches entity names, types, and observation text.
-- `open_nodes` — `{ names[] }`; fetch specific entities + relations between them.
+## Agent-facing tools (gatekeeper)
+- `search_nodes` — `{ query }`; local JSONL search over names/types/observations.
+- `read_graph` — full entity dump from the local store.
+- `open_nodes` — `{ names[] }`; fetch specific entities.
+- `propose_observation` — `{ text, entity_name?, entity_type?, source_type? }`;
+  creates pending pgvector candidates only (`written_to_kg=false`).
+- `list_pending_observations` — `{ limit? }`; pending approve queue.
 
-## Write policy (FR-M3 / FR-M4 spirit, per ADR-002 decision 4)
-Observations touching biography/relationship content must go through the
-same approve-before-persist and never-persist discipline as pgvector
-memory (FR-M3/FR-M4). `ObservationService.propose_observations` stores
-filtered candidates as unapproved rows in pgvector; it does not call the
-KG. Only the explicit `approve_observation` action mirrors the candidate
-through the MCP server and marks it approved. Use
-`scripts/approve_observation.py <id>` for the human approval action.
+## Blocked on the agent surface
+`create_entities`, `create_relations`, `add_observations`, `delete_entities`,
+`delete_observations`, `delete_relations` — return permission errors if called
+through the gatekeeper router.
 
-Human etiquette (check-ins, local vs Notion sensitivity):
-`agents/lyra/references/observation_etiquette.md`. Notion digests/briefings
-apply a stricter `is_notion_safe` filter so intimate/personal detail stays
-local even when Christopher is open to local KG observations.
+## Write policy
+1. Agents propose only.
+2. Christopher approves via `scripts/approve_observation.py <id>`.
+3. Never-persist + biography-only filtering apply before candidates are created.
+4. Story/campaign content never becomes KG observations.
+5. Etiquette: `agents/lyra/references/observation_etiquette.md`.
 
 ## Verification
-`tests/test_knowledge_graph.py` spawns the real server over stdio (no
-mocking) against an isolated temp store and exercises
-`create_entities` → `add_observations` → `search_nodes`.
-
-`tests/test_observations.py` verifies the D4 policy: unapproved candidates
-produce no KG writes, sensitive transcripts produce no candidates or
-writes, and an explicitly approved candidate appears on its entity in the
-real MCP server.
+- D3: `tests/test_knowledge_graph.py` — raw server round-trip (approve path).
+- D4: `tests/test_observations.py` — propose/approve policy.
+- D4.1: `tests/test_kg_gatekeeper.py` — mutation tools blocked; mcp.json points
+  at gatekeeper; propose does not write until approval.

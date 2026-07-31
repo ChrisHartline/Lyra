@@ -1,11 +1,10 @@
 # Knowledge Graph local store (D3, ADR-002)
 
-`memory.jsonl` in this folder is the live local store for the MCP knowledge
-graph server (`@modelcontextprotocol/server-memory`, registered as
-`lyra-memory` in `.cursor/mcp.json`). It is created automatically by the
-server on first write and is **gitignored** — it holds real entities,
-relations, and observations about Christopher and his projects, not fiction,
-and is never checked into version control.
+`memory.jsonl` in this folder is the live local store for Lyra's knowledge
+graph. Cursor agents reach it through the **gatekeeper** (`lyra-memory` →
+`mcp/server/kg_gatekeeper.py`): search/read + propose only. Approved writes
+still use the official memory server under `scripts/approve_observation.py`.
+The file is created on first write and is **gitignored**.
 
 - Tool contracts + entity taxonomy: `mcp/tools/knowledge_graph.md`
 - Observation etiquette: `agents/lyra/references/observation_etiquette.md`

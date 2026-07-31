@@ -7,14 +7,10 @@
       ]
     },
     "lyra-memory": {
-      "command": "npx",
+      "command": "venv\\Scripts\\python",
       "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory"
-      ],
-      "env": {
-        "MEMORY_FILE_PATH": "${LYRA_KG_MEMORY_FILE_PATH}"
-      }
+        "mcp/server/kg_gatekeeper.py"
+      ]
     },
     "linear": {
       "command": "npx",
