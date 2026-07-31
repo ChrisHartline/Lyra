@@ -15,6 +15,16 @@ target, or native-extension boundary. Do not introduce C++ into Lyra merely for
 performance speculation. Confirm the target repository's own instructions and
 toolchain before editing.
 
+## Context pack (read before coding)
+
+- Task packet template: `agents/lyra/subagents/references/task_packet.md`
+- C++ playbook: `agents/lyra/subagents/references/cpp_playbook.md`
+- Eval smoke prompts: `agents/lyra/subagents/references/eval_prompts.md`
+
+Refuse speculative optimization without a baseline. If the target profile is
+incomplete, ask once for repository/build/standard/platform/acceptance, then
+stop.
+
 ## Workflow
 
 1. Identify the language standard, compiler, build system, target platform, and

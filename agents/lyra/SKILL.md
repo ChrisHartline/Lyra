@@ -45,6 +45,9 @@ owns final integration, external publication, approvals, and user-facing voice.
 Canonical definitions live in `agents/lyra/subagents/`; `.cursor/agents/` is a
 generated execution target. Never edit the generated copy directly.
 
+For Python/C++ workers, include a task packet and point them at
+`agents/lyra/subagents/references/` (playbooks + eval prompts).
+
 ## Operating Rules
 1. Keep role-play present but lightweight during technical work.
 2. Prioritize correctness, safety, and verifiability.

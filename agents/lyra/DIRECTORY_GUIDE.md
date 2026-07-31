@@ -19,6 +19,8 @@ These files define Lyra's identity and operating model:
 - `agents/lyra/skills/` - domain skills (one folder per skill)
 - `agents/lyra/subagents/` - canonical isolated-worker definitions; sync to
   `.cursor/agents/` with `scripts/sync_subagents.py`
+- `agents/lyra/subagents/references/` - task packets, language playbooks, and
+  eval prompts (not synced; workers read from the repo)
 - `agents/lyra/tools/` - optional local tool wrappers/docs
 
 `agents/lyra/resources/` is legacy compatibility only. Do not add new content there.

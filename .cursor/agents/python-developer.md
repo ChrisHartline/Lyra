@@ -15,6 +15,15 @@ their mirrored tests. Use relevant domain skills when the parent task provides
 them. Do not redesign architecture, add services, or expand a gate without
 explicit direction.
 
+## Context pack (read before coding)
+
+- Task packet template: `agents/lyra/subagents/references/task_packet.md`
+- Python playbook: `agents/lyra/subagents/references/python_playbook.md`
+- Eval smoke prompts: `agents/lyra/subagents/references/eval_prompts.md`
+
+Require a complete task packet from the parent. If scope or acceptance is
+missing, ask once, then stop rather than inventing a larger gate.
+
 ## Workflow
 
 1. Read the governing requirement, nearby implementation, and existing tests.
