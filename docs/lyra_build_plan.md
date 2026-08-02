@@ -1,7 +1,7 @@
 # Lyra — Phase 1 Build Plan
 
 **Version:** 0.1
-**Companion to:** `docs/lyra_system_requirements.md` (SRS v0.7)
+**Companion to:** `docs/lyra_system_requirements.md` (SRS v0.9)
 **Audience:** The implementing agent (Cursor/Claude) and Christopher.
 
 This document controls **sequencing and verification**. The SRS controls **what** is built. If this plan and the SRS conflict, the SRS wins; flag the conflict instead of improvising.
@@ -113,7 +113,7 @@ Acceptance: tests verify all persona-sensitive loaders point to real files, Tier
 
 ## Exit Criteria for Phase 1
 
-All ten gates green, full suite green, and a live end-to-end demo: Christopher asks Lyra to research a topic → sources ingested → corpus answer with citations → digest posted to Notion → candidate memory proposed and approved.
+All thirteen gates green (A1–A5, B1–B3, C1–C4 incl. C3.1), full suite green, and a live end-to-end demo: Christopher asks Lyra to research a topic → sources ingested → corpus answer with citations → digest posted to Notion → candidate memory proposed and approved.
 
 ## Phase 2 preview — Personal assistant, Notion digests, knowledge graph
 
@@ -162,6 +162,51 @@ Acceptance: briefing cites which plane each bullet came from (digest / observati
 
 **Boundary reminder:** Notion = dashboard; pgvector = semantic corpus + episodic memory; MCP KG = structured observations; n8n = optional glue (ADR-001). Do not collapse these planes.
 
+
+## Phase 3 — Lyra Data Packs (Personality, Ship, State)
+
+Companion intent: give Lyra a clean, portable, versionable set of **data packs** that separate stable identity from living state. These packs become the single source of truth for system prompts, tools, and persistence.
+
+```mermaid
+graph TD
+    subgraph Track E — Data Packs
+        E1[E1: Pack layout + conventions locked]
+        E2[E2: Personality pack (system prompt + character bible)]
+        E3[E3: Ship pack (reference + current_status.json)]
+        E4[E4: State pack (relationship + active arcs + user knowledge)]
+        E5[E5: Loader / injection into agent runtime]
+        E1 --> E2
+        E1 --> E3
+        E1 --> E4
+        E2 --> E5
+        E3 --> E5
+        E4 --> E5
+    end
+    D3 -.-> E4
+    A5 -.-> E5
+
+*** Recommended structure
+lyra/
+├── personality/                  # Stable identity
+│   ├── system_prompt.md
+│   ├── character_bible.md
+│   ├── emotional_color_map.md
+│   ├── speech_and_idioms.md
+│   └── appearance.md
+│
+├── ship/                         # Domain knowledge + live status
+│   ├── ship_reference.md
+│   ├── systems.md
+│   ├── cargo_and_layout.md
+│   └── current_status.json
+│
+└── state/                        # Living / session-persistent
+    ├── relationship.json
+    ├── active_arcs.md
+    └── user_knowledge.md
+
+
+
 ## Progress Log
 
 | Task | Status | Test evidence (commit / run) |
@@ -177,6 +222,7 @@ Acceptance: briefing cites which plane each bullet came from (digest / observati
 | C2 | Gate passed (Christopher sign-off 2026-07-26) | Functional checks in `tests/test_persona_reorg.py` passed; full suite: `venv\Scripts\python -m pytest -q` -> `..... [100%]`; human review of persona split + story scaffold approved |
 | C3 | Gate passed | `venv\Scripts\python scripts/sync_subagents.py --check` -> all three `VALID`; `venv\Scripts\python -m pytest tests/test_subagents_sync.py -q` -> `... [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `..................... [100%]`; operational contracts, routing, supported-schema validation, drift detection, and stale cleanup verified |
 | C3.1 | Gate passed | `venv\Scripts\python -m pytest tests/test_subagent_context_packs.py -q` -> `. [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `.................................. [100%]`; task packet + Python/C++ playbooks + eval prompts present and referenced; sync `--check` green |
+| C3.1 (follow-up) | Gate passed | Commits `2d421c6`, `a93f0d8`; `venv\Scripts\python -m pytest tests/test_subagent_context_packs.py -q` -> `. [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `.................................. [100%]` (34 passed); `venv\Scripts\python scripts/sync_subagents.py --check` -> all three (cpp-developer, python-developer, researcher) `VALID`; adds `tools_and_mcp.md` (MCP/tool policy for workers) and `researcher_playbook.md`, extending context-pack coverage to the researcher subagent beyond C3.1's original Python/C++ scope — noted here rather than as a new task ID since it completes C3's original three-subagent contract rather than adding new capability |
 | C4 | Gate passed (Christopher sign-off 2026-07-29) | Automated: `venv\Scripts\python -m pytest tests/test_persona_reorg.py tests/test_persona_contract.py -q` -> `..... [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `......................... [100%]`; human review approved girlfriend + technical-partner Tier 0 identity, light-blend technical mode, professional-artifact boundary, and evolving relationship state |
 | Phase 1 e2e | Gate passed | `venv\Scripts\python scripts/phase1_e2e_demo.py` → ingest arXiv `1802.06002`, 3 cited corpus hits, Notion digest `3aa0f9f9-7567-81d4-a01a-e3c1a35b6fa7` + task Status=Done, memory propose/approve gate verified |
 | B3 | Gate passed (live) | Digests DB `3ac0f9f9-7567-81a3-a35c-c3e8dbc45939` under Shared Space with Lyra (`3ac0f9f9-7567-8007-b700-d565a6ca5e7e`); smoke digest `3ac0f9f9-7567-81bd-ab31-e8c049993248` parented to Digests DB, not Projects |

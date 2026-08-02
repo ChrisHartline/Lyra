@@ -1,7 +1,7 @@
 # Lyra — System Requirements Document
 
-**Version:** 0.8 (Kickoff candidate)
-**Date:** 2026-07-26
+**Version:** 0.9 (Kickoff candidate)
+**Date:** 2026-08-02
 **Author:** Christopher (with Claude)
 **Status:** In progress
 
@@ -123,6 +123,7 @@ must not dilute or redefine that personal contract.
   8. Anything Christopher marks "off the record" via an explicit do-not-remember signal.
   *(Policy confirmed v0.6. v1 stub enforces a regex subset of 1–3 and 8; full coverage is required when LLM write-back lands.)*
 - **FR-M5:** `agents/lyra/state/relationship_state.md` remains the human-readable summary of relationship stage; it is regenerated from (not a replacement for) the memory store.
+- **FR-M6 (Structured observation plane — ADR-002):** Alongside pgvector (semantic recall of episodic memory + corpus chunks), a separate **MCP knowledge graph** plane holds structured, assistant-oriented facts as entities/relations/observations (people, projects, orgs, habits, commitments) via the official MCP Memory server, local JSONL store. The two planes never merge: pgvector answers "what did we discuss/read," the KG answers "what do we know about X." Observations that touch biography/relationship content are subject to the same approval (FR-M3) and never-persist (FR-M4) rules as pgvector memories before they are written — propose, then approve, then write. Agents never receive raw KG mutation tools directly; they see only a gatekeeper interface (search/read + `propose_observation`), with an approval step promoting a pending proposal to a real KG write. Notion (FR-N3) remains the dashboard view, not a store for either plane.
 
 ### 3.5 Notion Integration
 - **FR-N1 (inbound):** When told that Notion content changed (e.g., "I updated the task board — check it"), Lyra reads the relevant pages/databases via API and incorporates the changes into her working context.
@@ -217,7 +218,7 @@ CREATE INDEX ON memories USING hnsw (embedding vector_cosine_ops);
 
 ## 6. Interfaces
 
-- **IF-1 (MCP):** External integrations (Notion, Linear, Supabase, Vercel, future Telegram, optional n8n-backed workflows) are exposed as MCP tools/resources; contracts and schemas live in `mcp/tools/`. The starter corpus/memory toolset is not exhaustive — new tools are added by contract under `mcp/tools/` (ADR-001 for n8n registration).
+- **IF-1 (MCP):** External integrations (Notion, Linear, Supabase, Vercel, future Telegram, optional n8n-backed workflows) are exposed as MCP tools/resources; contracts and schemas live in `mcp/tools/`. The starter corpus/memory toolset is not exhaustive — new tools are added by contract under `mcp/tools/` (ADR-001 for n8n registration; ADR-002 for the MCP knowledge-graph server, registered agent-facing only through the gatekeeper per FR-M6).
 - **IF-2 (Provider API):** Grok via xAI OpenAI-compatible endpoint; Claude via Anthropic API; selection per task category in runtime config (`LYRA_MODEL` overrides).
 - **IF-3 (Foundry VTT):** Existing Foundry API Bridge (MCP) module via hosted relay (per FR-D1); Lyra's orchestrator consumes it as a standard MCP server. Relay API key stored in `.env` per NFR-2. Self-hosted relay documented as a future option; no bespoke bridge development in scope.
 - **IF-4 (Corpus MCP server):** Local MCP server (Python) fronting pgvector + filesystem per FR-R6; tool contracts documented in `mcp/tools/`. This is the only supported retrieval path — no direct DB access from agents.
@@ -307,3 +308,4 @@ docker exec -it lyra-pgvector psql -U lyra -d lyra -c "CREATE EXTENSION IF NOT E
 | PRIV-1 | State files in public repo | **Decided v0.7** — repo made private; state stays tracked; NFR-1 conflict resolved |
 | FR-M2 | Write-back summarizer quality | **Decided v0.8** — v1 stub OK to prove gate; LLM summarizer is the target path |
 | ADR-001 | n8n automation plane | **Accepted v0.8** — optional glue for capability onboarding via workflows → MCP/webhook tools |
+| ADR-002 | MCP knowledge graph alongside pgvector memory | **Accepted v0.9** — structured observation plane (entities/relations/observations) via official MCP Memory server, local JSONL store; approval + never-persist rules (FR-M3/FR-M4) apply before KG write; agents see gatekeeper only (§3.4 FR-M6) |
