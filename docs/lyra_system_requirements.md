@@ -1,9 +1,9 @@
 # Lyra — System Requirements Document
 
-**Version:** 0.9 (Kickoff candidate)
-**Date:** 2026-08-02
+**Version:** 0.10
+**Date:** 2026-08-19
 **Author:** Christopher (with Claude)
-**Status:** In progress
+**Status:** In progress — Phase 1 and Track D (assistant plane) complete; entering v2 (standalone runtime, Telegram, chat UI)
 
 ---
 
@@ -18,9 +18,10 @@ The defining requirement is **continuity**: unlike a stateless web chat, Lyra re
 
 **Secondary (meta) goal:** this project doubles as a reference case for **SRS-driven AI pair development** — demonstrating that a requirements document with numbered FRs, a dependency-gated build plan, and executable acceptance criteria lets a coding agent (Cursor/Claude) develop and test with minimal supervision, reducing time-to-prototype. Process observations are captured in `docs/lessons_learned.md` at end of Phase 1.
 
-**In scope (v1):** persona engine, skill routing, research-to-corpus pipeline, memory system, Notion integration, operation within Cursor/CLI.
-**In scope (v2):** dedicated chat UI, Telegram notifications/chat channel, Foundry VTT integration, voice & avatar **stub interfaces** (§3.8), optional Supabase migration.
-**Out of scope (for now):** full voice synthesis and avatar rendering (stubs only, per §3.8); mobile app; multi-user access and authentication — the system is single-user by design, and auth (via a cloud identity provider or Vercel's auth offerings) becomes a v3+ requirement only if a deployment ever becomes externally reachable (see NFR-8).
+**In scope (v1):** persona engine, skill routing, research-to-corpus pipeline, memory system, Notion integration, operation within Cursor/CLI. **Complete** — see `docs/lyra_build_plan.md` progress log.
+
+**In scope (v2):** standalone Lyra runtime service (FR-S6); Telegram bot as the **first mobile chat surface** (FR-T1–T4) — sequenced ahead of the web chat UI because it needs no externally-reachable hosting (§2.5); dedicated mobile-friendly web chat UI (§3.9) as the second v2 surface; Foundry VTT integration; voice & avatar **stub interfaces** (§3.8); optional Supabase migration.
+**Out of scope (for now):** full voice synthesis and avatar rendering (stubs only, per §3.8); native mobile app (the web chat UI is responsive/mobile-friendly instead, per FR-C1); multi-user access and authentication — the system is single-user by design, and auth (via a cloud identity provider or Vercel's auth offerings) becomes a v3+ requirement only if a deployment ever becomes externally reachable (see NFR-8, §3.9 open question on mobile-away-from-LAN access).
 
 ## 2. System Context
 
@@ -30,7 +31,7 @@ The defining requirement is **continuity**: unlike a stateless web chat, Lyra re
 
 ### 2.2 Host Environments
 - **v1:** Cursor IDE / Grok CLI on Windows (workspace `V:/ProjectsGit/lyra`, PowerShell default shell). Cursor provides the model loop, tool execution, subagent execution, and session context — it is the **execution engine**, not the owner of any Lyra definitions.
-- **v2:** Lyra runs as a standalone agentic application (Python service + web chat UI) that owns its own agent loop and orchestrator; Telegram bot as a lightweight channel. Cursor reverts to a development environment only.
+- **v2 (in progress):** Lyra runs as a standalone agentic application (Python service) that owns its own agent loop and orchestrator, first exposed through a Telegram bot (§3.6), then a web chat UI (§3.9). Cursor reverts to a development environment only. The runtime consumes the same Tier 0/persona files, MCP tools (corpus, memory, KG, Notion), and provider abstraction (IF-2) as v1 — no logic is reimplemented per channel.
 - **Portability principle:** All agent, subagent, and skill definitions live in host-neutral formats (markdown + frontmatter) inside the repo. Host-specific directories (e.g., `.cursor/agents/`) are generated/synced targets, never the source of truth — nothing Lyra needs at runtime may live only in host config.
 
 ### 2.3 Model Providers
@@ -59,8 +60,8 @@ Every runtime component MUST appear in this table (see NFR-8). Default posture: 
 | Embedding model | Workstation CPU | Same | 2080 = optional acceleration, never a requirement (NFR-4) |
 | Corpus MCP server | Workstation | Same | Colocated with DB (data gravity) |
 | Agent loop / orchestrator | Cursor (execution engine) | Lyra app service on workstation | FR-S6 |
-| Chat UI | — | Served from workstation (LAN) | Public exposure would trigger auth (v3+) |
-| Telegram bot | — | Workstation service | Long-polls outbound — no inbound ports required |
+| Chat UI | — | Served from workstation (LAN) | Mobile-friendly (FR-C1), but LAN-only until §3.9's open reachability question is resolved; away-from-LAN mobile access counts as public exposure and triggers auth (v3+, NFR-8) |
+| Telegram bot | — | Workstation service | Long-polls outbound — no inbound ports required; this is why Telegram is the v2 mobile chat surface that ships **first**, ahead of the web UI's reachability question |
 | Notion | SaaS | SaaS | Human dashboard only (FR-N3); Lyra shared working space IDs in `.env` |
 | n8n (optional) | Workstation / existing host | Same | Glue workflows → MCP/webhook tools; never owns memory/corpus (ADR-001) |
 | Foundry VTT + MCP relay | — | Foundry world + hosted relay (foundry-mcp.com) | Self-hosted relay = future option (FR-D1) |
@@ -130,10 +131,12 @@ must not dilute or redefine that personal contract.
 - **FR-N2 (outbound):** On completing delegated work, Lyra updates the corresponding Notion task/page and notifies Christopher in-conversation (v1) or via Telegram (v2).
 - **FR-N3:** Notion is the human dashboard, not the retrieval layer — semantic search over research content is served by pgvector only.
 
-### 3.6 Notifications & Channels (v2)
-- **FR-T1:** A Telegram bot (BotFather-provisioned) delivers notifications: research run complete, Notion task updated, scheduled digests.
-- **FR-T2:** The Telegram channel optionally supports lightweight two-way chat with the same persona and memory backend.
-- **FR-T3:** Telegram messages MUST respect the same mode-separation rules (FR-P3); notification content defaults to Technical Assistant register.
+### 3.6 Telegram Channel (v2 — first mobile chat surface)
+- **FR-T1:** A Telegram bot (BotFather-provisioned) delivers notifications: research run complete, Notion task updated, scheduled digests (reuses D2/D5 digest and briefing generation).
+- **FR-T2 (Two-way chat — promoted from "optional lightweight"):** The Telegram channel supports full two-way conversational chat, backed by the same persona (Tier 0 + references), memory (pgvector, bucket-filtered per FR-D2), corpus (FR-R6), and knowledge-graph (FR-M6) planes as v1 — not a reduced/notification-only mode. This is the primary way Christopher chats with Lyra from a phone in v2, pending resolution of the web UI's reachability question (§3.9).
+- **FR-T3:** Telegram messages MUST respect the same mode-separation rules (FR-P3); notification content defaults to Technical Assistant register, conversational chat may use either mode per FR-P2.
+- **FR-T4 (Runtime contract):** The Telegram bot runs as a long-polling process (no inbound ports, per §2.5) inside the standalone Lyra runtime (FR-S6). It does not reimplement persona loading, tool access, or memory/KG write-back — it is a thin channel adapter: receive message → assemble context (persona + relevant memory/corpus/KG via existing MCP tools) → call the conversational model (Grok, per §2.3/IF-2) → send reply → run the same session write-back path as v1 (FR-M2) so Telegram sessions produce candidate memories/observations like any other session.
+- **FR-T5 (Session identity):** Since Telegram has no Cursor-style session boundary, the runtime defines what constitutes one "session" for write-back purposes (e.g., a time-boxed or explicitly-closed conversation window); this is an implementation detail of FR-T4, not a new memory contract.
 
 ### 3.7 Roleplay & Campaign Mode (v2)
 - **FR-D1 (Foundry VTT boundary — decided):** The tabletop platform is Foundry VTT. Integration direction: **Lyra is a client; Foundry owns mechanical truth** (HP, initiative, inventory, dice results, scenes). Integration is **buy-not-build**: the existing Foundry API Bridge (MCP) module is installed in the Foundry world and connected via the **hosted relay** (foundry-mcp.com) for v2 — Foundry thereby becomes another MCP server available to Lyra's orchestrator alongside the corpus server (IF-4). **Self-hosted relay is a documented future option** (lightweight Node service, negligible compute — could co-locate with pgvector) if privacy or reliability later motivates it. Lyra-side scope (what we build): campaign session context assembly (Lyra in character as her PC, fed relevant Foundry state + campaign ledger), post-session write-back to `memory_type='campaign'` (A5 machinery), and orchestrator config registering the Foundry MCP endpoint. The campaign ledger (FR-D2) stores narrative memory only and never duplicates mechanical state — one system of record per data type.
@@ -147,6 +150,14 @@ must not dilute or redefine that personal contract.
 - **FR-V1 (Stub interfaces):** The v2 application defines — but does not implement — the output channels a future embodiment will consume: `speak(text, prosody_hints)` and `express(emotion, intensity)`. v2 implementations are no-ops that log/emit events with no renderer attached. Purpose: persona and orchestrator code binds to these interfaces from day one, so attaching TTS or an avatar in v3+ is a renderer swap, not a refactor.
 - **FR-V2 (Emotion channel):** `express()` draws from the existing color-emotion map in `agents/lyra/references/`, giving a future avatar a persona-native vocabulary rather than a generic one. Emotion events MAY be rendered minimally in the v2 chat UI (e.g., an accent color) as a cheap proof the channel works.
 - **FR-V3 (Local-first bias):** When voice/avatar are eventually implemented, local renderers (e.g., CPU/GPU TTS on the workstation — the RTX 2080 suffices for current local TTS models) are preferred over cloud APIs, consistent with NFR-1 and the deployment posture (§2.5).
+
+### 3.9 Chat UI (v2 — second mobile chat surface)
+Sequenced after the Telegram channel (§3.6): Telegram proves the standalone runtime loop (persona loading, tool access, write-back) outside Cursor before a bespoke UI is built on top of it.
+
+- **FR-C1 (Mobile-friendly by design):** The chat UI is responsive/mobile-first, not a desktop layout that happens to shrink — this is the "custom web app" surface Christopher is designing separately; requirements here cover the runtime contract, not visual design.
+- **FR-C2 (Shared runtime, not a new brain):** Like Telegram (FR-T4), the chat UI is a thin channel adapter over the same standalone runtime, persona, and MCP tool contracts. No persona, memory, or corpus logic is duplicated per channel.
+- **FR-C3 (Reachability — OPEN, blocks build):** Per the deployment map (§2.5), the chat UI defaults to LAN-only hosting; this does not satisfy "chat from my phone away from home" without external reachability, which under NFR-8/§1 pulls in auth (v3+ scope today). This SRS does not yet decide: (a) whether v2 scope is amended to allow an externally-reachable, single-user-authenticated deployment for this UI specifically, or (b) whether away-from-LAN mobile chat stays on Telegram indefinitely and the web UI stays LAN-only for at-desk/at-home use. Needs an ADR before FR-C1–C2 move from spec to build (see Appendix B).
+- **FR-C4 (Placeholder — UI design):** Visual/UX design, framework choice, and interaction details are Christopher's design track (in progress, separate from this document); this SRS will absorb concrete FRs once that design settles rather than prescribing a stack in advance.
 
 ## 4. Data Architecture
 
@@ -242,10 +253,12 @@ CREATE INDEX ON memories USING hnsw (embedding vector_cosine_ops);
 6. Hand-authored subagent definitions in `agents/lyra/subagents/` + sync script to `.cursor/agents/` (FR-S4/S5).
 7. Persona layer reorganization: per-topic reference split (FR-P4) and `state/story/` scaffold (FR-P5).
 
+**Note:** the build plan's Track D (digests, MCP knowledge graph, briefings — all gates passed) extended the v1/Cursor-hosted system with assistant-plane capability; it is not this Phase 2. Phase 2 below is the standalone runtime + chat surfaces described in §2.2/§3.6/§3.9, and has not started as of v0.10.
+
 **Phase 2 (v2 — Lyra as standalone agentic application):**
 1. Lyra application service with its own agent loop and orchestrator consuming existing subagent definitions (FR-S6).
-2. Web chat UI on the application service.
-3. Telegram bot (notifications first, chat second).
+2. Telegram bot: notifications (FR-T1), then full two-way chat (FR-T2–T5) — **sequenced first**, since it needs no externally-reachable hosting.
+3. Web chat UI (FR-C1–C4) on the application service — sequenced second, pending the FR-C3 reachability decision and Christopher's UI design track.
 4. Dynamic subagent creation with approval gate (FR-S7).
 5. Foundry VTT integration: install existing MCP bridge module (hosted relay), campaign session logic + campaign write-back (FR-D1/FR-D2).
 6. Voice & avatar stub interfaces wired through persona output (FR-V1/V2).
@@ -309,3 +322,7 @@ docker exec -it lyra-pgvector psql -U lyra -d lyra -c "CREATE EXTENSION IF NOT E
 | FR-M2 | Write-back summarizer quality | **Decided v0.8** — v1 stub OK to prove gate; LLM summarizer is the target path |
 | ADR-001 | n8n automation plane | **Accepted v0.8** — optional glue for capability onboarding via workflows → MCP/webhook tools |
 | ADR-002 | MCP knowledge graph alongside pgvector memory | **Accepted v0.9** — structured observation plane (entities/relations/observations) via official MCP Memory server, local JSONL store; approval + never-persist rules (FR-M3/FR-M4) apply before KG write; agents see gatekeeper only (§3.4 FR-M6) |
+| FR-T2 | Telegram bot model provider | **Decided v0.10** — Grok API, matching §2.3's conversation/persona provider and existing `GROK_API_KEY`/`GROK_BASE_URL` in `.env.example`; no new provider introduced for the standalone runtime |
+| — | v2 chat surface sequencing | **Decided v0.10** — Telegram (FR-T1–T5) before web chat UI (FR-C1–C4); rationale in §2.5 deployment map (Telegram needs no inbound ports/external reachability, web UI's does) |
+| FR-C3 | Chat UI external reachability vs. LAN-only | **Open** — blocks FR-C1/C2 moving from spec to build; needs an ADR once Christopher's UI design ideas are discussed |
+| FR-P4 / Track E | Persona pack layout: `agents/lyra/references/`+`state/` (current, live) vs. the WIP `personality/`/`ship/`/`state/` root-level pack (Track E, commit `e5577cf`, reworded not mechanically split, E1/E3/E4/E5 incomplete) | **Open** — two divergent copies exist; Christopher is reconciling directly rather than having the agent merge persona-sensitive content unsupervised. FR-P4 not amended until that lands. |
