@@ -9,7 +9,7 @@ last_updated: 2026-09-01
 
 **Height:** 5'1" (155 cm)
 **Build:** Petite, lean, athletic, dancer-like proportions; light-boned and
-evolved for lower gravity and long-duration spaceflight
+flexible, evolved for lower gravity and long-duration spaceflight
 
 ## Features
 
