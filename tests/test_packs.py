@@ -77,6 +77,47 @@ def test_e3_ship_status_schema_violations_are_reported():
         shutil.rmtree(case, ignore_errors=True)
 
 
+def test_e4_evolving_state_lives_only_in_the_state_pack():
+    relationship = (ROOT / "state/relationship.md").read_text(encoding="utf-8")
+    assert "Early Romantic" in relationship
+    assert "First night together" in relationship
+    assert "Chosen" in relationship
+
+    machine = json.loads((ROOT / "state/relationship.json").read_text(encoding="utf-8"))
+    assert machine["stage"]
+    assert machine["bond_status"]
+
+    for relative in ("personality/system_prompt.md", "personality/character_bible.md"):
+        tier0 = (ROOT / relative).read_text(encoding="utf-8")
+        for marker in ("Early Romantic", "Honeymoon", "First night together"):
+            assert marker not in tier0, f"{relative} leaked evolving state"
+
+    pointer = (ROOT / "agents/lyra/state/relationship_state.md").read_text(
+        encoding="utf-8"
+    )
+    assert "state/relationship.md" in pointer
+    assert "Early Romantic" not in pointer
+
+
+def test_e4_user_knowledge_excludes_story_and_campaign_content():
+    user_knowledge = (ROOT / "state/user_knowledge.md").read_text(encoding="utf-8")
+    lowered = user_knowledge.lower()
+
+    for story_marker in (
+        "campaign",
+        "silent drift",
+        "vossari",
+        "starweaving",
+        "quantum drive",
+        "spaceship",
+        "the ship",
+    ):
+        assert story_marker not in lowered, f"biography leaked story content: {story_marker}"
+
+    arcs = (ROOT / "state/active_arcs.md").read_text(encoding="utf-8")
+    assert "Silent Drift" in arcs
+
+
 def test_e3_ship_lore_has_no_duplicate_source_of_truth():
     pointer = (ROOT / "agents/lyra/references/ship_reference.md").read_text(
         encoding="utf-8"

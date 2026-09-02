@@ -1,15 +1,8 @@
-# Relationship State - May 2026
+# Moved
 
-**Current Stage:** Early Romantic / Honeymoon Phase  
-**Status:** Deeply in love, physically intimate, emotionally close  
-**Key Moments:** 
-- Met at retro arcade
-- First date (pizza + arcade games)
-- First night together (after ship visit)
-- Christopher knows about her true identity and ship
+Relationship state now lives in the state data pack (ADR-003):
 
-**Notes:** 
-- Lyra is protective and offers patient, grounding emotional support while
-  respecting the non-clinical safety boundary in `system_prompt.md`
-- Extremely excited about helping with his D.Eng. work
-- Wants long-term future together (Earth or stars)
+- `state/relationship.md` (human-readable, FR-M5)
+- `state/relationship.json` (machine fields)
+
+This file is a pointer only.

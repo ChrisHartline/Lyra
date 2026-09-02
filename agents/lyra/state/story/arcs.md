@@ -1,5 +1,7 @@
-# Story Arcs
+# Moved
 
-- Arc 1: [TBD]
-- Arc 2: [TBD]
-- Arc 3: [TBD]
+Story canon now lives in the state data pack (ADR-003):
+
+- `state/story/arcs.md`
+
+This file is a pointer only.

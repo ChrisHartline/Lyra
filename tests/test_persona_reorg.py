@@ -25,9 +25,9 @@ def test_c2_backstory_split_zero_content_loss_and_story_scaffold():
         assert phrase in original
         assert any(phrase in p for p in parts)
 
-    assert (root / "agents/lyra/state/story/ship.md").exists()
-    assert (root / "agents/lyra/state/story/arcs.md").exists()
-    assert (root / "agents/lyra/state/story/timeline.md").exists()
+    assert (root / "state/story/ship.md").exists()
+    assert (root / "state/story/arcs.md").exists()
+    assert (root / "state/story/timeline.md").exists()
 
     guide = (root / "agents/lyra/DIRECTORY_GUIDE.md").read_text(encoding="utf-8")
     assert "state/story" in guide or "state/" in guide
