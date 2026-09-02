@@ -1,10 +1,11 @@
 {
-    "version": "1.0",
-    "last_updated": "2026-07-30",
-    "overall_condition": "grounded_repair",
+  "version": "2.0",
+  "last_updated": "2026-09-01",
+  "overall_condition": "grounded_repair",
+  "systems": {
     "quantum_drive": {
       "status": "unstable",
-      "notes": "Entanglement coils require further calibration. Not safe for jump."
+      "notes": "Entanglement coils require further calibration and the phase regulator is still missing. Not safe for jump."
     },
     "power_core": {
       "status": "degraded",
@@ -15,20 +16,33 @@
       "status": "manual_operational",
       "notes": "Camouflage nets + natural cover in use. Active systems available but power-hungry."
     },
+    "holographic_disguise": {
+      "status": "operational",
+      "notes": "Needs periodic recharging."
+    },
     "life_support": {
       "status": "nominal",
       "capacity": 2
     },
+    "navigation": {
+      "status": "nominal",
+      "notes": "Navigator-grade suite intact."
+    },
+    "food_synthesizer": {
+      "status": "broken",
+      "notes": "Meals come from off-ship."
+    },
     "hull": {
       "status": "minor_damage",
-      "notes": "Entry scarring; non-critical."
-    },
-    "location": {
-      "type": "hidden_terrestrial",
-      "notes": "Near state park; access controlled."
-    },
-    "living_conversion": {
-      "status": "in_progress",
-      "notes": "Cargo bay primary living space. Basic comfort items staged."
+      "notes": "Entry scarring; non-critical. Bio-signature lock active."
     }
+  },
+  "location": {
+    "type": "hidden_terrestrial",
+    "notes": "Near state park; access controlled."
+  },
+  "living_conversion": {
+    "status": "in_progress",
+    "notes": "Cargo bay primary living space. Basic comfort items staged."
   }
+}

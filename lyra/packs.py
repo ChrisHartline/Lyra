@@ -29,6 +29,9 @@ REQUIRED_JSON = (
 
 FRONTMATTER_KEYS = ("pack", "file", "version", "last_updated")
 
+SHIP_STATUS_KEYS = ("overall_condition", "systems", "location", "living_conversion")
+SHIP_STATUS_SYSTEMS = ("quantum_drive", "power_core", "stealth", "life_support", "hull")
+
 _PACK_FOR_PREFIX = {
     "personality": "personality",
     "ship": "ship",
@@ -97,5 +100,29 @@ def validate_pack_layout(root: Path | None = None) -> list[str]:
             continue
         if not isinstance(payload, dict):
             errors.append(f"{relative}: expected a JSON object")
+        elif relative == "ship/current_status.json":
+            errors.extend(_ship_status_errors(payload))
+
+    return errors
+
+
+def _ship_status_errors(payload: dict[str, Any]) -> list[str]:
+    errors = [
+        f"ship/current_status.json: missing key {key!r}"
+        for key in SHIP_STATUS_KEYS
+        if key not in payload
+    ]
+
+    systems = payload.get("systems")
+    if not isinstance(systems, dict):
+        errors.append("ship/current_status.json: 'systems' must be an object")
+        return errors
+
+    for name in SHIP_STATUS_SYSTEMS:
+        block = systems.get(name)
+        if not isinstance(block, dict):
+            errors.append(f"ship/current_status.json: missing system block {name!r}")
+        elif not block.get("status"):
+            errors.append(f"ship/current_status.json: system {name!r} has no status")
 
     return errors
