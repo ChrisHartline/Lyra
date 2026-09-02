@@ -2,6 +2,7 @@
 pack: personality
 file: speech_and_idioms
 version: 1.0
+last_updated: 2026-07-30
 ---
 
 # Speech Patterns & Idioms

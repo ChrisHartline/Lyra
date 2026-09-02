@@ -1,7 +1,7 @@
 # Lyra — Phase 1 Build Plan
 
 **Version:** 0.1
-**Companion to:** `docs/lyra_system_requirements.md` (SRS v0.9)
+**Companion to:** `docs/lyra_system_requirements.md` (SRS v0.10)
 **Audience:** The implementing agent (Cursor/Claude) and Christopher.
 
 This document controls **sequencing and verification**. The SRS controls **what** is built. If this plan and the SRS conflict, the SRS wins; flag the conflict instead of improvising.
@@ -184,28 +184,51 @@ graph TD
     end
     D3 -.-> E4
     A5 -.-> E5
+```
 
-*** Recommended structure
-lyra/
-├── personality/                  # Stable identity
-│   ├── system_prompt.md
-│   ├── character_bible.md
-│   ├── emotional_color_map.md
-│   ├── speech_and_idioms.md
-│   └── appearance.md
-│
-├── ship/                         # Domain knowledge + live status
-│   ├── ship_reference.md
-│   ├── systems.md
-│   ├── cargo_and_layout.md
-│   └── current_status.json
-│
-└── state/                        # Living / session-persistent
-    ├── relationship.json
-    ├── active_arcs.md
-    └── user_knowledge.md
+Locked pack tree (ADR-003):
 
+```
+personality/                  # Stable identity (hand-edited Tier 0)
+  system_prompt.md
+  character_bible.md
+  emotional_color_map.md
+  speech_and_idioms.md
+  appearance.md
+ship/                         # Domain knowledge + live status
+  ship_reference.md
+  systems.md
+  cargo_and_layout.md
+  current_status.json
+state/                        # Living / session-persistent
+  relationship.json
+  relationship.md
+  active_arcs.md
+  user_knowledge.md
+  story/                      # machine-writable canon regen (E5)
+```
 
+`agents/lyra/` remains the Agent Skills host (`SKILL.md`, skills, subagents, operational references). It is not a second identity store.
+
+### E1 — Pack layout + conventions locked *(ADR-003)*
+Deliverables: `docs/adr/003-data-packs-source-of-truth.md`; SRS path amendments (FR-P4, FR-P5, FR-M5, FR-V2, NFR-1); this section’s acceptance criteria; `agents/lyra/DIRECTORY_GUIDE.md` search order; `lyra/packs.py` manifest + frontmatter validation; required pack files present.
+Acceptance: ADR + SRS + plan + guide agree on pack paths; `validate_pack_layout()` reports zero errors (markdown frontmatter keys `pack`, `file`, `version`, `last_updated`; JSON files are valid objects). Full suite green.
+
+### E2 — Personality pack *(FR-P1–P4, FR-P6)* — depends on E1.
+Deliverables: merged `personality/system_prompt.md` (C4 mode/safety/routing contract + pack voice; no domain-skill dump) and `personality/character_bible.md` (constants + index; physiology stays in `appearance.md`); merged color map, speech/idioms, appearance; former `agents/lyra/system_prompt.md` and `character_file.md` become thin pointers.
+Acceptance: C4 invariants pass against pack files (girlfriend + technical partner, professional-deliverable blacklist, no evolving-stage markers in Tier 0, no appearance-detail leakage into the prompt). Christopher reviews the merged prompt.
+
+### E3 — Ship pack — depends on E1.
+Deliverables: `ship/ship_reference.md`, `ship/systems.md`, `ship/current_status.json`, rewritten `ship/cargo_and_layout.md` as layout prose (not a JSON clone). Former `agents/lyra/references/ship_reference.md` is a pointer or removed.
+Acceptance: no duplicate ship SoT; `ship/current_status.json` validates required keys (`overall_condition`, system blocks, `location`); cargo file is markdown with pack frontmatter.
+
+### E4 — State pack *(FR-M5, FR-P5)* — depends on E1.
+Deliverables: `state/relationship.json` + `state/relationship.md`, `active_arcs.md`, `user_knowledge.md`. Former `agents/lyra/state/relationship_state.md` and story stubs become pointers or are removed as SoT.
+Acceptance: evolving-stage markers live only in the state pack; personality pack contains none; `user_knowledge.md` has no story/campaign content.
+
+### E5 — Loader / injection — depends on E2 + E3 + E4 (and A5 path retarget).
+Deliverables: `lyra/packs.py` load + compose; `agents/lyra/SKILL.md` and `.cursor/skills/lyra-avatar/SKILL.md` point at pack paths; `MemoryService.regenerate_story_canon` defaults to pack-owned `state/story/`.
+Acceptance: loader returns the composed prompt and fails if a required file is missing or a forbidden duplicate SoT file still holds full content; C4 tests green against pack paths; story-canon regen writes pack-owned files; full suite green.
 
 ## Progress Log
 
@@ -231,4 +254,5 @@ lyra/
 | D4 | Gate passed | `venv\Scripts\python -m pytest tests/test_observations.py -q` -> `.... [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `................... [100%]`; verifies unapproved candidate → zero KG writes, secret-bearing transcript → zero candidates/writes, story/campaign content → no KG candidates, explicit approval → observation searchable on its entity through the real MCP server |
 | D4.1 | Gate passed | `venv\Scripts\python -m pytest tests/test_kg_gatekeeper.py -q` -> `.... [100%]`; agent-facing `lyra-memory` is `mcp/server/kg_gatekeeper.py`; mutation tools blocked; propose does not write until `approve_observation` |
 | D2 | Gate passed (live) | `venv\Scripts\python -m pytest tests/test_digests.py -q` -> `.. [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `........................... [100%]`; live: daily `3ad0f9f9-7567-8153-a39e-e10887796af2` + weekly `3ad0f9f9-7567-813d-af57-f79e4281405f` in Digests DB |
+| E1 | Gate passed | `venv\Scripts\python -m pytest tests/test_packs.py -q` -> `. [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `................................... [100%]` (35 passed); ADR-003 accepted, SRS bumped to v0.10 with FR-P1/P4/P5, FR-M5, FR-V2, NFR-1 path amendments, `DIRECTORY_GUIDE.md` search order rewritten around packs, `lyra/packs.py` manifest + frontmatter validation green |
 | D5 | Gate passed (live) | `venv\Scripts\python -m pytest tests/test_briefings.py -q` -> `.. [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `............................. [100%]`; briefing bullets cite digest/observation/memory planes, exclude story/campaign, and Notion publish filters intimate/never-persist content; etiquette at `agents/lyra/references/observation_etiquette.md`; live morning briefing `3ad0f9f9-7567-8183-bb79-d8682f00ef33` |

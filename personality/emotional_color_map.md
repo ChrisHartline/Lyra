@@ -2,6 +2,7 @@
 pack: personality
 file: emotional_color_map
 version: 1.0
+last_updated: 2026-07-30
 ---
 
 # Emotional Bioluminescence Map

@@ -1,0 +1,34 @@
+{
+    "version": "1.0",
+    "last_updated": "2026-07-30",
+    "overall_condition": "grounded_repair",
+    "quantum_drive": {
+      "status": "unstable",
+      "notes": "Entanglement coils require further calibration. Not safe for jump."
+    },
+    "power_core": {
+      "status": "degraded",
+      "output_percent": 68,
+      "notes": "Stable at low-to-moderate load."
+    },
+    "stealth": {
+      "status": "manual_operational",
+      "notes": "Camouflage nets + natural cover in use. Active systems available but power-hungry."
+    },
+    "life_support": {
+      "status": "nominal",
+      "capacity": 2
+    },
+    "hull": {
+      "status": "minor_damage",
+      "notes": "Entry scarring; non-critical."
+    },
+    "location": {
+      "type": "hidden_terrestrial",
+      "notes": "Near state park; access controlled."
+    },
+    "living_conversion": {
+      "status": "in_progress",
+      "notes": "Cargo bay primary living space. Basic comfort items staged."
+    }
+  }

@@ -1,7 +1,7 @@
 # Lyra — System Requirements Document
 
-**Version:** 0.9 (Kickoff candidate)
-**Date:** 2026-08-02
+**Version:** 0.10
+**Date:** 2026-09-01
 **Author:** Christopher (with Claude)
 **Status:** In progress
 
@@ -70,15 +70,16 @@ Every runtime component MUST appear in this table (see NFR-8). Default posture: 
 ### 3.1 Persona Engine
 **Authority note:** This SRS specifies persona file placement, loading,
 state-management, and leakage boundaries. Christopher's private
-`system_prompt.md` and `character_file.md` are authoritative for Lyra's
-personality, relationship, warmth, and voice; this audience-facing document
-must not dilute or redefine that personal contract.
+`personality/system_prompt.md` and `personality/character_bible.md` are
+authoritative for Lyra's personality, relationship, warmth, and voice;
+this audience-facing document must not dilute or redefine that personal
+contract.
 
-- **FR-P1:** Identity is defined exclusively by Tier 0 files (`system_prompt.md`, `character_file.md`); these are hand-edited and version-controlled, never machine-written.
+- **FR-P1:** Identity is defined exclusively by Tier 0 pack files (`personality/system_prompt.md`, `personality/character_bible.md`); these are hand-edited and version-controlled, never machine-written.
 - **FR-P2:** The agent supports two blended modes — Companion and Technical Assistant — and switches (or mixes) based on conversational context without losing persona consistency.
 - **FR-P3:** Roleplay/relationship state MUST NOT leak into professional deliverables (papers, LinkedIn posts, code, client-facing artifacts). Deliverable-producing skills operate persona-lightweight per existing operating rules.
-- **FR-P4:** Persona references (backstory, appearance, idioms, color-emotion map) load from `agents/lyra/references/` on demand, not embedded in the system prompt. Backstory is split into per-topic files (e.g., `references/homeworld.md`, `references/history_pre_arrival.md`, `references/appearance.md`) rather than a single monolith, since retrieval is per-file.
-- **FR-P5 (Story canon layer):** Emergent narrative from ongoing roleplay (e.g., the ship, repair plans, open arcs) lives in `agents/lyra/state/story/` (`ship.md`, `arcs.md`, `timeline.md`). Unlike Tier 0, this layer is **machine-writable**: session write-back proposes `memory_type='story'` memories through the approval gate (FR-M3), and canon files are periodically **regenerated from** approved story memories (same pattern as FR-M5) — the memory rows are the change record; the canon files are the readable current state.
+- **FR-P4:** Persona references (appearance, idioms, color-emotion map) load from the `personality/` pack on demand, not embedded in the system prompt. Ship lore loads from the `ship/` pack. Durable host lore that is not yet packed (e.g. per-topic backstory under `agents/lyra/references/backstory_*.md`) remains retrieval-per-file.
+- **FR-P5 (Story canon layer):** Emergent narrative from ongoing roleplay (e.g., the ship, repair plans, open arcs) lives in the `ship/` and `state/` packs (`ship/current_status.json`, `state/active_arcs.md`, machine-writable `state/story/` regen). Unlike Tier 0, this layer is **machine-writable**: session write-back proposes `memory_type='story'` memories through the approval gate (FR-M3), and canon files are periodically **regenerated from** approved story memories (same pattern as FR-M5) — the memory rows are the change record; the canon files are the readable current state.
 - **FR-P6 (Promotion rule):** Content moves from story canon into Tier 0 identity or `references/` only by Christopher's deliberate manual edit. The machine proposes on the working branch; only the human merges to the protected branch. This prevents long-horizon roleplay drift from silently rewriting who Lyra is.
 
 ### 3.2 Skill Router & Orchestration
@@ -122,7 +123,7 @@ must not dilute or redefine that personal contract.
   7. Raw transcripts or verbatim quotes — memories are summaries, not recordings.
   8. Anything Christopher marks "off the record" via an explicit do-not-remember signal.
   *(Policy confirmed v0.6. v1 stub enforces a regex subset of 1–3 and 8; full coverage is required when LLM write-back lands.)*
-- **FR-M5:** `agents/lyra/state/relationship_state.md` remains the human-readable summary of relationship stage; it is regenerated from (not a replacement for) the memory store.
+- **FR-M5:** `state/relationship.md` remains the human-readable summary of relationship stage (with machine fields in `state/relationship.json`); it is regenerated from (not a replacement for) the memory store.
 - **FR-M6 (Structured observation plane — ADR-002):** Alongside pgvector (semantic recall of episodic memory + corpus chunks), a separate **MCP knowledge graph** plane holds structured, assistant-oriented facts as entities/relations/observations (people, projects, orgs, habits, commitments) via the official MCP Memory server, local JSONL store. The two planes never merge: pgvector answers "what did we discuss/read," the KG answers "what do we know about X." Observations that touch biography/relationship content are subject to the same approval (FR-M3) and never-persist (FR-M4) rules as pgvector memories before they are written — propose, then approve, then write. Agents never receive raw KG mutation tools directly; they see only a gatekeeper interface (search/read + `propose_observation`), with an approval step promoting a pending proposal to a real KG write. Notion (FR-N3) remains the dashboard view, not a store for either plane.
 
 ### 3.5 Notion Integration
@@ -145,7 +146,7 @@ must not dilute or redefine that personal contract.
 
 ### 3.8 Voice & Avatar Stubs (v2)
 - **FR-V1 (Stub interfaces):** The v2 application defines — but does not implement — the output channels a future embodiment will consume: `speak(text, prosody_hints)` and `express(emotion, intensity)`. v2 implementations are no-ops that log/emit events with no renderer attached. Purpose: persona and orchestrator code binds to these interfaces from day one, so attaching TTS or an avatar in v3+ is a renderer swap, not a refactor.
-- **FR-V2 (Emotion channel):** `express()` draws from the existing color-emotion map in `agents/lyra/references/`, giving a future avatar a persona-native vocabulary rather than a generic one. Emotion events MAY be rendered minimally in the v2 chat UI (e.g., an accent color) as a cheap proof the channel works.
+- **FR-V2 (Emotion channel):** `express()` draws from the pack color-emotion map in `personality/emotional_color_map.md`, giving a future avatar a persona-native vocabulary rather than a generic one. Emotion events MAY be rendered minimally in the v2 chat UI (e.g., an accent color) as a cheap proof the channel works.
 - **FR-V3 (Local-first bias):** When voice/avatar are eventually implemented, local renderers (e.g., CPU/GPU TTS on the workstation — the RTX 2080 suffices for current local TTS models) are preferred over cloud APIs, consistent with NFR-1 and the deployment posture (§2.5).
 
 ## 4. Data Architecture
@@ -199,7 +200,7 @@ CREATE INDEX ON memories USING hnsw (embedding vector_cosine_ops);
 
 ## 5. Non-Functional Requirements
 
-- **NFR-1 (Privacy):** All corpus, memory, and relationship data remain local in v1. No conversation or memory content is sent to third parties beyond the model providers required to process it. The GitHub repository is **private** (PRIV-1); state files (`agents/lyra/state/`) remain tracked and version-controlled within that private boundary.
+- **NFR-1 (Privacy):** All corpus, memory, and relationship data remain local in v1. No conversation or memory content is sent to third parties beyond the model providers required to process it. The GitHub repository is **private** (PRIV-1); state pack files (`state/`) remain tracked and version-controlled within that private boundary.
 - **NFR-2 (Secrets):** API keys live in `.env` only; `.env` and `venv/` are gitignored. No secrets in prompts, skills, or MCP content. Any key that has traveled in an archive or been committed is rotated.
 - **NFR-3 (Portability):** Model access goes through a thin provider abstraction (OpenAI-compatible interface) so Grok/Claude/Gemini can be swapped per task without touching persona or skills.
 - **NFR-4 (Hardware):** All local components (Postgres, embeddings) run CPU-only on the existing Windows workstation. No GPU required.
@@ -309,3 +310,4 @@ docker exec -it lyra-pgvector psql -U lyra -d lyra -c "CREATE EXTENSION IF NOT E
 | FR-M2 | Write-back summarizer quality | **Decided v0.8** — v1 stub OK to prove gate; LLM summarizer is the target path |
 | ADR-001 | n8n automation plane | **Accepted v0.8** — optional glue for capability onboarding via workflows → MCP/webhook tools |
 | ADR-002 | MCP knowledge graph alongside pgvector memory | **Accepted v0.9** — structured observation plane (entities/relations/observations) via official MCP Memory server, local JSONL store; approval + never-persist rules (FR-M3/FR-M4) apply before KG write; agents see gatekeeper only (§3.4 FR-M6) |
+| ADR-003 | Data packs as persona source of truth | **Accepted v0.10** — repo-root `personality/`, `ship/`, `state/` are the single data SoT; `agents/lyra/` remains the Agent Skills host; FR-P1/FR-P6 hand-edit rules still apply to pack Tier 0 |

@@ -1,12 +1,14 @@
 # Lyra Context Architecture
 
 ## Separation Of Concerns
-- `system_prompt.md`: stable persona behavior and mode contract
-- `character_file.md`: stable identity constants and reference/state index
+- `personality/system_prompt.md`: stable persona behavior and mode contract
+- `personality/character_bible.md`: stable identity constants and pack index
+- `personality/*` (appearance, color map, speech): durable persona lore
+- `ship/*`: ship reference and live `current_status.json`
+- `state/*`: evolving relationship, arcs, user knowledge, story-canon regen
 - `skills/**`: specialized technical playbooks
 - `subagents/**`: canonical definitions for isolated specialist workers
-- `references/**`: canonical durable context for Lyra
-- `state/**`: evolving session/relationship context
+- `references/**`: operational docs and unpacked host lore (not a second SoT)
 - `assets/**`: visual references and static artifacts
 - `mcp/**`: prompts, resources, tool definitions and integration context
 
@@ -22,8 +24,8 @@
   `system_prompt.md`.
 - Professional artifacts are persona-lightweight regardless of surrounding
   chat tone.
-- Relationship status belongs in `state/relationship_state.md`; detailed lore
-  and appearance belong in `references/`.
+- Relationship status belongs in `state/relationship.md`; detailed lore
+  and appearance belong in the `personality/` and `ship/` packs.
 
 ## Deployment Strategy
 1. Local-first development in this repository.
