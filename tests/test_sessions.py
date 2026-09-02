@@ -92,6 +92,31 @@ def test_turn_status_and_visible_message_contract(ensure_db):
     assert len(service.list_messages(session["session_id"], visible_only=False)) == 2
 
 
+def test_restart_recovery_marks_unfinished_turns_disconnected(ensure_db):
+    _reset()
+    service = SessionService(connection_factory=_conn)
+    session = service.create_session("Recovery")
+    pending = service.start_turn(session["session_id"], "pending")
+    running = service.start_turn(session["session_id"], "running")
+    completed = service.start_turn(session["session_id"], "running")
+    service.update_turn(completed["turn_id"], "completed")
+
+    recovered = SessionService(connection_factory=_conn).recover_interrupted_turns(
+        session["session_id"]
+    )
+
+    assert recovered == 2
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, status, error_code FROM session_turns ORDER BY id"
+            )
+            statuses = {str(row[0]): (row[1], row[2]) for row in cur.fetchall()}
+    assert statuses[pending["turn_id"]] == ("disconnected", "runtime_interrupted")
+    assert statuses[running["turn_id"]] == ("disconnected", "runtime_interrupted")
+    assert statuses[completed["turn_id"]] == ("completed", None)
+
+
 def test_synopsis_replaces_only_summarized_prefix(ensure_db):
     _reset()
     service = SessionService(connection_factory=_conn)

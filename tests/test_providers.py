@@ -255,3 +255,67 @@ def test_invalid_tool_json_becomes_error_without_raw_payload():
 
     assert events[0].kind is EventKind.ERROR
     assert "not-a-secret" not in (events[0].text or "")
+
+
+def test_anthropic_adapter_translates_generic_tool_history():
+    payloads: list[dict[str, Any]] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        payloads.append(json.loads(request.content))
+        return httpx.Response(
+            200,
+            text=(
+                'event: message_delta\n'
+                'data: {"type":"message_delta","delta":{"stop_reason":"end_turn"}}\n\n'
+                'event: message_stop\n'
+                'data: {"type":"message_stop"}\n\n'
+            ),
+        )
+
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            profile = ModelProfile(
+                "specialist",
+                "anthropic",
+                "claude-test",
+                "ANTHROPIC_API_KEY",
+                "https://example.test/v1",
+            )
+            return await _collect(
+                AnthropicAdapter(client).stream(
+                    profile,
+                    [
+                        {
+                            "role": "assistant",
+                            "content": None,
+                            "tool_calls": [
+                                {
+                                    "id": "call-1",
+                                    "type": "function",
+                                    "function": {
+                                        "name": "search_corpus",
+                                        "arguments": '{"query":"stars"}',
+                                    },
+                                }
+                            ],
+                        },
+                        {
+                            "role": "tool",
+                            "tool_call_id": "call-1",
+                            "content": '{"hits":[]}',
+                        },
+                    ],
+                    environ={"ANTHROPIC_API_KEY": "secret"},
+                )
+            )
+
+    events = asyncio.run(run())
+
+    assert events[-1].kind is EventKind.COMPLETION
+    assert payloads[0]["messages"][0]["content"][0] == {
+        "type": "tool_use",
+        "id": "call-1",
+        "name": "search_corpus",
+        "input": {"query": "stars"},
+    }
+    assert payloads[0]["messages"][1]["content"][0]["type"] == "tool_result"

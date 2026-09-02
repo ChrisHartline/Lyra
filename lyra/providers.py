@@ -332,14 +332,58 @@ class AnthropicAdapter:
             yield RuntimeEvent.error("provider_not_configured", str(exc))
             return
         system_parts: list[str] = []
-        anthropic_messages: list[Mapping[str, Any]] = []
+        anthropic_messages: list[dict[str, Any]] = []
         for message in messages:
             if message.get("role") == "system":
                 content = message.get("content")
                 if isinstance(content, str):
                     system_parts.append(content)
+            elif message.get("role") == "tool":
+                anthropic_messages.append(
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": message.get("tool_call_id"),
+                                "content": str(message.get("content", "")),
+                            }
+                        ],
+                    }
+                )
+            elif message.get("role") == "assistant" and message.get("tool_calls"):
+                blocks: list[dict[str, Any]] = []
+                content = message.get("content")
+                if isinstance(content, str) and content:
+                    blocks.append({"type": "text", "text": content})
+                calls = message.get("tool_calls")
+                if isinstance(calls, Sequence):
+                    for call in calls:
+                        if not isinstance(call, Mapping):
+                            continue
+                        function = call.get("function")
+                        if not isinstance(function, Mapping):
+                            continue
+                        arguments = function.get("arguments", "{}")
+                        if isinstance(arguments, str):
+                            parsed, error = _json_object(arguments)
+                            if error:
+                                parsed = {}
+                        elif isinstance(arguments, Mapping):
+                            parsed = dict(arguments)
+                        else:
+                            parsed = {}
+                        blocks.append(
+                            {
+                                "type": "tool_use",
+                                "id": call.get("id"),
+                                "name": function.get("name"),
+                                "input": parsed or {},
+                            }
+                        )
+                anthropic_messages.append({"role": "assistant", "content": blocks})
             else:
-                anthropic_messages.append(message)
+                anthropic_messages.append(dict(message))
         payload: dict[str, Any] = {
             "model": profile.model,
             "messages": anthropic_messages,

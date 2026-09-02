@@ -320,6 +320,26 @@ class SessionService:
             conn.commit()
         return self._turn(row)
 
+    def recover_interrupted_turns(
+        self, session_id: str | uuid.UUID | None = None
+    ) -> int:
+        session_filter = "AND session_id = %s" if session_id is not None else ""
+        params: tuple[Any, ...] = (session_id,) if session_id is not None else ()
+        with self.connection_factory() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    UPDATE session_turns
+                    SET status = 'disconnected', error_code = 'runtime_interrupted'
+                    WHERE status IN ('pending', 'running')
+                    {session_filter}
+                    """,
+                    params,
+                )
+                recovered = cur.rowcount
+            conn.commit()
+        return recovered
+
     def update_turn(
         self,
         turn_id: str | uuid.UUID,
