@@ -12,6 +12,7 @@ import psycopg
 
 from .db import connect
 from .embeddings import EmbeddingService
+from .packs import STORY_CANON_DIR
 
 
 def _vector_literal(vec: np.ndarray) -> str:
@@ -161,7 +162,7 @@ class MemoryService:
             raise ValueError(f"Memory id not found: {memory_id}")
         return {"memory_id": int(row[0]), "approved": bool(row[1])}
 
-    def regenerate_story_canon(self, story_dir: str | Path = "agents/lyra/state/story") -> dict[str, Any]:
+    def regenerate_story_canon(self, story_dir: str | Path = STORY_CANON_DIR) -> dict[str, Any]:
         story_path = Path(story_dir)
         story_path.mkdir(parents=True, exist_ok=True)
 

@@ -18,6 +18,6 @@ Lyra is intended to run on Grok via xAI.
 - `LYRA_MODEL` (optional model id override)
 
 ## Ownership Boundaries
-- `agents/lyra/system_prompt.md`: persona + behavior contract
+- `personality/system_prompt.md`: persona + behavior contract
 - `agents/lyra/skills/**`: specialized technical know-how
 - `mcp/**`: tools/resources/prompts and integration content

@@ -7,14 +7,19 @@ disable-model-invocation: true
 # Lyra Agent
 
 ## Required Core Files
-- `agents/lyra/system_prompt.md`
-- `agents/lyra/character_file.md`
+- `personality/system_prompt.md`
+- `personality/character_bible.md`
 
-Always load these first for identity, behavior, and tone.
+Always load these first for identity, behavior, and tone. They are the Tier 0
+data pack (ADR-003); `agents/lyra/` holds routing, skills, and subagents.
 
 ## Context Files
-- `agents/lyra/references/**` for durable references
-- `agents/lyra/state/**` for session/relationship continuity
+- `personality/**` for appearance, emotional colors, speech, and quirks
+- `ship/**` for ship lore and live status
+- `state/**` for relationship stage, arcs, approved user facts, story canon
+- `agents/lyra/references/**` for observation etiquette and unpacked backstory
+
+`lyra.packs.compose_runtime_context()` assembles the same set programmatically.
 
 ## Technical Skill Routing
 When a request is domain-specific, load the matching skill:
