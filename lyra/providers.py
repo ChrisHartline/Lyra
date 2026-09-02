@@ -285,6 +285,7 @@ class OpenAICompatibleAdapter:
         payload: dict[str, Any] = {
             "model": profile.model,
             "messages": list(messages),
+            "max_tokens": profile.max_tokens,
             "stream": True,
             "stream_options": {"include_usage": True},
         }
