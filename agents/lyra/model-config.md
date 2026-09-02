@@ -14,8 +14,17 @@ Lyra is intended to run on Grok via xAI.
 
 ## Suggested Runtime Environment Variables
 - `GROK_API_KEY`
-- `GROK_BASE_URL` (optional, if your runtime supports endpoint override)
-- `LYRA_MODEL` (optional model id override)
+- `GROK_BASE_URL` (defaults to `https://api.x.ai/v1`)
+- `LYRA_MODEL` (back-compatible conversation model id)
+- `LYRA_CONVERSATION_PROVIDER` / `LYRA_CONVERSATION_MODEL`
+- `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL`
+- `LYRA_SPECIALIST_PROVIDER` / `LYRA_SPECIALIST_MODEL`
+
+Logical profiles are resolved when a request starts, not when the module is
+imported. `conversation` defaults to the OpenAI-compatible Grok adapter and
+`specialist` defaults to the Anthropic adapter. A profile with no model or no
+credential produces a sanitized runtime error event; it never falls back to an
+unconfigured provider or includes a secret value in output.
 
 ## Ownership Boundaries
 - `personality/system_prompt.md`: persona + behavior contract

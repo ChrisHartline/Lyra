@@ -383,7 +383,7 @@ Acceptance: both full suites pass; the secrecy, idempotency, recovery, and bucke
 | E4 | Gate passed | Focused pack/persona tests -> `........... [100%]`; full suite -> `40 passed`; relationship/state/story ownership reconciled with biography bucket isolation. |
 | E5 | Gate passed | Focused `tests/test_packs.py` -> `........... [100%]`; full suite -> `45 passed`; subagent sync all `VALID`; pack loader/composer, missing-file failure, legacy duplicate guard, and story-canon target verified. |
 | W4.1 | Gate passed | `.\\venv\\Scripts\\python.exe scripts\\validate_build_plan.py` -> `VALID`; focused: `.\\venv\\Scripts\\python.exe -m pytest tests\\test_build_plan.py -q --basetemp=data\\test_tmp\\pytest_w41 -p no:cacheprovider` -> `.. [100%]`; full suite (with Docker/npm access): `.\\venv\\Scripts\\python.exe -m pytest -q --basetemp=data\\test_tmp\\pytest_w41_full -p no:cacheprovider` -> `47 passed`. |
-| W4.2 | Not started | — |
+| W4.2 | Gate passed | Focused: `.\\venv\\Scripts\\python.exe -m pytest tests\\test_providers.py -q --basetemp=data\\test_tmp\\pytest_w42 -p no:cacheprovider` -> `..... [100%]`; compileall green; full suite (with Docker/npm access): `.\\venv\\Scripts\\python.exe -m pytest -q --basetemp=data\\test_tmp\\pytest_w42_full -p no:cacheprovider` -> `52 passed`. |
 | W4.3 | Not started | — |
 | W4.4 | Not started | — |
 | W4.5 | Not started | — |
