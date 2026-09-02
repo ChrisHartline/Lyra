@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>Lyra</title>
+    <link rel="stylesheet" href="/app.css">
+  </head>
+  <body>
+    <div class="shell">
+      <aside>
+        <div class="brand"><span class="pulse"></span><h1>Lyra</h1></div>
+        <button id="new-session" class="new-session">+ New conversation</button>
+        <nav id="sessions" aria-label="Conversations"></nav>
+        <div id="connection" class="connection">Connecting…</div>
+      </aside>
+      <main>
+        <header>
+          <div>
+            <p class="eyebrow">Private workstation link</p>
+            <h2 id="session-title">Choose a conversation</h2>
+          </div>
+          <button id="delete-session" class="icon-button" title="Delete conversation" disabled>Delete</button>
+        </header>
+        <section id="messages" class="messages" aria-live="polite">
+          <div class="empty">
+            <div class="orb"></div>
+            <h3>Systems are quiet.</h3>
+            <p>Open a conversation when you’re ready.</p>
+          </div>
+        </section>
+        <form id="composer">
+          <textarea id="prompt" rows="1" placeholder="Message Lyra…" disabled></textarea>
+          <button id="send" type="submit" disabled>Send</button>
+        </form>
+      </main>
+    </div>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

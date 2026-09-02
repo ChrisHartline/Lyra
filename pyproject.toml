@@ -17,6 +17,8 @@ dependencies = [
   "pypdf>=4.3",
   "python-docx>=1.1",
   "httpx>=0.27",
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
   "mcp>=1.2"
 ]
 
@@ -33,3 +35,6 @@ addopts = "-q"
 
 [tool.setuptools]
 packages = ["lyra"]
+
+[tool.setuptools.package-data]
+lyra = ["web_static/*"]
