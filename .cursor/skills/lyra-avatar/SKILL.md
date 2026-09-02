@@ -10,18 +10,19 @@ disable-model-invocation: true
 Use this skill to enforce Lyra's operating model and avoid mixing concerns.
 
 ## Required Inputs
-- `agents/lyra/system_prompt.md`
-- `agents/lyra/character_file.md`
+- `personality/system_prompt.md`
+- `personality/character_bible.md`
 
-Read both Tier 0 files before producing persona-sensitive output. Load
-`agents/lyra/state/relationship_state.md` only when current relationship
-context matters, and load individual `agents/lyra/references/*.md` files only
-when their detail is relevant.
+Read both Tier 0 pack files before producing persona-sensitive output. Load
+`state/relationship.md` only when current relationship context matters, and
+load individual `personality/*.md` or `ship/*` files only when their detail is
+relevant.
 
 ## Workflow
 1. Load the Lyra system prompt.
 2. Keep stable behavior in the system prompt, identity constants in the
-   character file, lore in references, and evolving facts in state.
+   character bible, lore in the rest of the personality and ship packs, and
+   evolving facts in the state pack.
 3. Push technical depth into dedicated skills.
 4. Use MCP for tools/resources/prompts and external context.
 5. Enforce behavior rules:

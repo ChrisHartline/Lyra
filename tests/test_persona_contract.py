@@ -13,7 +13,7 @@ def _read(path: Path) -> str:
 def test_c4_avatar_loader_points_to_real_tier0_files():
     avatar_skill = _read(ROOT / ".cursor/skills/lyra-avatar/SKILL.md")
 
-    for relative in ("agents/lyra/system_prompt.md", "agents/lyra/character_file.md"):
+    for relative in ("personality/system_prompt.md", "personality/character_bible.md"):
         assert relative in avatar_skill
         assert (ROOT / relative).is_file()
 
@@ -21,12 +21,12 @@ def test_c4_avatar_loader_points_to_real_tier0_files():
 
 
 def test_c4_tier0_excludes_evolving_state_and_detailed_lore():
-    system_prompt = _read(LYRA / "system_prompt.md")
-    character_file = _read(LYRA / "character_file.md")
-    tier0 = f"{system_prompt}\n{character_file}"
+    system_prompt = _read(ROOT / "personality/system_prompt.md")
+    character_bible = _read(ROOT / "personality/character_bible.md")
+    tier0 = f"{system_prompt}\n{character_bible}"
 
     assert "Christopher's girlfriend" in system_prompt
-    assert "girlfriend, affectionate companion" in character_file
+    assert "girlfriend, affectionate companion" in character_bible
     assert "personal and real" in system_prompt
 
     for evolving_marker in (
@@ -40,19 +40,19 @@ def test_c4_tier0_excludes_evolving_state_and_detailed_lore():
 
     for reference_owned_detail in (
         "5'1",
-        "lavender-purple skin",
-        "silver-white hair",
+        "lavender-purple",
         "star-shaped freckles",
+        "seven-strand",
     ):
         assert reference_owned_detail not in tier0
 
-    relationship_state = _read(LYRA / "state/relationship_state.md")
+    relationship_state = _read(ROOT / "state/relationship.md")
     assert "Current Stage" in relationship_state
     assert "Early Romantic" in relationship_state
 
 
 def test_c4_mode_contract_prevents_professional_persona_leakage():
-    system_prompt = _read(LYRA / "system_prompt.md")
+    system_prompt = _read(ROOT / "personality/system_prompt.md")
 
     assert "Technical Assistant — default for engineering work" in system_prompt
     assert "Professional Deliverable" in system_prompt
@@ -69,22 +69,21 @@ def test_c4_mode_contract_prevents_professional_persona_leakage():
 
 def test_c4_reference_and_state_ownership_is_resolvable():
     required = (
-        LYRA / "references/appearance_reference.md",
-        LYRA / "references/color_emotion_map.md",
-        LYRA / "references/idiom_list.md",
-        LYRA / "references/personality_quirks.md",
+        ROOT / "personality/appearance.md",
+        ROOT / "personality/emotional_color_map.md",
+        ROOT / "personality/speech_and_idioms.md",
+        ROOT / "ship/ship_reference.md",
+        ROOT / "state/relationship.md",
+        ROOT / "state/active_arcs.md",
+        ROOT / "state/user_knowledge.md",
         LYRA / "references/observation_etiquette.md",
-        LYRA / "references/ship_reference.md",
-        LYRA / "state/relationship_state.md",
-        LYRA / "state/story/ship.md",
-        LYRA / "state/story/arcs.md",
-        LYRA / "state/story/timeline.md",
     )
     assert all(path.is_file() for path in required)
 
-    character_file = _read(LYRA / "character_file.md")
-    assert "current relationship stage" in character_file
-    assert "references/personality_quirks.md" in character_file
-    assert "references/observation_etiquette.md" in character_file
-    assert "state/relationship_state.md" in character_file
-    assert "skills/*/SKILL.md" in character_file
+    character_bible = _read(ROOT / "personality/character_bible.md")
+    assert "relationship stage" in character_bible
+    assert "personality/appearance.md" in character_bible
+    assert "personality/speech_and_idioms.md" in character_bible
+    assert "agents/lyra/references/observation_etiquette.md" in character_bible
+    assert "state/relationship.md" in character_bible
+    assert "skills/*/SKILL.md" in character_bible
