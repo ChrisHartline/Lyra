@@ -1,14 +1,14 @@
-# Lyra — Phase 1 Build Plan
+# Lyra — Build Plan
 
-**Version:** 0.1
-**Companion to:** `docs/lyra_system_requirements.md` (SRS v0.10)
+**Version:** 0.2
+**Companion to:** `docs/lyra_system_requirements.md` (SRS v0.11)
 **Audience:** The implementing agent (Cursor/Claude) and Christopher.
 
 This document controls **sequencing and verification**. The SRS controls **what** is built. If this plan and the SRS conflict, the SRS wins; flag the conflict instead of improvising.
 
 ## Rules of Engagement (for the implementing agent)
 
-1. **Gated progression.** Do not begin a task until every task it depends on has passing acceptance tests. Parallel tracks (A/B/C) may be worked in any interleaving.
+1. **Gated progression.** Do not begin a task until every task it depends on has passing acceptance tests. Independent dependency branches may be worked in parallel.
 2. **Run the tests; report real output.** Never assert a test passed without executing it (SRS VA-3 / NFR-7). Paste actual pytest output when marking a task done.
 3. **One task, one commit (minimum).** Commit at each green gate with the task ID in the message (e.g., `A3: ingestion pipeline`), so progress is bisectable.
 4. **Full suite before "done."** A task is complete only when the entire test suite is green, not just its own tests (VA-4).
@@ -115,7 +115,7 @@ Acceptance: tests verify all persona-sensitive loaders point to real files, Tier
 
 All thirteen gates green (A1–A5, B1–B3, C1–C4 incl. C3.1), full suite green, and a live end-to-end demo: Christopher asks Lyra to research a topic → sources ingested → corpus answer with citations → digest posted to Notion → candidate memory proposed and approved.
 
-## Phase 2 preview — Personal assistant, Notion digests, knowledge graph
+## Build Wave 2 — Personal assistant, Notion digests, knowledge graph
 
 Companion intent (SRS to be updated before gates open): Lyra as a **daily / weekly personal + professional assistant**, with Notion as the human dashboard and an MCP knowledge graph for structured observations.
 
@@ -163,7 +163,7 @@ Acceptance: briefing cites which plane each bullet came from (digest / observati
 **Boundary reminder:** Notion = dashboard; pgvector = semantic corpus + episodic memory; MCP KG = structured observations; n8n = optional glue (ADR-001). Do not collapse these planes.
 
 
-## Phase 3 — Lyra Data Packs (Personality, Ship, State)
+## Build Wave 3 — Lyra Data Packs (Personality, Ship, State)
 
 Companion intent: give Lyra a clean, portable, versionable set of **data packs** that separate stable identity from living state. These packs become the single source of truth for system prompts, tools, and persistence.
 
@@ -230,6 +230,129 @@ Acceptance: evolving-stage markers live only in the state pack; personality pack
 Deliverables: `lyra/packs.py` load + compose; `agents/lyra/SKILL.md` and `.cursor/skills/lyra-avatar/SKILL.md` point at pack paths; `MemoryService.regenerate_story_canon` defaults to pack-owned `state/story/`.
 Acceptance: loader returns the composed prompt and fails if a required file is missing or a forbidden duplicate SoT file still holds full content; C4 tests green against pack paths; story-canon regen writes pack-owned files; full suite green.
 
+## Build Wave 4 — Standalone Runtime
+
+```mermaid
+graph TD
+    W41[W4.1: roadmap and requirements cleanup]
+    W42[W4.2: provider and event abstraction]
+    W43[W4.3: persistent sessions and context]
+    W44[W4.4: safe conversational agent loop]
+    W45[W4.5: local web chat]
+    W46[W4.6: workstation service]
+    W41 --> W42
+    W41 --> W43
+    W42 --> W44
+    W43 --> W44
+    W44 --> W45
+    W45 --> W46
+```
+
+### W4.1 — Roadmap and requirements cleanup
+Deliverables: rename this document as a multi-wave build plan; distinguish SRS product versions from build waves; preserve and order historical A–E evidence without duplicate task rows; add ADR-004; add `scripts/validate_build_plan.py` and its tests.
+Acceptance: every gate has exactly one definition and one progress row; progress rows are ordered; hidden task ranges fail validation; focused validator tests and the full suite pass; Christopher's roadmap identifier choice is recorded by this accepted plan.
+
+### W4.2 — Provider and event abstraction
+Deliverables: async Grok/OpenAI-compatible and Anthropic adapters; logical model profiles resolved from runtime config; normalized text, tool, subagent, emotion, completion, and error events.
+Acceptance: mocked provider streams normalize to the same event contract; missing credentials/model profiles fail safely without exposing secrets; focused tests and the full suite pass.
+
+### W4.3 — Persistent sessions and context
+Deliverables: PostgreSQL-backed named sessions, visible messages, channel bindings, turn status, deletion, context budgeting, and session-only synopsis support.
+Acceptance: sessions resume after service restart, delete transitively, and remain isolated from corpus, vector memory, KG, story, and campaign planes; only approved bucket-filtered memories enter context; focused tests and the full suite pass.
+
+### W4.4 — Safe conversational agent loop
+Deliverables: streamed model/tool loop with bounded iterations, timeouts, disconnect recovery, explicit MCP registry/allowlist, read-only researcher orchestration, and no-op voice/emotion outputs.
+Acceptance: permitted corpus and gated-memory tools work; shell, filesystem-write, Git, desktop-control, raw memory approval, and unregistered MCP tools cannot be invoked; focused tests and the full suite pass.
+
+### W4.5 — Local web chat
+Deliverables: FastAPI application and integrated HTML/CSS/JavaScript UI for session CRUD, Markdown messages, SSE turns, status events, errors, and reconnect/resume.
+Acceptance: the HTTP/SSE contract passes automated tests; a local browser completes and resumes a real conversation; the server listens only on `127.0.0.1`; full suite passes.
+
+### W4.6 — Workstation service
+Deliverables: readiness/doctor checks, backup coverage for sessions, rotated gitignored logs, and idempotent NSSM install/uninstall/status helpers accepting an explicit NSSM path or `PATH` discovery.
+Acceptance: service install dry-run and doctor tests pass; live service survives restart and restores a named session; full suite passes.
+
+## Build Wave 5 — Code Collaboration
+
+```mermaid
+graph TD
+    W51[W5.1: coding-engine adapter]
+    W52[W5.2: sandboxed coding jobs]
+    W53[W5.3: GitHub contributor workflow]
+    W54[W5.4: live coding pilot]
+    W46 --> W51
+    W51 --> W52
+    W52 --> W53
+    W53 --> W54
+```
+
+### W5.1 — Coding-engine adapter
+Deliverables: engine-neutral start/stream/resume/cancel/review interface and first adapter using the stable Python Codex SDK; read-only planning and workspace-write implementation modes.
+Acceptance: adapter contract tests cover resumable threads, streamed events, cancellation, and sandbox selection; no Codex identity or raw worker response replaces Lyra's user-facing voice; full suite passes.
+
+### W5.2 — Sandboxed coding jobs
+Deliverables: Lyra-only repository allowlist; self-contained task packets; first approval gate; isolated job clone; sanitized persisted progress; revision/resume flow; review package containing base SHA, complete diff hash, changed files, actual tests, risks, and unresolved items.
+Acceptance: the worker cannot access the primary checkout, paths outside its job workspace, or GitHub credentials; rejected/cancelled jobs leave repositories and GitHub unchanged; full suite passes.
+
+### W5.3 — GitHub contributor workflow
+Deliverables: repository-scoped Lyra GitHub App integration; second approval gate; short-lived installation token generation outside the model context; `lyra/<job-id>-<slug>` branch publication and draft PR creation.
+Acceptance: only Metadata read, Contents read/write, Pull requests read/write, and Checks read are required; publication rejects failed tests, stale bases, secrets, forbidden files, or changed diff hashes; Lyra cannot push to, approve, mark ready, or merge `main`; full suite passes.
+
+### W5.4 — Live coding pilot
+Deliverables: one real Lyra change taken from discussion through task approval, isolated implementation, review, publication approval, and draft PR.
+Acceptance: actual test evidence and PR URL are recorded; branch attribution is Lyra's GitHub App; protected `main` rejects direct push/merge; full suite passes before sign-off.
+
+## Build Wave 6 — Mobile and Private Access
+
+### W6.1 — Telegram
+Deliverables: allowlisted long-polling notifications/chat sharing the web session store; session and coding-job status commands.
+Acceptance: unauthorized Telegram users receive no session data; web and Telegram resume the same named session; coding execution and publication approvals remain unavailable over Telegram; full suite and live mobile smoke pass.
+
+### W6.2 — Tailscale evaluation
+Deliverables: optional install/runbook for workstation and mobile; Tailscale Serve proxy to the localhost-bound service; identity validation and Christopher-only tailnet policy; explicit Funnel prohibition.
+Acceptance: no Tailscale dependency is introduced before opt-in; private mobile conversation and read-only job monitoring work; direct LAN/public access and approval actions remain blocked until separate sign-off.
+
+## Build Wave 7 — Narrative VTT
+
+```mermaid
+graph TD
+    W71[W7.1: VTT decision and executable baseline]
+    W72[W7.2: VTT persistence and module retrieval]
+    W73[W7.3: DM/player security boundary]
+    W74[W7.4: VTT MCP service]
+    W75[W7.5: Lyra campaign experience]
+    W76[W7.6: live campaign pilot]
+    W71 --> W72
+    W72 --> W73
+    W73 --> W74
+    W74 --> W75
+    W75 --> W76
+```
+
+### W7.1 — VTT decision and executable baseline
+Deliverables: ADR-005 evaluating and selecting `V:/ProjectsGit/tabletop` as the separately versioned narrative campaign authority; SRS FR-D1/IF-3 amendments; reproducible environment and real baseline tests in the VTT repository; Foundry retained only as a future ADR-gated tactical option.
+Acceptance: both repositories agree on ownership and boundaries; the VTT suite runs with recorded output; no Foundry or hosted-relay dependency remains in current-scope runtime configuration.
+
+### W7.2 — VTT persistence and module retrieval
+Deliverables: VTT-owned transactional state with stable campaign/session/character/scene/action/event IDs; immutable events; adventure-module pgvector namespace with source/section/visibility metadata; local gitignored source files; injectable dice randomness.
+Acceptance: state is atomic and restart-safe; repeated action IDs are idempotent; module ingestion is reproducible; dice and transitions are auditable; VTT and Lyra suites pass.
+
+### W7.3 — DM/player security boundary
+Deliverables: Lyra player-character profile; separate DM process owning module access, hidden state, NPC intent, and mechanical resolution; submitted player actions replace direct state mutation.
+Acceptance: planted DM secrets never appear in Lyra context, player tools, public logs, or campaign-memory proposals; unresolved player actions cannot mutate mechanics; both suites pass.
+
+### W7.4 — VTT MCP service
+Deliverables: player-safe `list_campaigns`, `open_campaign`, `get_player_scene`, `get_my_character`, `submit_player_action`, `get_action_result`, `get_public_events`, and `end_session` tools; DM tools remain internal.
+Acceptance: tool contracts enforce campaign/player identity and visibility; `end_session` may create only approval-gated campaign-memory proposals keyed by campaign ID; both suites pass.
+
+### W7.5 — Lyra campaign experience
+Deliverables: campaign mode in Lyra sessions with narration, public scene state, Lyra's sheet, dice results, and turn status; existing in-fiction/technical register transition remains intact.
+Acceptance: campaign state cannot enter biography/story retrieval; first release contains no maps, tokens, initiative board, or multiplayer UI; web experience passes automated and manual checks.
+
+### W7.6 — Live campaign pilot
+Deliverables: complete Christopher/Lyra player session run by a separate DM, restart recovery, immutable event record, and approved campaign-only write-back.
+Acceptance: both full suites pass; the secrecy, idempotency, recovery, and bucket-isolation checks pass live; Christopher signs off.
+
 ## Progress Log
 
 | Task | Status | Test evidence (commit / run) |
@@ -241,24 +364,39 @@ Acceptance: loader returns the composed prompt and fails if a required file is m
 | A5 | Gate passed | `venv\Scripts\python -m pytest tests/test_memory.py -q` -> `... [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `........... [100%]` |
 | B1 | Gate passed | `venv\Scripts\python -m pytest tests/test_embeddings.py tests/test_notion_sync.py tests/test_subagents_sync.py tests/test_persona_reorg.py -q` -> `.... [100%]` |
 | B2 | Gate passed | `venv\Scripts\python -m pytest tests/test_notion_sync.py -q` -> `.. [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `............ [100%]` |
+| B3 | Gate passed (live) | Digests DB `3ac0f9f9-7567-81a3-a35c-c3e8dbc45939` under Shared Space with Lyra (`3ac0f9f9-7567-8007-b700-d565a6ca5e7e`); smoke digest `3ac0f9f9-7567-81bd-ab31-e8c049993248` parented to Digests DB, not Projects |
 | C1 | Gate passed (Christopher sign-off 2026-07-26) | Automated: `venv\Scripts\python -m pytest tests/test_embeddings.py tests/test_notion_sync.py tests/test_subagents_sync.py tests/test_persona_reorg.py -q` -> `.... [100%]`; manual: subagent invoke check signed off by Christopher |
 | C2 | Gate passed (Christopher sign-off 2026-07-26) | Functional checks in `tests/test_persona_reorg.py` passed; full suite: `venv\Scripts\python -m pytest -q` -> `..... [100%]`; human review of persona split + story scaffold approved |
 | C3 | Gate passed | `venv\Scripts\python scripts/sync_subagents.py --check` -> all three `VALID`; `venv\Scripts\python -m pytest tests/test_subagents_sync.py -q` -> `... [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `..................... [100%]`; operational contracts, routing, supported-schema validation, drift detection, and stale cleanup verified |
-| C3.1 | Gate passed | `venv\Scripts\python -m pytest tests/test_subagent_context_packs.py -q` -> `. [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `.................................. [100%]`; task packet + Python/C++ playbooks + eval prompts present and referenced; sync `--check` green |
-| C3.1 (follow-up) | Gate passed | Commits `2d421c6`, `a93f0d8`; `venv\Scripts\python -m pytest tests/test_subagent_context_packs.py -q` -> `. [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `.................................. [100%]` (34 passed); `venv\Scripts\python scripts/sync_subagents.py --check` -> all three (cpp-developer, python-developer, researcher) `VALID`; adds `tools_and_mcp.md` (MCP/tool policy for workers) and `researcher_playbook.md`, extending context-pack coverage to the researcher subagent beyond C3.1's original Python/C++ scope — noted here rather than as a new task ID since it completes C3's original three-subagent contract rather than adding new capability |
+| C3.1 | Gate passed | Initial: `venv\Scripts\python -m pytest tests/test_subagent_context_packs.py -q` -> `. [100%]`; full suite -> `.................................. [100%]`. Addenda commits `2d421c6`, `a93f0d8`: focused test remained green; full suite `34 passed`; sync `--check` reported cpp-developer, python-developer, and researcher `VALID`; added `tools_and_mcp.md` and `researcher_playbook.md` without creating a second gate. |
 | C4 | Gate passed (Christopher sign-off 2026-07-29) | Automated: `venv\Scripts\python -m pytest tests/test_persona_reorg.py tests/test_persona_contract.py -q` -> `..... [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `......................... [100%]`; human review approved girlfriend + technical-partner Tier 0 identity, light-blend technical mode, professional-artifact boundary, and evolving relationship state |
 | Phase 1 e2e | Gate passed | `venv\Scripts\python scripts/phase1_e2e_demo.py` → ingest arXiv `1802.06002`, 3 cited corpus hits, Notion digest `3aa0f9f9-7567-81d4-a01a-e3c1a35b6fa7` + task Status=Done, memory propose/approve gate verified |
-| B3 | Gate passed (live) | Digests DB `3ac0f9f9-7567-81a3-a35c-c3e8dbc45939` under Shared Space with Lyra (`3ac0f9f9-7567-8007-b700-d565a6ca5e7e`); smoke digest `3ac0f9f9-7567-81bd-ab31-e8c049993248` parented to Digests DB, not Projects |
 | D1 | Gate passed (live) | `venv\Scripts\python -m pytest tests/test_notion_sync.py -q` -> `.... [100%]` (adds `query_database`); live: `venv\Scripts\python scripts/d1_verify_live_digest.py` -> digest `3ac0f9f9-7567-8133-b5c7-f6a4faec3b98` parented to Digests DB, Projects/tasks row count unchanged (10 before, 10 after) |
+| D2 | Gate passed (live) | `venv\Scripts\python -m pytest tests/test_digests.py -q` -> `.. [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `........................... [100%]`; live: daily `3ad0f9f9-7567-8153-a39e-e10887796af2` + weekly `3ad0f9f9-7567-813d-af57-f79e4281405f` in Digests DB |
 | D3 | Gate passed | `venv\Scripts\python -m pytest tests/test_knowledge_graph.py -q` -> `. [100%]` (live subprocess round trip via `npx @modelcontextprotocol/server-memory`, no mocking); full suite: `venv\Scripts\python -m pytest -q` -> `............... [100%]`; registered as `lyra-memory` in `.cursor/mcp.json`; live smoke create/search/delete against the registered store path (`agents/lyra/state/knowledge_graph/memory.jsonl`, gitignored) verified clean round trip |
 | D4 | Gate passed | `venv\Scripts\python -m pytest tests/test_observations.py -q` -> `.... [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `................... [100%]`; verifies unapproved candidate → zero KG writes, secret-bearing transcript → zero candidates/writes, story/campaign content → no KG candidates, explicit approval → observation searchable on its entity through the real MCP server |
 | D4.1 | Gate passed | `venv\Scripts\python -m pytest tests/test_kg_gatekeeper.py -q` -> `.... [100%]`; agent-facing `lyra-memory` is `mcp/server/kg_gatekeeper.py`; mutation tools blocked; propose does not write until `approve_observation` |
-| D2 | Gate passed (live) | `venv\Scripts\python -m pytest tests/test_digests.py -q` -> `.. [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `........................... [100%]`; live: daily `3ad0f9f9-7567-8153-a39e-e10887796af2` + weekly `3ad0f9f9-7567-813d-af57-f79e4281405f` in Digests DB |
-| E5 | Gate passed | `venv\Scripts\python -m pytest tests/test_packs.py -q` -> `........... [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `............................................. [100%]` (45 passed); `venv\Scripts\python scripts/sync_subagents.py --check` -> all three `VALID`; `lyra/packs.py` gains `load_packs()` / `compose_runtime_context()` (14622-char composed context, ship/state slices toggleable), missing files raise `PackError`, `LEGACY_POINTERS` rejects any legacy file that regrows full content, `MemoryService.regenerate_story_canon` defaults to `state/story`, and `agents/lyra/SKILL.md`, `.cursor/skills/lyra-avatar/SKILL.md`, `model-config.md`, and `AGENTS.md` point at pack paths |
-| E4 | Gate passed | `venv\Scripts\python -m pytest tests/test_packs.py tests/test_persona_contract.py tests/test_persona_reorg.py -q` -> `........... [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `........................................ [100%]` (40 passed); reconciled the two relationship records (Chosen bond is settled identity, Early Romantic is the evolving stage) into `state/relationship.md` + `state/relationship.json`, moved story-world threads out of `state/user_knowledge.md` into `state/active_arcs.md` so biography stays FR-D2 clean, relocated story canon to `state/story/`, and reduced `agents/lyra/state/relationship_state.md` and the old story stubs to pointers |
-| E3 | Gate passed | `venv\Scripts\python -m pytest tests/test_packs.py -q` -> `.... [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `...................................... [100%]` (38 passed); merged hand + pack ship lore into `ship/ship_reference.md` and `ship/systems.md`, rewrote `ship/cargo_and_layout.md` as interior prose (no JSON clone), restructured `ship/current_status.json` under a `systems` block with holo-emitter/navigation/synthesizer telemetry, added schema validation in `lyra/packs.py`, and reduced `agents/lyra/references/ship_reference.md` to a pointer |
-| E2 | Gate passed (Christopher sign-off 2026-09-01) | `venv\Scripts\python -m pytest tests/test_persona_contract.py tests/test_packs.py tests/test_persona_reorg.py -q` -> `...... [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `................................... [100%]` (35 passed); merged C4 mode/safety/routing contract with pack voice into `personality/system_prompt.md` v2.0, index+constants into `personality/character_bible.md` v2.0, physiology into `personality/appearance.md`, unified color map, folded quirks into `personality/speech_and_idioms.md`; `agents/lyra/system_prompt.md`, `character_file.md`, and the four moved reference files are pointers; avatar skill retargeted. Conflicts resolved for review: height 5'1" (hand copy) over 4'11"; hairless physiology reconciled as body-hairless with silver-white head hair; "the user" rendered as Christopher throughout |
-| E2 (follow-up) | Gate passed (Christopher sign-off 2026-09-01) | Full suite: `venv\Scripts\python -m pytest -q` -> `............................................. [100%]` (45 passed); adds a Mode Transitions subsection to `personality/system_prompt.md` so a technical question mid-scene shifts register without ending the scene or resetting the relationship, and rewrites behavior rule 6 so only an explicit request to drop the persona breaks role. Covers the blended roleplay-plus-real-work intent (FR-P2) that the removed domain-expertise list never provided; vertical nesting stays FR-D2's concern |
-| E2 (lore split) | Gate passed (Christopher sign-off 2026-09-01) | Full suite: `venv\Scripts\python -m pytest -q` -> `............................................. [100%]` (45 passed); moves the expanded Chosen-bond definition out of `personality/character_bible.md` into `agents/lyra/references/backstory_chosen_bond.md`, leaving a one-line constant plus pointer so Tier 0 stays an index (FR-P1) while the lore has room to grow. Restores the original "locking of navigation patterns" framing dropped in the E2 merge, ties the bond to why she fled the arranged match, and marks the Starweaving explicitly as an open arc rather than canon |
-| E1 | Gate passed | `venv\Scripts\python -m pytest tests/test_packs.py -q` -> `. [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `................................... [100%]` (35 passed); ADR-003 accepted, SRS bumped to v0.10 with FR-P1/P4/P5, FR-M5, FR-V2, NFR-1 path amendments, `DIRECTORY_GUIDE.md` search order rewritten around packs, `lyra/packs.py` manifest + frontmatter validation green |
 | D5 | Gate passed (live) | `venv\Scripts\python -m pytest tests/test_briefings.py -q` -> `.. [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `............................. [100%]`; briefing bullets cite digest/observation/memory planes, exclude story/campaign, and Notion publish filters intimate/never-persist content; etiquette at `agents/lyra/references/observation_etiquette.md`; live morning briefing `3ad0f9f9-7567-8183-bb79-d8682f00ef33` |
+| E1 | Gate passed | Focused `tests/test_packs.py` -> `. [100%]`; full suite -> `35 passed`; ADR-003, SRS v0.10, directory guide, pack manifest, and frontmatter validation aligned. |
+| E2 | Gate passed (Christopher sign-off 2026-09-01) | Initial persona merge: focused pack/persona tests -> `...... [100%]`; full suite -> `35 passed`. Addenda: mode-transition follow-up full suite -> `45 passed`; Chosen-bond lore split full suite -> `45 passed`. Both addenda retained E2's scope and human sign-off rather than creating duplicate gates. |
+| E3 | Gate passed | Focused `tests/test_packs.py` -> `.... [100%]`; full suite -> `38 passed`; ship lore/layout/status consolidated with schema validation and legacy pointer. |
+| E4 | Gate passed | Focused pack/persona tests -> `........... [100%]`; full suite -> `40 passed`; relationship/state/story ownership reconciled with biography bucket isolation. |
+| E5 | Gate passed | Focused `tests/test_packs.py` -> `........... [100%]`; full suite -> `45 passed`; subagent sync all `VALID`; pack loader/composer, missing-file failure, legacy duplicate guard, and story-canon target verified. |
+| W4.1 | Gate passed | `.\\venv\\Scripts\\python.exe scripts\\validate_build_plan.py` -> `VALID`; focused: `.\\venv\\Scripts\\python.exe -m pytest tests\\test_build_plan.py -q --basetemp=data\\test_tmp\\pytest_w41 -p no:cacheprovider` -> `.. [100%]`; full suite (with Docker/npm access): `.\\venv\\Scripts\\python.exe -m pytest -q --basetemp=data\\test_tmp\\pytest_w41_full -p no:cacheprovider` -> `47 passed`. |
+| W4.2 | Not started | — |
+| W4.3 | Not started | — |
+| W4.4 | Not started | — |
+| W4.5 | Not started | — |
+| W4.6 | Not started | — |
+| W5.1 | Not started | — |
+| W5.2 | Not started | — |
+| W5.3 | Not started | — |
+| W5.4 | Not started | — |
+| W6.1 | Not started | — |
+| W6.2 | Not started | — |
+| W7.1 | Not started | — |
+| W7.2 | Not started | — |
+| W7.3 | Not started | — |
+| W7.4 | Not started | — |
+| W7.5 | Not started | — |
+| W7.6 | Not started | — |

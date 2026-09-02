@@ -1,6 +1,6 @@
 # Lyra — System Requirements Document
 
-**Version:** 0.10
+**Version:** 0.11
 **Date:** 2026-09-01
 **Author:** Christopher (with Claude)
 **Status:** In progress
@@ -19,8 +19,8 @@ The defining requirement is **continuity**: unlike a stateless web chat, Lyra re
 **Secondary (meta) goal:** this project doubles as a reference case for **SRS-driven AI pair development** — demonstrating that a requirements document with numbered FRs, a dependency-gated build plan, and executable acceptance criteria lets a coding agent (Cursor/Claude) develop and test with minimal supervision, reducing time-to-prototype. Process observations are captured in `docs/lessons_learned.md` at end of Phase 1.
 
 **In scope (v1):** persona engine, skill routing, research-to-corpus pipeline, memory system, Notion integration, operation within Cursor/CLI.
-**In scope (v2):** dedicated chat UI, Telegram notifications/chat channel, Foundry VTT integration, voice & avatar **stub interfaces** (§3.8), optional Supabase migration.
-**Out of scope (for now):** full voice synthesis and avatar rendering (stubs only, per §3.8); mobile app; multi-user access and authentication — the system is single-user by design, and auth (via a cloud identity provider or Vercel's auth offerings) becomes a v3+ requirement only if a deployment ever becomes externally reachable (see NFR-8).
+**In scope (v2):** standalone conversational runtime, dedicated local chat UI, PostgreSQL-backed named sessions, Telegram notifications/chat, approval-gated repository collaboration, campaign integration, voice & avatar **stub interfaces** (§3.8), and optional private tailnet access.
+**Out of scope (for now):** general desktop control; direct conversational shell/filesystem/Git authority; public web hosting; full voice synthesis and avatar rendering (stubs only, per §3.8); native mobile app; multi-user access. Public reachability requires authentication and a new ADR (see NFR-8).
 
 ## 2. System Context
 
@@ -30,7 +30,7 @@ The defining requirement is **continuity**: unlike a stateless web chat, Lyra re
 
 ### 2.2 Host Environments
 - **v1:** Cursor IDE / Grok CLI on Windows (workspace `V:/ProjectsGit/lyra`, PowerShell default shell). Cursor provides the model loop, tool execution, subagent execution, and session context — it is the **execution engine**, not the owner of any Lyra definitions.
-- **v2:** Lyra runs as a standalone agentic application (Python service + web chat UI) that owns its own agent loop and orchestrator; Telegram bot as a lightweight channel. Cursor reverts to a development environment only.
+- **v2:** Lyra runs as a standalone Python application service with a local web chat UI, persistent named sessions, and Telegram as a lightweight channel. The conversational runtime owns its model/tool loop; repository work is isolated behind separate task and publication approvals (ADR-004). Cursor/Codex remains a development environment and may be used internally as a replaceable coding worker.
 - **Portability principle:** All agent, subagent, and skill definitions live in host-neutral formats (markdown + frontmatter) inside the repo. Host-specific directories (e.g., `.cursor/agents/`) are generated/synced targets, never the source of truth — nothing Lyra needs at runtime may live only in host config.
 
 ### 2.3 Model Providers
@@ -58,8 +58,10 @@ Every runtime component MUST appear in this table (see NFR-8). Default posture: 
 | PostgreSQL + pgvector | Docker on workstation | Same | Supabase migration only if UI goes public |
 | Embedding model | Workstation CPU | Same | 2080 = optional acceleration, never a requirement (NFR-4) |
 | Corpus MCP server | Workstation | Same | Colocated with DB (data gravity) |
-| Agent loop / orchestrator | Cursor (execution engine) | Lyra app service on workstation | FR-S6 |
-| Chat UI | — | Served from workstation (LAN) | Public exposure would trigger auth (v3+) |
+| Agent loop / orchestrator | Cursor (execution engine) | Lyra app service on workstation | FR-S6; loopback only |
+| Chat UI | — | Served from workstation on `127.0.0.1` | Optional Tailscale Serve is separately gated; no public exposure |
+| Session history | Host memory | PostgreSQL on workstation | Named raw chat sessions; operational state, not semantic memory |
+| Repository coding worker | Cursor/manual | Isolated local job workspace | Separate approvals; no GitHub credential in worker context |
 | Telegram bot | — | Workstation service | Long-polls outbound — no inbound ports required |
 | Notion | SaaS | SaaS | Human dashboard only (FR-N3); Lyra shared working space IDs in `.env` |
 | n8n (optional) | Workstation / existing host | Same | Glue workflows → MCP/webhook tools; never owns memory/corpus (ADR-001) |
@@ -88,7 +90,7 @@ contract.
 - **FR-S3:** Skills MUST NOT contain persona content; persona files MUST NOT contain domain-technical depth. (Existing separation-of-concerns rule, formalized.)
 - **FR-S4 (Subagents, v1):** Specialist ephemeral agents (e.g., `python-developer`, `cpp-developer`, `researcher`) are defined as host-neutral markdown files with frontmatter (`name`, `description`, `model`; optional host-supported execution flags) in `agents/lyra/subagents/` — the single source of truth. Tool/capability expectations live in the operational body because Cursor subagents inherit parent tools and do not support a per-agent `tools` frontmatter field. A sync script publishes copies to `.cursor/agents/` for Cursor execution in v1. Definitions persist; instances are ephemeral with fresh, isolated context per run (no shared state between runs).
 - **FR-S5 (Model pinning):** Subagent definitions MAY pin a model per task (e.g., Claude for code-generation subagents while the main persona loop runs on Grok), implementing the split-provider strategy at the orchestration layer.
-- **FR-S6 (Orchestrator, v2):** The Lyra application implements its own orchestrator: load subagent definition → construct isolated context → execute to completion via the provider abstraction (NFR-3) → return result to the main loop. The orchestrator consumes the same definition files as v1; no Cursor dependency. Keep it minimal (plain Python loop); adopt a framework only if demonstrated need arises.
+- **FR-S6 (Orchestrator, v2):** The Lyra application implements its own conversational orchestrator: compose current packs and approved context → call the provider abstraction (NFR-3) → execute only explicitly allowlisted MCP tools → stream and persist the visible response. Read-only specialists run with isolated context. Repository coding is not part of this conversational tool loop; it uses the separately approved workflow in FR-G1–FR-G5. Keep the conversation loop minimal and framework-light.
 - **FR-S7 (Dynamic agent creation, v2 → v3):** In v2, Lyra MAY author new subagent definition files on demand when a task requires a specialist that does not exist, gated on Christopher's approval before the definition is committed (same trust model as memory write-back, FR-M3). Unattended auto-creation is deferred to v3, contingent on v2 track record.
 
 ### 3.3 Research & Corpus Pipeline
@@ -107,7 +109,7 @@ contract.
 - **FR-M1:** Memory is tiered:
   - **Identity:** Tier 0 files — never auto-written.
   - **Episodic/relational memory:** pgvector `memories` table (text, embedding, type, salience, timestamp) enabling semantic recall of past sessions. Every memory carries a **bucket** per FR-D2 (biography / story / campaign); retrieval filters by bucket so contexts never blend. ("Ledger" in older notes means the same thing — a retrieval namespace, not a financial metaphor.)
-  - **Session state:** ephemeral, managed by the host.
+  - **Session state:** named raw chat sessions stored in relational PostgreSQL tables for resume across service restarts and channels (ADR-004). Session rows are operational history, not searchable semantic memory; they remain until Christopher deletes them and are never automatically copied into corpus, memory, KG, story, or campaign planes.
 - **FR-M2:** A write-back job turns each session into candidate memories.
   - **Contract (stable):** candidates are written with `approved=false`; only approved rows are recalled (FR-M3); never-persist rules apply before propose (FR-M4); each candidate is tagged with a FR-D2 bucket.
   - **v1 implementation (honest):** Phase 1 ships a **deterministic stub** — sentence split, keyword bucket tags, regex never-persist filter, and markdown dump for story-canon regen. This proves the gate and isolation contracts; it is not production-grade summarization.
@@ -149,13 +151,21 @@ contract.
 - **FR-V2 (Emotion channel):** `express()` draws from the pack color-emotion map in `personality/emotional_color_map.md`, giving a future avatar a persona-native vocabulary rather than a generic one. Emotion events MAY be rendered minimally in the v2 chat UI (e.g., an accent color) as a cheap proof the channel works.
 - **FR-V3 (Local-first bias):** When voice/avatar are eventually implemented, local renderers (e.g., CPU/GPU TTS on the workstation — the RTX 2080 suffices for current local TTS models) are preferred over cloud APIs, consistent with NFR-1 and the deployment posture (§2.5).
 
+### 3.9 Repository Collaboration (v2)
+- **FR-G1 (Separate authority):** Conversational Lyra has no shell, filesystem-write, Git, or desktop-control tools. A repository request becomes a bounded coding job only after Christopher approves a self-contained task packet naming the repository, base revision, allowed scope, constraints, acceptance criteria, and required tests.
+- **FR-G2 (Isolated worker):** Each coding job runs in an isolated checkout with workspace-scoped write access. The coding engine is replaceable behind a host-neutral adapter; the first implementation uses the stable Python Codex SDK. The worker never receives GitHub publication credentials or write access to Christopher's primary checkout.
+- **FR-G3 (Review package):** A completed job returns the base SHA, complete diff and digest, changed-file list, actual test output, risks, and unresolved items. Christopher may request revisions on the same worker thread or reject the result without changing GitHub.
+- **FR-G4 (Publication approval):** Publishing requires a second explicit approval bound to the reviewed base SHA and diff digest. The publisher may push only a `lyra/*` branch and open a draft pull request. It cannot push to, approve, mark ready, or merge the default branch.
+- **FR-G5 (GitHub least privilege):** Lyra authenticates as a GitHub App installed only on approved repositories. Installation tokens are short-lived and generated outside model context. Initial permissions are Metadata read, Contents read/write, Pull requests read/write, and Checks read; administration, secrets, workflow writes, and branch-protection bypass are prohibited.
+
 ## 4. Data Architecture
 
-Three storage planes (the routing table / TFTP server / NOC dashboard split):
+Four storage planes keep operational conversation state separate from durable knowledge:
 
 | Plane | Store | Role |
 |---|---|---|
 | Semantic index | PostgreSQL + pgvector (Docker, local) | Fast semantic lookup: `sources`, `chunks`, `memories` tables |
+| Session history | PostgreSQL relational tables (Docker, local) | Named raw chat sessions for resume; never searched as semantic memory |
 | Raw artifacts | Local filesystem `data/` (gitignored) | PDFs, scraped HTML, datasets; referenced by path from `sources` |
 | Human view | Notion | Tasks, digests, status — for Christopher, not for retrieval |
 
@@ -200,7 +210,7 @@ CREATE INDEX ON memories USING hnsw (embedding vector_cosine_ops);
 
 ## 5. Non-Functional Requirements
 
-- **NFR-1 (Privacy):** All corpus, memory, and relationship data remain local in v1. No conversation or memory content is sent to third parties beyond the model providers required to process it. The GitHub repository is **private** (PRIV-1); state pack files (`state/`) remain tracked and version-controlled within that private boundary.
+- **NFR-1 (Privacy):** Corpus, memory, relationship data, raw session history, and coding-job records remain on the workstation unless an explicitly approved integration requires transfer. No conversation or memory content is sent to third parties beyond the model/coding providers required for the requested turn or job. The GitHub repository is **private** (PRIV-1); state pack files (`state/`) remain tracked and version-controlled within that private boundary.
 - **NFR-2 (Secrets):** API keys live in `.env` only; `.env` and `venv/` are gitignored. No secrets in prompts, skills, or MCP content. Any key that has traveled in an archive or been committed is rotated.
 - **NFR-3 (Portability):** Model access goes through a thin provider abstraction (OpenAI-compatible interface) so Grok/Claude/Gemini can be swapped per task without touching persona or skills.
 - **NFR-4 (Hardware):** All local components (Postgres, embeddings) run CPU-only on the existing Windows workstation. No GPU required.
@@ -223,6 +233,7 @@ CREATE INDEX ON memories USING hnsw (embedding vector_cosine_ops);
 - **IF-2 (Provider API):** Grok via xAI OpenAI-compatible endpoint; Claude via Anthropic API; selection per task category in runtime config (`LYRA_MODEL` overrides).
 - **IF-3 (Foundry VTT):** Existing Foundry API Bridge (MCP) module via hosted relay (per FR-D1); Lyra's orchestrator consumes it as a standard MCP server. Relay API key stored in `.env` per NFR-2. Self-hosted relay documented as a future option; no bespoke bridge development in scope.
 - **IF-4 (Corpus MCP server):** Local MCP server (Python) fronting pgvector + filesystem per FR-R6; tool contracts documented in `mcp/tools/`. This is the only supported retrieval path — no direct DB access from agents.
+- **IF-5 (Coding engine):** A host-neutral Python interface starts/resumes/cancels isolated coding jobs and streams sanitized events. The first adapter uses the Codex Python SDK, but Lyra's conversation, approvals, job records, review package, and GitHub publisher remain engine-independent.
 
 ## 7. Constraints & Assumptions
 
@@ -244,13 +255,13 @@ CREATE INDEX ON memories USING hnsw (embedding vector_cosine_ops);
 7. Persona layer reorganization: per-topic reference split (FR-P4) and `state/story/` scaffold (FR-P5).
 
 **Phase 2 (v2 — Lyra as standalone agentic application):**
-1. Lyra application service with its own agent loop and orchestrator consuming existing subagent definitions (FR-S6).
-2. Web chat UI on the application service.
-3. Telegram bot (notifications first, chat second).
-4. Dynamic subagent creation with approval gate (FR-S7).
-5. Foundry VTT integration: install existing MCP bridge module (hosted relay), campaign session logic + campaign write-back (FR-D1/FR-D2).
-6. Voice & avatar stub interfaces wired through persona output (FR-V1/V2).
-7. Optional Supabase migration if hosting moves off-workstation.
+1. Standalone conversation service, named PostgreSQL sessions, and local loopback web UI (FR-S6; ADR-004).
+2. Approval-gated repository collaboration ending at a Lyra-authored draft PR (FR-G1–FR-G5).
+3. Telegram notifications/chat and optional private Tailscale Serve access; no public web hosting.
+4. Campaign integration per FR-D1/FR-D2, re-evaluated at Build Gate W7.1 before implementation.
+5. Voice & avatar stub interfaces wired through persona output (FR-V1/V2).
+6. Dynamic subagent creation remains optional and approval-gated (FR-S7).
+7. Supabase remains conditional on a future authenticated public-hosting ADR.
 
 **Phase 3 (v3 — earned autonomy & embodiment):**
 1. Per-category memory auto-commit (pending v2 trust record).
@@ -311,3 +322,4 @@ docker exec -it lyra-pgvector psql -U lyra -d lyra -c "CREATE EXTENSION IF NOT E
 | ADR-001 | n8n automation plane | **Accepted v0.8** — optional glue for capability onboarding via workflows → MCP/webhook tools |
 | ADR-002 | MCP knowledge graph alongside pgvector memory | **Accepted v0.9** — structured observation plane (entities/relations/observations) via official MCP Memory server, local JSONL store; approval + never-persist rules (FR-M3/FR-M4) apply before KG write; agents see gatekeeper only (§3.4 FR-M6) |
 | ADR-003 | Data packs as persona source of truth | **Accepted v0.10** — repo-root `personality/`, `ship/`, `state/` are the single data SoT; `agents/lyra/` remains the Agent Skills host; FR-P1/FR-P6 hand-edit rules still apply to pack Tier 0 |
+| ADR-004 | Standalone runtime boundaries | **Accepted v0.11** — local Python conversation service; PostgreSQL named sessions; allowlisted MCP only; repository coding and publication use separate explicit approvals; loopback web by default |
