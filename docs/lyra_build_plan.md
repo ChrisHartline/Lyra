@@ -1,7 +1,7 @@
 # Lyra — Build Plan
 
-**Version:** 0.2
-**Companion to:** `docs/lyra_system_requirements.md` (SRS v0.11)
+**Version:** 0.3
+**Companion to:** `docs/lyra_system_requirements.md` (SRS v0.13)
 **Audience:** The implementing agent (Cursor/Claude) and Christopher.
 
 This document controls **sequencing and verification**. The SRS controls **what** is built. If this plan and the SRS conflict, the SRS wins; flag the conflict instead of improvising.
@@ -379,76 +379,129 @@ Acceptance: callbacks cite approved local state, can be corrected or disabled, d
 Deliverables: optional ship-status briefs and small ambient story developments grounded in `ship/` and approved `state/story/` canon; explicit pause/intensity controls; proposal flow for canon-changing events.
 Acceptance: ambient events cannot mutate ship/story state without approval, cannot appear in biography/KG/Notion or campaign retrieval, preserve technical register shifts inside scenes, and remain fully disableable; full suite and a live continuity smoke pass.
 
-## Build Wave 9 — Code Collaboration
+## Build Wave 9 — Personality Depth and Embodiment
 
-Scheduling note: Wave 9 follows Waves 5–8 in the current product priority even though its strict technical dependency remains W4.6; beginning it earlier requires an explicit roadmap reprioritization.
+Companion intent (SRS v0.13 FR-P7, FR-V1–FR-V6): deepen Lyra's hand-authored character and give that character selective visual and vocal presence without bloating Tier 0, creating another memory store, or sending private context to media providers unnecessarily.
 
 ```mermaid
 graph TD
-    W91[W9.1: coding-engine adapter]
-    W92[W9.2: sandboxed coding jobs]
-    W93[W9.3: GitHub contributor workflow]
-    W94[W9.4: live coding pilot]
-    W46[W4.6: workstation service] --> W91
-    W91 --> W92
+    W91[W9.1: visual reference library]
+    W92[W9.2: backstory and context import]
+    W93[W9.3: agent wiki and knowledge routing]
+    W94[W9.4: scene direction and still insertion]
+    W95[W9.5: voice and avatar evaluation]
+    W96[W9.6: Everwood selfie-tool adaptation]
+    W97[W9.7: embodied companion pilot]
+    E5[E5: pack runtime injection] --> W91
+    E5 --> W92
     W92 --> W93
+    W91 --> W94
     W93 --> W94
+    W94 --> W95
+    W94 --> W96
+    W95 --> W97
+    W96 --> W97
+    W83[W8.3: ship continuity] --> W97
 ```
 
-### W9.1 — Coding-engine adapter
-Deliverables: engine-neutral start/stream/resume/cancel/review interface and first adapter using the stable Python Codex SDK; read-only planning and workspace-write implementation modes.
-Acceptance: adapter contract tests cover resumable threads, streamed events, cancellation, and sandbox selection; no Codex identity or raw worker response replaces Lyra's user-facing voice; full suite passes.
+### W9.1 — Visual reference library
+Deliverables: Christopher-led collection of Lyra, Silent Drift, ship-interior, object, wardrobe, and location references under `assets/visual_references/`; a machine-readable catalog recording subject, canon status, source/provenance, usage rights, allowed transformations, visual traits, and supersession; approved/reference/candidate separation so a generated variation cannot silently become canon.
+Acceptance: every active visual has catalog metadata and a stable asset ID; missing files, duplicate IDs, invalid subjects, and unapproved canonical references fail validation; no provider credential or private remote URL is committed; Christopher signs off on Lyra's canonical appearance set.
 
-### W9.2 — Sandboxed coding jobs
-Deliverables: Lyra-only repository allowlist; self-contained task packets; first approval gate; isolated job clone; sanitized persisted progress; revision/resume flow; review package containing base SHA, complete diff hash, changed files, actual tests, risks, and unresolved items.
-Acceptance: the worker cannot access the primary checkout, paths outside its job workspace, or GitHub credentials; rejected/cancelled jobs leave repositories and GitHub unchanged; full suite passes.
+### W9.2 — Backstory and context import
+Deliverables: Christopher-led source material imported into topic-sized `agents/lyra/references/backstory_*.md` files with provenance notes and cross-links; Tier 0 retains only stable identity/interaction contracts and pointers; ship facts remain in `ship/`, evolving story remains in `state/story/`, and real biography remains isolated from story/campaign material.
+Acceptance: an import checklist accounts for every supplied source without silent rewriting; loaders and pointer tests pass; lore conflicts are surfaced for Christopher rather than resolved automatically; Christopher approves the resulting backstory map.
 
-### W9.3 — GitHub contributor workflow
-Deliverables: repository-scoped Lyra GitHub App integration; second approval gate; short-lived installation token generation outside the model context; `lyra/<job-id>-<slug>` branch publication and draft PR creation.
-Acceptance: only Metadata read, Contents read/write, Pull requests read/write, and Checks read are required; publication rejects failed tests, stale bases, secrets, forbidden files, or changed diff hashes; Lyra cannot push to, approve, mark ready, or merge `main`; full suite passes.
+### W9.3 — Agent wiki and knowledge routing
+Deliverables: a local Markdown wiki interface for standing Lyra knowledge, lore, and expertise with `wiki_search` and `wiki_read`-style contracts; explicit routing among Tier 0, reference wiki, corpus, KG observations, episodic memory, ship state, and campaign state; lexical retrieval first with an optional pgvector path only when scale/evaluation justifies it.
+Acceptance: the wiki is not a second memory/corpus database and never receives chat logs automatically; retrieval is bucket- and provenance-aware; wiki content cannot be treated as lived memory or invented anecdote; agent-specific pages remain isolated; search/read, missing-page, routing, and prompt-leakage tests pass.
 
-### W9.4 — Live coding pilot
-Deliverables: one real Lyra change taken from discussion through task approval, isolated implementation, review, publication approval, and draft PR; read-only progress and test summaries available through Telegram.
-Acceptance: actual test evidence and PR URL are recorded; branch attribution is Lyra's GitHub App; protected `main` rejects direct push/merge; Telegram cannot execute, approve publication, or disclose repository secrets; full suite passes before sign-off.
+### W9.4 — Scene direction and still insertion
+Deliverables: an opt-in scene-director contract that converts a bounded, privacy-filtered conversation slice plus approved canon into a structured scene brief; web/Telegram media events for a single still or a short storyboard; triggers for explicit requests, arrivals/location reveals, meaningful emotional beats, appearance changes, ship discoveries, and milestones, with rate limits and a never-generate-every-turn rule.
+Acceptance: text conversation does not wait on image generation; scenes are clearly marked generated/non-canonical until approved; failed renders degrade to text; only scene-relevant context leaves the workstation; local files retain prompt/provider/model/source-asset provenance; a user can disable or delete generated media without changing conversation memory.
 
-## Build Wave 10 — Narrative VTT
+### W9.5 — Voice and avatar evaluation
+Deliverables: a fixed test script and representative scene set comparing ElevenLabs, HeyGen, and D-ID for Lyra's target experience; measurements for voice/identity consistency, emotional control, first-audio/frame latency, interruption behavior, render time, API ergonomics, privacy/retention controls, cost, and export ownership; one disposable prototype per relevant mode rather than permanent provider coupling.
+Acceptance: credentials come only from `.env`; the evaluation distinguishes streaming voice, talking portrait, cinematic scene, and asynchronous video rather than naming a single overall winner; outputs and costs are recorded against the same inputs; Christopher selects or defers each renderer independently.
+
+### W9.6 — Everwood selfie-tool adaptation
+Deliverables: a Lyra-native, provider-neutral scene-image tool adapted from Everwood's conversation-aware reference-image pipeline; explicit `selfie`, `portrait`, `location`, and `storyboard_frame` intents; approved Lyra/ship/location references; local output storage and provenance; Silent Drift location generation; MCP contracts under `mcp/tools/` with the reusable agent workflow expressed as a Lyra skill.
+Acceptance: the implementation does not import Everwood runtime paths or Clara-specific state; reference selection and session context are injected rather than model-controlled; prompt construction excludes secrets, intimate journal content, and unrelated history; provider failures/fallbacks are bounded and visible; focused tool tests and a live Lyra/Silent Drift render pass.
+
+### W9.7 — Embodied companion pilot
+Deliverables: one live cross-device companion session containing normal text, an explicit Lyra still, one system-selected meaningful scene beat, optional Lyra speech, and one short avatar/cinematic clip; a review record comparing the experience against the target goal and deciding which modes become routine, request-only, or deferred.
+Acceptance: identity and relationship continuity survive every renderer boundary; text remains authoritative and responsive; quiet hours/Away Mode and media budgets are honored; no scene becomes canon or durable memory without approval; generated artifacts remain local after provider delivery; Christopher signs off.
+
+## Build Wave 10 — Code Collaboration
+
+Scheduling note: Wave 10 follows Waves 5–9 in the current product priority even though its strict technical dependency remains W4.6; beginning it earlier requires an explicit roadmap reprioritization.
 
 ```mermaid
 graph TD
-    W101[W10.1: VTT decision and executable baseline]
-    W102[W10.2: VTT persistence and module retrieval]
-    W103[W10.3: DM/player security boundary]
-    W104[W10.4: VTT MCP service]
-    W105[W10.5: Lyra campaign experience]
-    W106[W10.6: live campaign pilot]
+    W101[W10.1: coding-engine adapter]
+    W102[W10.2: sandboxed coding jobs]
+    W103[W10.3: GitHub contributor workflow]
+    W104[W10.4: live coding pilot]
+    W46[W4.6: workstation service] --> W101
     W101 --> W102
     W102 --> W103
     W103 --> W104
-    W104 --> W105
-    W105 --> W106
 ```
 
-### W10.1 — VTT decision and executable baseline
+### W10.1 — Coding-engine adapter
+Deliverables: engine-neutral start/stream/resume/cancel/review interface and first adapter using the stable Python Codex SDK; read-only planning and workspace-write implementation modes.
+Acceptance: adapter contract tests cover resumable threads, streamed events, cancellation, and sandbox selection; no Codex identity or raw worker response replaces Lyra's user-facing voice; full suite passes.
+
+### W10.2 — Sandboxed coding jobs
+Deliverables: Lyra-only repository allowlist; self-contained task packets; first approval gate; isolated job clone; sanitized persisted progress; revision/resume flow; review package containing base SHA, complete diff hash, changed files, actual tests, risks, and unresolved items.
+Acceptance: the worker cannot access the primary checkout, paths outside its job workspace, or GitHub credentials; rejected/cancelled jobs leave repositories and GitHub unchanged; full suite passes.
+
+### W10.3 — GitHub contributor workflow
+Deliverables: repository-scoped Lyra GitHub App integration; second approval gate; short-lived installation token generation outside the model context; `lyra/<job-id>-<slug>` branch publication and draft PR creation.
+Acceptance: only Metadata read, Contents read/write, Pull requests read/write, and Checks read are required; publication rejects failed tests, stale bases, secrets, forbidden files, or changed diff hashes; Lyra cannot push to, approve, mark ready, or merge `main`; full suite passes.
+
+### W10.4 — Live coding pilot
+Deliverables: one real Lyra change taken from discussion through task approval, isolated implementation, review, publication approval, and draft PR; read-only progress and test summaries available through Telegram.
+Acceptance: actual test evidence and PR URL are recorded; branch attribution is Lyra's GitHub App; protected `main` rejects direct push/merge; Telegram cannot execute, approve publication, or disclose repository secrets; full suite passes before sign-off.
+
+## Build Wave 11 — Narrative VTT
+
+```mermaid
+graph TD
+    W111[W11.1: VTT decision and executable baseline]
+    W112[W11.2: VTT persistence and module retrieval]
+    W113[W11.3: DM/player security boundary]
+    W114[W11.4: VTT MCP service]
+    W115[W11.5: Lyra campaign experience]
+    W116[W11.6: live campaign pilot]
+    W111 --> W112
+    W112 --> W113
+    W113 --> W114
+    W114 --> W115
+    W115 --> W116
+```
+
+### W11.1 — VTT decision and executable baseline
 Deliverables: ADR-005 evaluating and selecting `V:/ProjectsGit/tabletop` as the separately versioned narrative campaign authority; SRS FR-D1/IF-3 amendments; reproducible environment and real baseline tests in the VTT repository; Foundry retained only as a future ADR-gated tactical option.
 Acceptance: both repositories agree on ownership and boundaries; the VTT suite runs with recorded output; no Foundry or hosted-relay dependency remains in current-scope runtime configuration.
 
-### W10.2 — VTT persistence and module retrieval
+### W11.2 — VTT persistence and module retrieval
 Deliverables: VTT-owned transactional state with stable campaign/session/character/scene/action/event IDs; immutable events; adventure-module pgvector namespace with source/section/visibility metadata; local gitignored source files; injectable dice randomness.
 Acceptance: state is atomic and restart-safe; repeated action IDs are idempotent; module ingestion is reproducible; dice and transitions are auditable; VTT and Lyra suites pass.
 
-### W10.3 — DM/player security boundary
+### W11.3 — DM/player security boundary
 Deliverables: Lyra player-character profile; separate DM process owning module access, hidden state, NPC intent, and mechanical resolution; submitted player actions replace direct state mutation.
 Acceptance: planted DM secrets never appear in Lyra context, player tools, public logs, or campaign-memory proposals; unresolved player actions cannot mutate mechanics; both suites pass.
 
-### W10.4 — VTT MCP service
+### W11.4 — VTT MCP service
 Deliverables: player-safe `list_campaigns`, `open_campaign`, `get_player_scene`, `get_my_character`, `submit_player_action`, `get_action_result`, `get_public_events`, and `end_session` tools; DM tools remain internal.
 Acceptance: tool contracts enforce campaign/player identity and visibility; `end_session` may create only approval-gated campaign-memory proposals keyed by campaign ID; both suites pass.
 
-### W10.5 — Lyra campaign experience
+### W11.5 — Lyra campaign experience
 Deliverables: campaign mode in Lyra sessions with narration, public scene state, Lyra's sheet, dice results, and turn status; existing in-fiction/technical register transition remains intact.
 Acceptance: campaign state cannot enter biography/story retrieval; first release contains no maps, tokens, initiative board, or multiplayer UI; web experience passes automated and manual checks.
 
-### W10.6 — Live campaign pilot
+### W11.6 — Live campaign pilot
 Deliverables: complete Christopher/Lyra player session run by a separate DM, restart recovery, immutable event record, and approved campaign-only write-back.
 Acceptance: both full suites pass; the secrecy, idempotency, recovery, and bucket-isolation checks pass live; Christopher signs off.
 
@@ -503,9 +556,16 @@ Acceptance: both full suites pass; the secrecy, idempotency, recovery, and bucke
 | W9.2 | Not started | — |
 | W9.3 | Not started | — |
 | W9.4 | Not started | — |
+| W9.5 | Not started | — |
+| W9.6 | Not started | — |
+| W9.7 | Not started | — |
 | W10.1 | Not started | — |
 | W10.2 | Not started | — |
 | W10.3 | Not started | — |
 | W10.4 | Not started | — |
-| W10.5 | Not started | — |
-| W10.6 | Not started | — |
+| W11.1 | Not started | — |
+| W11.2 | Not started | — |
+| W11.3 | Not started | — |
+| W11.4 | Not started | — |
+| W11.5 | Not started | — |
+| W11.6 | Not started | — |

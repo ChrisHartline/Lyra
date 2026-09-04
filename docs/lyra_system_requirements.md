@@ -1,7 +1,7 @@
 # Lyra — System Requirements Document
 
-**Version:** 0.12
-**Date:** 2026-09-03
+**Version:** 0.13
+**Date:** 2026-09-04
 **Author:** Christopher (with Claude)
 **Status:** In progress
 
@@ -19,8 +19,8 @@ The defining requirement is **continuity**: unlike a stateless web chat, Lyra re
 **Secondary (meta) goal:** this project doubles as a reference case for **SRS-driven AI pair development** — demonstrating that a requirements document with numbered FRs, a dependency-gated build plan, and executable acceptance criteria lets a coding agent (Cursor/Claude) develop and test with minimal supervision, reducing time-to-prototype. Process observations are captured in `docs/lessons_learned.md` at end of Phase 1.
 
 **In scope (v1):** persona engine, skill routing, research-to-corpus pipeline, memory system, Notion integration, operation within Cursor/CLI.
-**In scope (v2):** standalone conversational runtime, dedicated local chat UI, PostgreSQL-backed named sessions, Telegram notifications/chat, approval-gated repository collaboration, campaign integration, voice & avatar **stub interfaces** (§3.8), and optional private tailnet access.
-**Out of scope (for now):** general desktop control; direct conversational shell/filesystem/Git authority; public web hosting; full voice synthesis and avatar rendering (stubs only, per §3.8); native mobile app; multi-user access. Public reachability requires authentication and a new ADR (see NFR-8).
+**In scope (v2):** standalone conversational runtime, dedicated local chat UI, PostgreSQL-backed named sessions, Telegram notifications/chat, personality/reference-wiki expansion, selective still/voice/avatar prototypes (§3.8), approval-gated repository collaboration, campaign integration, and optional private tailnet access.
+**Out of scope (for now):** general desktop control; direct conversational shell/filesystem/Git authority; public web hosting; always-on live embodiment or automatic media on every turn; native mobile app; multi-user access. Public reachability requires authentication and a new ADR (see NFR-8).
 
 ## 2. System Context
 
@@ -83,6 +83,7 @@ contract.
 - **FR-P4:** Persona references (appearance, idioms, color-emotion map) load from the `personality/` pack on demand, not embedded in the system prompt. Ship lore loads from the `ship/` pack. Durable host lore that is not yet packed (e.g. per-topic backstory under `agents/lyra/references/backstory_*.md`) remains retrieval-per-file.
 - **FR-P5 (Story canon layer):** Emergent narrative from ongoing roleplay (e.g., the ship, repair plans, open arcs) lives in the `ship/` and `state/` packs (`ship/current_status.json`, `state/active_arcs.md`, machine-writable `state/story/` regen). Unlike Tier 0, this layer is **machine-writable**: session write-back proposes `memory_type='story'` memories through the approval gate (FR-M3), and canon files are periodically **regenerated from** approved story memories (same pattern as FR-M5) — the memory rows are the change record; the canon files are the readable current state.
 - **FR-P6 (Promotion rule):** Content moves from story canon into Tier 0 identity or `references/` only by Christopher's deliberate manual edit. The machine proposes on the working branch; only the human merges to the protected branch. This prevents long-horizon roleplay drift from silently rewriting who Lyra is.
+- **FR-P7 (Agent wiki):** Standing lore, expertise, preferences, places, and creative constraints are exposed through local read-only wiki search/read tools over canonical pack/reference files or generated indexes. The wiki is not a second memory or corpus store, receives no automatic chat-log writes, preserves bucket/provenance metadata, and cannot be treated by the model as lived experience merely because it was retrieved.
 
 ### 3.2 Skill Router & Orchestration
 - **FR-S1:** Domain-specific requests route to the matching skill per `agents/lyra/SKILL.md` (Agent Skills standard).
@@ -150,10 +151,13 @@ contract.
   3. **Campaigns** — D&D/tabletop game state (`memory_type='campaign'`, keyed by campaign ID).
   Nested roleplay is explicitly supported: in a campaign, Lyra is a character playing a character — her PC's fate affects only the campaign bucket, never her persona, story canon, or relationship memory. Cross-bucket writes occur only via the human promotion rule (FR-P6). Schema/API may still expose the field name `ledger` for compatibility; treat it as the bucket tag.
 
-### 3.8 Voice & Avatar Stubs (v2)
-- **FR-V1 (Stub interfaces):** The v2 application defines — but does not implement — the output channels a future embodiment will consume: `speak(text, prosody_hints)` and `express(emotion, intensity)`. v2 implementations are no-ops that log/emit events with no renderer attached. Purpose: persona and orchestrator code binds to these interfaces from day one, so attaching TTS or an avatar in v3+ is a renderer swap, not a refactor.
+### 3.8 Voice, Scene & Avatar Interfaces (v2)
+- **FR-V1 (Renderer interfaces):** The v2 application defines provider-neutral output channels `speak(text, prosody_hints)`, `express(emotion, intensity)`, and `illustrate(scene_brief, reference_asset_ids, output_mode)`. No-op/event implementations remain valid before a renderer is selected; bounded Wave 9 prototypes attach behind these interfaces rather than entering persona or orchestrator code directly.
 - **FR-V2 (Emotion channel):** `express()` draws from the pack color-emotion map in `personality/emotional_color_map.md`, giving a future avatar a persona-native vocabulary rather than a generic one. Emotion events MAY be rendered minimally in the v2 chat UI (e.g., an accent color) as a cheap proof the channel works.
-- **FR-V3 (Local-first bias):** When voice/avatar are eventually implemented, local renderers (e.g., CPU/GPU TTS on the workstation — the RTX 2080 suffices for current local TTS models) are preferred over cloud APIs, consistent with NFR-1 and the deployment posture (§2.5).
+- **FR-V3 (Renderer selection):** Local renderers remain preferred where they meet the experience target, consistent with NFR-1 and the deployment posture (§2.5). Cloud voice/avatar/image APIs MAY be used only as independently replaceable renderers after a fixed-input evaluation of quality, latency, cost, privacy/retention, export ownership, and failure behavior; provider accounts or built-in agent/knowledge products never become Lyra's conversational or knowledge authority.
+- **FR-V4 (Visual references):** Canonical Lyra, ship, object, wardrobe, and location images live under `assets/visual_references/` with stable IDs, provenance/rights, canon status, allowed transformations, and supersession metadata. Generated variants remain non-canonical until Christopher approves them.
+- **FR-V5 (Scene direction):** Visual generation is triggered by explicit request or a small allowlist of meaningful scene beats, never every conversational turn. A scene director builds a structured brief from approved canon and the minimum privacy-filtered conversation slice. Text returns without waiting for media; renderer failure degrades safely to text.
+- **FR-V6 (Media privacy and retention):** External renderers receive no secrets, private-journal content, unrelated conversation history, or unapproved memory/KG proposals. Generated artifacts and their prompt/provider/model/source-asset provenance are downloaded to local storage; provider URLs are not treated as durable storage; deletion and media-disable controls do not alter authoritative conversation or memory state.
 
 ### 3.9 Repository Collaboration (v2)
 - **FR-G1 (Separate authority):** Conversational Lyra has no shell, filesystem-write, Git, or desktop-control tools. A repository request becomes a bounded coding job only after Christopher approves a self-contained task packet naming the repository, base revision, allowed scope, constraints, acceptance criteria, and required tests.
@@ -263,16 +267,16 @@ CREATE INDEX ON memories USING hnsw (embedding vector_cosine_ops);
 1. Standalone conversation service, named PostgreSQL sessions, and local loopback web UI (FR-S6; ADR-004).
 2. Telegram inbox/chat, cross-device session handoff, and optional private Tailscale Serve access; no public web hosting (FR-T1–FR-T7).
 3. Personal-agency, daily-rhythm, and private continuity features proceed through their approval and storage boundaries before repository authority expands.
-4. Approval-gated repository collaboration ending at a Lyra-authored draft PR (FR-G1–FR-G5).
-5. Campaign integration per FR-D1/FR-D2, re-evaluated at Build Gate W10.1 before implementation.
-6. Voice & avatar stub interfaces wired through persona output (FR-V1/V2).
+4. Personality/reference-wiki expansion plus selective scene, voice, and avatar prototypes behind renderer interfaces (FR-P7, FR-V1–FR-V6).
+5. Approval-gated repository collaboration ending at a Lyra-authored draft PR (FR-G1–FR-G5).
+6. Campaign integration per FR-D1/FR-D2, re-evaluated at Build Gate W11.1 before implementation.
 7. Dynamic subagent creation remains optional and approval-gated (FR-S7).
 8. Supabase remains conditional on a future authenticated public-hosting ADR.
 
 **Phase 3 (v3 — earned autonomy & embodiment):**
 1. Per-category memory auto-commit (pending v2 trust record).
 2. Unattended subagent auto-creation (FR-S7, pending v2 trust record).
-3. Voice/avatar renderers attached to the stub interfaces (FR-V3, local-first).
+3. Production-quality voice/avatar renderers and any always-on live mode promoted from the bounded v2 prototypes only after Christopher's sign-off (FR-V3–FR-V6).
 4. Auth via cloud identity provider — required before any externally reachable deployment (scope note, §1; NFR-8).
 
 ## 9. Verification & Acceptance
