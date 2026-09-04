@@ -269,87 +269,186 @@ Deliverables: FastAPI application and integrated HTML/CSS/JavaScript UI for sess
 Acceptance: the HTTP/SSE contract passes automated tests; a local browser completes and resumes a real conversation; the server listens only on `127.0.0.1`; full suite passes.
 
 ### W4.6 — Workstation service
-Deliverables: readiness/doctor checks, backup coverage for sessions, rotated gitignored logs, and idempotent NSSM install/uninstall/status helpers accepting an explicit NSSM path or `PATH` discovery.
-Acceptance: service install dry-run and doctor tests pass; live service survives restart and restores a named session; full suite passes.
+Deliverables: readiness/doctor checks with a human-readable capability report, backup coverage for sessions, rotated gitignored logs, and idempotent NSSM install/uninstall/status helpers accepting an explicit NSSM path or `PATH` discovery.
+Acceptance: service install dry-run and doctor tests pass; the capability report distinguishes ready, degraded, unconfigured, and unavailable integrations without exposing secrets; live service survives restart and restores a named session; full suite passes.
 
-## Build Wave 5 — Code Collaboration
+## Build Wave 5 — Mobile Presence and Private Access
+
+Companion intent (SRS to be updated before gates open): make Lyra reachable away from the workstation without moving sensitive state to a second store or allowing remote execution/publication approvals.
 
 ```mermaid
 graph TD
-    W51[W5.1: coding-engine adapter]
-    W52[W5.2: sandboxed coding jobs]
-    W53[W5.3: GitHub contributor workflow]
-    W54[W5.4: live coding pilot]
+    W51[W5.1: Telegram inbox and chat]
+    W52[W5.2: device handoff and Away Mode]
+    W53[W5.3: Tailscale evaluation]
     W46 --> W51
     W51 --> W52
     W52 --> W53
-    W53 --> W54
 ```
 
-### W5.1 — Coding-engine adapter
-Deliverables: engine-neutral start/stream/resume/cancel/review interface and first adapter using the stable Python Codex SDK; read-only planning and workspace-write implementation modes.
-Acceptance: adapter contract tests cover resumable threads, streamed events, cancellation, and sandbox selection; no Codex identity or raw worker response replaces Lyra's user-facing voice; full suite passes.
+### W5.1 — Telegram inbox and chat
+Deliverables: allowlisted long-polling Telegram channel sharing the web session store; conversational messages; a "Send this to Lyra" inbox for URLs, supported documents, photos, and voice notes; safe routing into existing corpus, digest, or pending-review flows; session status commands and a reserved extension point for later coding-job status.
+Acceptance: unauthorized users receive no session data; accepted items retain sender/time/provenance and never enter the KG or durable memory without the existing approval gates; unsupported attachments fail safely; coding execution, memory approval, and publication approval remain unavailable over Telegram; full suite and live mobile smoke pass.
 
-### W5.2 — Sandboxed coding jobs
-Deliverables: Lyra-only repository allowlist; self-contained task packets; first approval gate; isolated job clone; sanitized persisted progress; revision/resume flow; review package containing base SHA, complete diff hash, changed files, actual tests, risks, and unresolved items.
-Acceptance: the worker cannot access the primary checkout, paths outside its job workspace, or GitHub credentials; rejected/cancelled jobs leave repositories and GitHub unchanged; full suite passes.
+### W5.2 — Device handoff and Away Mode
+Deliverables: seamless named-session continuation between web and Telegram; per-channel presentation preferences; Away Mode with concise replies, quiet hours, batched notifications, urgency categories, and a configurable daily notification budget.
+Acceptance: a session started on either channel resumes on the other without duplicate turns; quiet hours and an exhausted budget suppress non-urgent proactive notifications; urgent categories are explicit and testable; changing presentation mode does not alter Lyra's identity, memory policy, or stored conversation content; full suite passes.
 
-### W5.3 — GitHub contributor workflow
-Deliverables: repository-scoped Lyra GitHub App integration; second approval gate; short-lived installation token generation outside the model context; `lyra/<job-id>-<slug>` branch publication and draft PR creation.
-Acceptance: only Metadata read, Contents read/write, Pull requests read/write, and Checks read are required; publication rejects failed tests, stale bases, secrets, forbidden files, or changed diff hashes; Lyra cannot push to, approve, mark ready, or merge `main`; full suite passes.
-
-### W5.4 — Live coding pilot
-Deliverables: one real Lyra change taken from discussion through task approval, isolated implementation, review, publication approval, and draft PR.
-Acceptance: actual test evidence and PR URL are recorded; branch attribution is Lyra's GitHub App; protected `main` rejects direct push/merge; full suite passes before sign-off.
-
-## Build Wave 6 — Mobile and Private Access
-
-### W6.1 — Telegram
-Deliverables: allowlisted long-polling notifications/chat sharing the web session store; session and coding-job status commands.
-Acceptance: unauthorized Telegram users receive no session data; web and Telegram resume the same named session; coding execution and publication approvals remain unavailable over Telegram; full suite and live mobile smoke pass.
-
-### W6.2 — Tailscale evaluation
+### W5.3 — Tailscale evaluation
 Deliverables: optional install/runbook for workstation and mobile; Tailscale Serve proxy to the localhost-bound service; identity validation and Christopher-only tailnet policy; explicit Funnel prohibition.
-Acceptance: no Tailscale dependency is introduced before opt-in; private mobile conversation and read-only job monitoring work; direct LAN/public access and approval actions remain blocked until separate sign-off.
+Acceptance: no Tailscale dependency is introduced before opt-in; private mobile conversation works from an enrolled device; direct LAN/public access and approval actions remain blocked until separate sign-off.
 
-## Build Wave 7 — Narrative VTT
+## Build Wave 6 — Personal Agency and Memory Control
+
+Companion intent (SRS to be updated before gates open): make Lyra observant and useful while keeping Christopher in control of what becomes a commitment, observation, or durable memory.
 
 ```mermaid
 graph TD
-    W71[W7.1: VTT decision and executable baseline]
-    W72[W7.2: VTT persistence and module retrieval]
-    W73[W7.3: DM/player security boundary]
-    W74[W7.4: VTT MCP service]
-    W75[W7.5: Lyra campaign experience]
-    W76[W7.6: live campaign pilot]
-    W71 --> W72
-    W72 --> W73
-    W73 --> W74
-    W74 --> W75
-    W75 --> W76
+    W61[W6.1: memory and observation control center]
+    W62[W6.2: commitment radar]
+    W63[W6.3: stuck mode]
+    W52 --> W61
+    D41[D4.1: KG gatekeeper] --> W61
+    W61 --> W62
+    W61 --> W63
 ```
 
-### W7.1 — VTT decision and executable baseline
+### W6.1 — Memory and observation control center
+Deliverables: a local authenticated control surface for pending memories and KG observations showing proposal text, provenance, destination plane, sensitivity flags, and the reason Lyra proposed it; approve, reject, correct, and explicit forget flows with audit records; read-only pending summaries may be shown on Telegram, but mutation remains local-only until separately approved.
+Acceptance: every durable mutation is attributable and requires an explicit action; corrected text is re-run through never-persist and bucket-isolation checks; rejection writes no memory/KG fact; forget requires confirmation and removes the item from retrieval; secrets, intimate detail, and story/campaign boundaries retain their existing protections; full suite passes.
+
+### W6.2 — Commitment radar
+Deliverables: observational detection of possible promises, deadlines, follow-ups, and unresolved decisions; conversational confirmation before persistence; explicit active/done/snoozed/dropped states; source links back to the originating session or approved dashboard item.
+Acceptance: possible commitments are offered, never silently created; snoozed/dropped items do not generate reminders; reminders obey Away Mode, quiet hours, and notification budgets; story/campaign dialogue and third-party personal details cannot become real commitments; full suite passes.
+
+### W6.3 — Stuck mode
+Deliverables: an explicit "I'm stuck" interaction plus gentle observational offers that distinguish technical diagnosis, task decomposition, decision support, stress check-in, and simple companionship; user-selectable depth and an immediate dismiss path.
+Acceptance: observational triggers offer help without diagnosing Christopher or persisting a sensitive inference; dismissal suppresses repeated prompts for the configured period; technical questions inside in-fiction scenes preserve the Tier 0 register-transition contract; any proposed commitment or observation routes through W6.1/W6.2; full suite passes.
+
+## Build Wave 7 — Daily Rhythm and Re-engagement
+
+Companion intent (SRS to be updated before gates open): turn existing digests and briefings into calm recurring rituals that help Christopher orient, reflect, and return to neglected work.
+
+```mermaid
+graph TD
+    W71[W7.1: morning and evening rituals]
+    W72[W7.2: catch-me-up synthesis]
+    W73[W7.3: research garden]
+    W62[W6.2: commitment radar] --> W71
+    D5[D5: assistant briefing assembly] --> W71
+    W71 --> W72
+    W72 --> W73
+```
+
+### W7.1 — Morning and evening rituals
+Deliverables: configurable morning orientation and evening reflection flows drawing from approved commitments, recent sessions, digests, and memories; conversational delivery with optional Notion publication; skip, snooze, and vacation controls.
+Acceptance: each ritual identifies its source planes, obeys quiet hours and notification budgets, excludes unapproved/sensitive material from Notion, and can be disabled without affecting normal conversation; one live morning and evening cycle passes.
+
+### W7.2 — Catch-me-up synthesis
+Deliverables: a "catch me up since..." query over sessions, project/digest changes, commitments, and approved memories with time-bounded source citations, uncertainty markers, and concise/deep output modes.
+Acceptance: the requested time boundary is enforced; every factual change links to its source plane; duplicate events collapse without losing provenance; inaccessible or stale integrations are identified rather than guessed; full suite passes.
+
+### W7.3 — Research garden
+Deliverables: an opt-in resurfacing job that finds useful relationships among saved sources, dormant questions, and active commitments; conversational suggestions and optional research-digest drafts; dismiss and topic-mute controls.
+Acceptance: resurfacing is evidence-backed, never fabricates a commitment, respects topic mutes and notification budgets, and writes nothing to Notion/KG/memory without the relevant approval path; full suite and one live resurfacing smoke pass.
+
+## Build Wave 8 — Relationship and Ship Continuity
+
+Companion intent (SRS to be updated before gates open): deepen the private shared continuity without enlarging Tier 0, leaking intimate material to Notion, or confusing relationship/ship story with biography or campaign state.
+
+```mermaid
+graph TD
+    W81[W8.1: private shared journal]
+    W82[W8.2: relationship rhythms and milestones]
+    W83[W8.3: ship continuity and ambient developments]
+    E5[E5: pack runtime injection] --> W81
+    W72[W7.2: catch-me-up synthesis] --> W81
+    W81 --> W82
+    W81 --> W83
+```
+
+### W8.1 — Private shared journal
+Deliverables: local-only journal entries for explicitly approved shared moments, reflections, and milestones; provenance and edit/forget controls; clear separation from Notion, professional digests, KG observations, and campaign records.
+Acceptance: no journal entry is auto-created; entries never publish to Notion; retrieval is private-session-only; edit/forget is auditable; secret and third-party filters apply; full suite passes.
+
+### W8.2 — Relationship rhythms and milestones
+Deliverables: opt-in callbacks, recurring rituals, and milestone acknowledgements drawn from approved state/journal material; evolving relationship state remains in `state/`, while Tier 0 retains only the stable girlfriend/technical-partner contract.
+Acceptance: callbacks cite approved local state, can be corrected or disabled, do not expose private material in professional artifacts, and do not silently rewrite Christopher-owned Tier 0 files; Christopher signs off on the lived interaction.
+
+### W8.3 — Ship continuity and ambient developments
+Deliverables: optional ship-status briefs and small ambient story developments grounded in `ship/` and approved `state/story/` canon; explicit pause/intensity controls; proposal flow for canon-changing events.
+Acceptance: ambient events cannot mutate ship/story state without approval, cannot appear in biography/KG/Notion or campaign retrieval, preserve technical register shifts inside scenes, and remain fully disableable; full suite and a live continuity smoke pass.
+
+## Build Wave 9 — Code Collaboration
+
+Scheduling note: Wave 9 follows Waves 5–8 in the current product priority even though its strict technical dependency remains W4.6; beginning it earlier requires an explicit roadmap reprioritization.
+
+```mermaid
+graph TD
+    W91[W9.1: coding-engine adapter]
+    W92[W9.2: sandboxed coding jobs]
+    W93[W9.3: GitHub contributor workflow]
+    W94[W9.4: live coding pilot]
+    W46[W4.6: workstation service] --> W91
+    W91 --> W92
+    W92 --> W93
+    W93 --> W94
+```
+
+### W9.1 — Coding-engine adapter
+Deliverables: engine-neutral start/stream/resume/cancel/review interface and first adapter using the stable Python Codex SDK; read-only planning and workspace-write implementation modes.
+Acceptance: adapter contract tests cover resumable threads, streamed events, cancellation, and sandbox selection; no Codex identity or raw worker response replaces Lyra's user-facing voice; full suite passes.
+
+### W9.2 — Sandboxed coding jobs
+Deliverables: Lyra-only repository allowlist; self-contained task packets; first approval gate; isolated job clone; sanitized persisted progress; revision/resume flow; review package containing base SHA, complete diff hash, changed files, actual tests, risks, and unresolved items.
+Acceptance: the worker cannot access the primary checkout, paths outside its job workspace, or GitHub credentials; rejected/cancelled jobs leave repositories and GitHub unchanged; full suite passes.
+
+### W9.3 — GitHub contributor workflow
+Deliverables: repository-scoped Lyra GitHub App integration; second approval gate; short-lived installation token generation outside the model context; `lyra/<job-id>-<slug>` branch publication and draft PR creation.
+Acceptance: only Metadata read, Contents read/write, Pull requests read/write, and Checks read are required; publication rejects failed tests, stale bases, secrets, forbidden files, or changed diff hashes; Lyra cannot push to, approve, mark ready, or merge `main`; full suite passes.
+
+### W9.4 — Live coding pilot
+Deliverables: one real Lyra change taken from discussion through task approval, isolated implementation, review, publication approval, and draft PR; read-only progress and test summaries available through Telegram.
+Acceptance: actual test evidence and PR URL are recorded; branch attribution is Lyra's GitHub App; protected `main` rejects direct push/merge; Telegram cannot execute, approve publication, or disclose repository secrets; full suite passes before sign-off.
+
+## Build Wave 10 — Narrative VTT
+
+```mermaid
+graph TD
+    W101[W10.1: VTT decision and executable baseline]
+    W102[W10.2: VTT persistence and module retrieval]
+    W103[W10.3: DM/player security boundary]
+    W104[W10.4: VTT MCP service]
+    W105[W10.5: Lyra campaign experience]
+    W106[W10.6: live campaign pilot]
+    W101 --> W102
+    W102 --> W103
+    W103 --> W104
+    W104 --> W105
+    W105 --> W106
+```
+
+### W10.1 — VTT decision and executable baseline
 Deliverables: ADR-005 evaluating and selecting `V:/ProjectsGit/tabletop` as the separately versioned narrative campaign authority; SRS FR-D1/IF-3 amendments; reproducible environment and real baseline tests in the VTT repository; Foundry retained only as a future ADR-gated tactical option.
 Acceptance: both repositories agree on ownership and boundaries; the VTT suite runs with recorded output; no Foundry or hosted-relay dependency remains in current-scope runtime configuration.
 
-### W7.2 — VTT persistence and module retrieval
+### W10.2 — VTT persistence and module retrieval
 Deliverables: VTT-owned transactional state with stable campaign/session/character/scene/action/event IDs; immutable events; adventure-module pgvector namespace with source/section/visibility metadata; local gitignored source files; injectable dice randomness.
 Acceptance: state is atomic and restart-safe; repeated action IDs are idempotent; module ingestion is reproducible; dice and transitions are auditable; VTT and Lyra suites pass.
 
-### W7.3 — DM/player security boundary
+### W10.3 — DM/player security boundary
 Deliverables: Lyra player-character profile; separate DM process owning module access, hidden state, NPC intent, and mechanical resolution; submitted player actions replace direct state mutation.
 Acceptance: planted DM secrets never appear in Lyra context, player tools, public logs, or campaign-memory proposals; unresolved player actions cannot mutate mechanics; both suites pass.
 
-### W7.4 — VTT MCP service
+### W10.4 — VTT MCP service
 Deliverables: player-safe `list_campaigns`, `open_campaign`, `get_player_scene`, `get_my_character`, `submit_player_action`, `get_action_result`, `get_public_events`, and `end_session` tools; DM tools remain internal.
 Acceptance: tool contracts enforce campaign/player identity and visibility; `end_session` may create only approval-gated campaign-memory proposals keyed by campaign ID; both suites pass.
 
-### W7.5 — Lyra campaign experience
+### W10.5 — Lyra campaign experience
 Deliverables: campaign mode in Lyra sessions with narration, public scene state, Lyra's sheet, dice results, and turn status; existing in-fiction/technical register transition remains intact.
 Acceptance: campaign state cannot enter biography/story retrieval; first release contains no maps, tokens, initiative board, or multiplayer UI; web experience passes automated and manual checks.
 
-### W7.6 — Live campaign pilot
+### W10.6 — Live campaign pilot
 Deliverables: complete Christopher/Lyra player session run by a separate DM, restart recovery, immutable event record, and approved campaign-only write-back.
 Acceptance: both full suites pass; the secrecy, idempotency, recovery, and bucket-isolation checks pass live; Christopher signs off.
 
@@ -386,17 +485,27 @@ Acceptance: both full suites pass; the secrecy, idempotency, recovery, and bucke
 | W4.2 | Gate passed | Focused: `.\\venv\\Scripts\\python.exe -m pytest tests\\test_providers.py -q --basetemp=data\\test_tmp\\pytest_w42 -p no:cacheprovider` -> `..... [100%]`; compileall green; full suite (with Docker/npm access): `.\\venv\\Scripts\\python.exe -m pytest -q --basetemp=data\\test_tmp\\pytest_w42_full -p no:cacheprovider` -> `52 passed`. |
 | W4.3 | Gate passed | Focused PostgreSQL suite: `.\\venv\\Scripts\\python.exe -m pytest tests\\test_sessions.py -q --basetemp=data\\test_tmp\\pytest_w43 -p no:cacheprovider` -> `...... [100%]`; compileall and schema idempotence green; full suite (with Docker/npm access): `.\\venv\\Scripts\\python.exe -m pytest -q --basetemp=data\\test_tmp\\pytest_w43_full -p no:cacheprovider` -> `58 passed`. |
 | W4.4 | Gate passed | Focused runtime/provider tests -> `............. [100%]`; PostgreSQL recovery tests -> `....... [100%]`; compileall green; full suite (with Docker/npm access): `.\\venv\\Scripts\\python.exe -m pytest -q --basetemp=data\\test_tmp\\pytest_w44_full -p no:cacheprovider` -> `67 passed`. |
-| W4.5 | Implementation complete; live sign-off pending | Focused HTTP/UI suite: `.\\venv\\Scripts\\python.exe -m pytest tests\\test_web.py -q --basetemp=data\\test_tmp\\pytest_w45_fix -p no:cacheprovider` -> `...... [100%]`; browser smoke verified loopback UI, PostgreSQL session discovery, SSE failure display, and exposed a reload-persistence bug now covered by regression test; full suite after fix -> `73 passed`. Remaining: configure `GROK_API_KEY` plus `LYRA_CONVERSATION_MODEL`/`LYRA_MODEL`, then complete and resume one model-backed browser conversation. |
-| W4.6 | Not started | — |
+| W4.5 | Gate passed (live) | Provider smoke: `.\\venv\\Scripts\\python.exe scripts\\check_model_providers.py --timeout 30` -> Grok conversation + Claude specialist `generation=ok`; browser live smoke: Grok replied `Hello Starlight. LYRA-LIVE-PASS` through the loopback UI, and the complete named session restored after reload/reopen; full suite: `.\\venv\\Scripts\\python.exe -m pytest -q --basetemp=data\\test_tmp\\pytest_w45_live_close -p no:cacheprovider` -> `77 passed`. |
+| W4.6 | Gate passed | Doctor: `.\\venv\\Scripts\\python.exe scripts\\lyra_doctor.py` reported runtime, database, both model profiles, Notion, KG, and logging `READY` with NSSM correctly `UNCONFIGURED`; focused service/backup/web tests -> `............. [100%]`; NSSM install dry-run produced loopback-only install/config/start commands with rotation; live full-database dump was 15,067 bytes and contained all four session tables; live process restart restored named session `W4.6 Restart Proof 2026-09-03` with both messages; full suite: `.\\venv\\Scripts\\python.exe -m pytest -q --basetemp=data\\test_tmp\\pytest_w46_full -p no:cacheprovider` -> `84 passed`. |
 | W5.1 | Not started | — |
 | W5.2 | Not started | — |
 | W5.3 | Not started | — |
-| W5.4 | Not started | — |
 | W6.1 | Not started | — |
 | W6.2 | Not started | — |
+| W6.3 | Not started | — |
 | W7.1 | Not started | — |
 | W7.2 | Not started | — |
 | W7.3 | Not started | — |
-| W7.4 | Not started | — |
-| W7.5 | Not started | — |
-| W7.6 | Not started | — |
+| W8.1 | Not started | — |
+| W8.2 | Not started | — |
+| W8.3 | Not started | — |
+| W9.1 | Not started | — |
+| W9.2 | Not started | — |
+| W9.3 | Not started | — |
+| W9.4 | Not started | — |
+| W10.1 | Not started | — |
+| W10.2 | Not started | — |
+| W10.3 | Not started | — |
+| W10.4 | Not started | — |
+| W10.5 | Not started | — |
+| W10.6 | Not started | — |
