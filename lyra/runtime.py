@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from collections.abc import AsyncIterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol
@@ -12,6 +13,9 @@ from lyra.providers import ModelProfile
 from lyra.runtime_events import EventKind, RuntimeEvent
 from lyra.runtime_tools import ToolDeniedError, ToolRegistry
 from lyra.sessions import ContextBuilder, SessionService
+
+
+logger = logging.getLogger(__name__)
 
 
 class ProviderAdapter(Protocol):
@@ -208,6 +212,7 @@ class AgentLoop:
             )
             raise
         except Exception:
+            logger.exception("Conversation turn failed")
             persist_assistant(partial=True)
             self.sessions.update_turn(
                 turn["turn_id"], "failed", error_code="runtime_error"

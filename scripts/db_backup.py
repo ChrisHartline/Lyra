@@ -1,29 +1,95 @@
 from __future__ import annotations
 
-from datetime import datetime
+import argparse
+from datetime import UTC, datetime
+import os
 from pathlib import Path
+import shutil
 import subprocess
+
+import psycopg
+
 from lyra.config import settings
+from lyra.service import SESSION_TABLES
 
 
-def main() -> None:
-    backup_dir = Path("backups")
-    backup_dir.mkdir(exist_ok=True)
-    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+def verify_session_tables() -> None:
+    with psycopg.connect(
+        host=settings.db_host,
+        port=settings.db_port,
+        dbname=settings.db_name,
+        user=settings.db_user,
+        password=settings.db_password,
+        connect_timeout=5,
+    ) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT tablename FROM pg_tables WHERE schemaname = 'public' "
+                "AND tablename = ANY(%s)",
+                (list(SESSION_TABLES),),
+            )
+            found = {row[0] for row in cursor.fetchall()}
+    missing = set(SESSION_TABLES) - found
+    if missing:
+        raise RuntimeError(
+            "Session backup coverage is incomplete; missing tables: "
+            + ", ".join(sorted(missing))
+        )
+
+
+def create_backup(
+    backup_dir: Path,
+    *,
+    runner=subprocess.run,
+    pg_dump_path: str | None = None,
+) -> Path:
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     out = backup_dir / f"lyra_{ts}.sql"
-    subprocess.run(
-        [
-            "pg_dump",
+    environment = dict(os.environ)
+    environment["PGPASSWORD"] = settings.db_password
+    executable = pg_dump_path or shutil.which("pg_dump") or shutil.which("pg_dump.exe")
+    if executable:
+        runner(
+            [
+            executable,
             "-h", settings.db_host,
             "-p", str(settings.db_port),
             "-U", settings.db_user,
             "-d", settings.db_name,
+            "--no-password",
             "-f", str(out),
-        ],
-        check=True,
-    )
+            ],
+            env=environment,
+            check=True,
+        )
+    else:
+        command = [
+            "docker",
+            "exec",
+            "lyra-pgvector",
+            "pg_dump",
+            "-U",
+            settings.db_user,
+            "-d",
+            settings.db_name,
+            "--no-password",
+        ]
+        with out.open("wb") as stream:
+            runner(command, stdout=stream, check=True)
+    return out
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Back up the complete Lyra database")
+    parser.add_argument("--output-dir", type=Path, default=Path("backups"))
+    args = parser.parse_args(argv)
+    verify_session_tables()
+    out = create_backup(args.output_dir)
     print(f"Backup written: {out}")
+    print("Session tables covered: " + ", ".join(SESSION_TABLES))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

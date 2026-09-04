@@ -21,6 +21,7 @@ from lyra.providers import ModelProfiles, ProviderConfigurationError, adapter_fo
 from lyra.runtime import AgentLoop, ModelToolRunner
 from lyra.runtime_events import EventKind, RuntimeEvent
 from lyra.runtime_tools import build_conversation_registry
+from lyra.service import configure_rotating_logging
 from lyra.sessions import ContextBuilder, SessionService
 
 
@@ -237,6 +238,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args(argv)
     host = validate_bind_host(args.host)
+    configure_rotating_logging(Path("logs"))
     import uvicorn
 
     uvicorn.run("lyra.web:app", host=host, port=args.port, reload=False)
