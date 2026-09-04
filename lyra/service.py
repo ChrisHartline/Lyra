@@ -123,6 +123,27 @@ def capability_report(
         )
     )
 
+    telegram_token = _configured(env, "TELEGRAM_BOT_TOKEN")
+    telegram_allowlists = _configured(
+        env, "LYRA_TELEGRAM_ALLOWED_USER_IDS"
+    ) and _configured(env, "LYRA_TELEGRAM_ALLOWED_CHAT_IDS")
+    telegram_state = (
+        "ready"
+        if telegram_token and telegram_allowlists
+        else "degraded"
+        if telegram_token or telegram_allowlists
+        else "unconfigured"
+    )
+    capabilities.append(
+        Capability(
+            "telegram",
+            telegram_state,
+            "bot token and both allowlists are set"
+            if telegram_state == "ready"
+            else "Telegram is optional or incompletely configured",
+        )
+    )
+
     kg_path = Path(active_settings.kg_memory_file_path)
     capabilities.append(
         Capability(

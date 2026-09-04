@@ -80,6 +80,32 @@ CREATE INDEX IF NOT EXISTS idx_session_messages_session_sequence
 CREATE INDEX IF NOT EXISTS idx_session_turns_session_started
   ON session_turns (session_id, started_at DESC);
 
+CREATE TABLE IF NOT EXISTS telegram_updates (
+  update_id BIGINT PRIMARY KEY,
+  status TEXT NOT NULL CHECK (status IN ('processing', 'completed', 'failed', 'ignored')),
+  error_code TEXT,
+  received_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  finished_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS telegram_inbox (
+  id UUID PRIMARY KEY,
+  update_id BIGINT NOT NULL UNIQUE REFERENCES telegram_updates(update_id) ON DELETE RESTRICT,
+  message_id BIGINT NOT NULL,
+  sender_id TEXT NOT NULL,
+  chat_id TEXT NOT NULL,
+  media_type TEXT NOT NULL,
+  original_filename TEXT,
+  local_path TEXT,
+  source_url TEXT,
+  route TEXT NOT NULL CHECK (route IN ('corpus_candidate', 'pending_review', 'unsupported')),
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_telegram_inbox_created
+  ON telegram_inbox (created_at DESC);
+
 CREATE INDEX IF NOT EXISTS idx_chunks_embedding_hnsw
   ON chunks USING hnsw (embedding vector_cosine_ops);
 CREATE INDEX IF NOT EXISTS idx_memories_embedding_hnsw

@@ -1,7 +1,7 @@
 # Lyra — System Requirements Document
 
-**Version:** 0.11
-**Date:** 2026-09-01
+**Version:** 0.12
+**Date:** 2026-09-03
 **Author:** Christopher (with Claude)
 **Status:** In progress
 
@@ -134,9 +134,13 @@ contract.
 - **FR-N3:** Notion is the human dashboard, not the retrieval layer — semantic search over research content is served by pgvector only.
 
 ### 3.6 Notifications & Channels (v2)
-- **FR-T1:** A Telegram bot (BotFather-provisioned) delivers notifications: research run complete, Notion task updated, scheduled digests.
-- **FR-T2:** The Telegram channel optionally supports lightweight two-way chat with the same persona and memory backend.
-- **FR-T3:** Telegram messages MUST respect the same mode-separation rules (FR-P3); notification content defaults to Technical Assistant register.
+- **FR-T1 (Transport):** A BotFather-provisioned Telegram bot runs as part of the workstation service using outbound long polling; it opens no inbound port and requires no public web endpoint. The bot token lives only in `.env` as `TELEGRAM_BOT_TOKEN`.
+- **FR-T2 (Single-user allowlist):** Telegram updates are accepted only when both the sender user ID and destination chat ID match explicit `.env` allowlists. Unauthorized updates are ignored without confirming that Lyra exists and receive no session names, message history, attachment metadata, or error details.
+- **FR-T3 (Shared conversation):** Telegram two-way chat uses the same persona, provider loop, PostgreSQL named sessions, and approved-memory context as the local web UI. A Telegram chat binds to one named session through the existing channel-binding table; updates have stable external IDs so retries do not duplicate visible turns.
+- **FR-T4 ("Send this to Lyra" inbox):** Telegram accepts text/URLs, supported documents, photos, and voice notes. Every accepted item records Telegram update/message ID, sender, chat, received time, media type, original filename when available, and local artifact path or URL provenance. URLs and supported documents may route to the existing corpus ingestion contract; photos, voice notes, ambiguous items, and unsupported media route to a local pending-review record rather than being discarded or guessed. Inbox acceptance never creates a KG observation or durable episodic memory directly.
+- **FR-T5 (Remote authority boundary):** Telegram exposes conversation, inbox intake, and read-only status only. It cannot approve/reject/edit/forget memories or observations, execute coding jobs, authorize filesystem/shell/Git actions, publish to Notion/GitHub, change allowlists, or reveal credentials. Those actions remain local-only until a separately reviewed requirement and sign-off explicitly expands authority.
+- **FR-T6 (Presentation boundary):** Telegram messages respect the same persona and professional-artifact separation rules (FR-P3). Proactive notification content defaults to concise Technical Assistant register; conversational replies retain the Tier 0 companion/technical-partner blend.
+- **FR-T7 (Failure and retention):** Telegram API failures use bounded retry/backoff and sanitized local logs. Raw Telegram artifacts remain local and gitignored; deletion of a session does not silently delete independently ingested corpus sources, and deleting an inbox item does not erase a linked source without explicit confirmation.
 
 ### 3.7 Roleplay & Campaign Mode (v2)
 - **FR-D1 (Foundry VTT boundary — decided):** The tabletop platform is Foundry VTT. Integration direction: **Lyra is a client; Foundry owns mechanical truth** (HP, initiative, inventory, dice results, scenes). Integration is **buy-not-build**: the existing Foundry API Bridge (MCP) module is installed in the Foundry world and connected via the **hosted relay** (foundry-mcp.com) for v2 — Foundry thereby becomes another MCP server available to Lyra's orchestrator alongside the corpus server (IF-4). **Self-hosted relay is a documented future option** (lightweight Node service, negligible compute — could co-locate with pgvector) if privacy or reliability later motivates it. Lyra-side scope (what we build): campaign session context assembly (Lyra in character as her PC, fed relevant Foundry state + campaign ledger), post-session write-back to `memory_type='campaign'` (A5 machinery), and orchestrator config registering the Foundry MCP endpoint. The campaign ledger (FR-D2) stores narrative memory only and never duplicates mechanical state — one system of record per data type.
@@ -229,11 +233,12 @@ CREATE INDEX ON memories USING hnsw (embedding vector_cosine_ops);
 
 ## 6. Interfaces
 
-- **IF-1 (MCP):** External integrations (Notion, Linear, Supabase, Vercel, future Telegram, optional n8n-backed workflows) are exposed as MCP tools/resources; contracts and schemas live in `mcp/tools/`. The starter corpus/memory toolset is not exhaustive — new tools are added by contract under `mcp/tools/` (ADR-001 for n8n registration; ADR-002 for the MCP knowledge-graph server, registered agent-facing only through the gatekeeper per FR-M6).
+- **IF-1 (MCP):** External integrations used *by the agent as tools* (Notion, Linear, Supabase, Vercel, optional n8n-backed workflows) are exposed as MCP tools/resources; contracts and schemas live in `mcp/tools/`. User-facing channel adapters such as Telegram are runtime interfaces, not agent-callable MCP tools. The starter corpus/memory toolset is not exhaustive — new tools are added by contract under `mcp/tools/` (ADR-001 for n8n registration; ADR-002 for the MCP knowledge-graph server, registered agent-facing only through the gatekeeper per FR-M6).
 - **IF-2 (Provider API):** Grok via xAI OpenAI-compatible endpoint; Claude via Anthropic API; selection per task category in runtime config (`LYRA_MODEL` overrides).
 - **IF-3 (Foundry VTT):** Existing Foundry API Bridge (MCP) module via hosted relay (per FR-D1); Lyra's orchestrator consumes it as a standard MCP server. Relay API key stored in `.env` per NFR-2. Self-hosted relay documented as a future option; no bespoke bridge development in scope.
 - **IF-4 (Corpus MCP server):** Local MCP server (Python) fronting pgvector + filesystem per FR-R6; tool contracts documented in `mcp/tools/`. This is the only supported retrieval path — no direct DB access from agents.
 - **IF-5 (Coding engine):** A host-neutral Python interface starts/resumes/cancels isolated coding jobs and streams sanitized events. The first adapter uses the Codex Python SDK, but Lyra's conversation, approvals, job records, review package, and GitHub publisher remain engine-independent.
+- **IF-6 (Telegram channel):** A thin Bot API adapter receives long-poll updates and sends sanitized text/status replies. It translates Telegram update IDs, chat IDs, sender IDs, text, and attachment descriptors into Lyra's channel-neutral session/inbox contracts; provider, memory, ingestion, and approval logic remain outside the transport adapter.
 
 ## 7. Constraints & Assumptions
 
@@ -256,12 +261,13 @@ CREATE INDEX ON memories USING hnsw (embedding vector_cosine_ops);
 
 **Phase 2 (v2 — Lyra as standalone agentic application):**
 1. Standalone conversation service, named PostgreSQL sessions, and local loopback web UI (FR-S6; ADR-004).
-2. Approval-gated repository collaboration ending at a Lyra-authored draft PR (FR-G1–FR-G5).
-3. Telegram notifications/chat and optional private Tailscale Serve access; no public web hosting.
-4. Campaign integration per FR-D1/FR-D2, re-evaluated at Build Gate W7.1 before implementation.
-5. Voice & avatar stub interfaces wired through persona output (FR-V1/V2).
-6. Dynamic subagent creation remains optional and approval-gated (FR-S7).
-7. Supabase remains conditional on a future authenticated public-hosting ADR.
+2. Telegram inbox/chat, cross-device session handoff, and optional private Tailscale Serve access; no public web hosting (FR-T1–FR-T7).
+3. Personal-agency, daily-rhythm, and private continuity features proceed through their approval and storage boundaries before repository authority expands.
+4. Approval-gated repository collaboration ending at a Lyra-authored draft PR (FR-G1–FR-G5).
+5. Campaign integration per FR-D1/FR-D2, re-evaluated at Build Gate W10.1 before implementation.
+6. Voice & avatar stub interfaces wired through persona output (FR-V1/V2).
+7. Dynamic subagent creation remains optional and approval-gated (FR-S7).
+8. Supabase remains conditional on a future authenticated public-hosting ADR.
 
 **Phase 3 (v3 — earned autonomy & embodiment):**
 1. Per-category memory auto-commit (pending v2 trust record).

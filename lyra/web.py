@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -23,6 +25,7 @@ from lyra.runtime_events import EventKind, RuntimeEvent
 from lyra.runtime_tools import build_conversation_registry
 from lyra.service import configure_rotating_logging
 from lyra.sessions import ContextBuilder, SessionService
+from lyra.telegram import run_configured_bot
 
 
 STATIC_DIR = Path(__file__).resolve().parent / "web_static"
@@ -120,10 +123,27 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
 def create_app(
     sessions: SessionService | None = None,
     loop_factory: LoopFactory | None = None,
+    telegram_runner: Callable[[SessionService, LoopFactory], Any] | None = run_configured_bot,
 ) -> FastAPI:
     session_service = sessions or SessionService()
     factory = loop_factory or default_loop_factory(session_service)
-    app = FastAPI(title="Lyra", version="0.2.0")
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        task = (
+            asyncio.create_task(telegram_runner(session_service, factory))
+            if telegram_runner is not None
+            else None
+        )
+        try:
+            yield
+        finally:
+            if task is not None:
+                task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await task
+
+    app = FastAPI(title="Lyra", version="0.2.0", lifespan=lifespan)
 
     @app.get("/", include_in_schema=False)
     async def index():

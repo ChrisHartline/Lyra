@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 from types import SimpleNamespace
 
@@ -236,3 +237,28 @@ def test_bind_host_rejects_lan_and_public_addresses():
             assert "loopback" in str(exc)
         else:  # pragma: no cover
             raise AssertionError(f"non-loopback host accepted: {host}")
+
+
+def test_app_lifespan_starts_and_stops_optional_telegram_runner():
+    client, sessions = _client()
+    events = []
+
+    async def runner(received_sessions, loop_factory):
+        assert received_sessions is sessions
+        assert loop_factory is not None
+        events.append("started")
+        try:
+            await asyncio.Event().wait()
+        finally:
+            events.append("stopped")
+
+    app = create_app(
+        sessions=sessions,  # type: ignore[arg-type]
+        loop_factory=lambda _session_id: FakeLoop(sessions),
+        telegram_runner=runner,
+    )
+    with TestClient(app) as live_client:
+        assert live_client.get("/api/health").status_code == 200
+        assert events == ["started"]
+
+    assert events == ["started", "stopped"]

@@ -32,7 +32,13 @@ def test_a1_schema_and_cosine_similarity(ensure_db):
             cur.execute("SELECT extname FROM pg_extension WHERE extname = 'vector'")
             assert cur.fetchone()[0] == "vector"
 
-            for tbl in ("sources", "chunks", "memories"):
+            for tbl in (
+                "sources",
+                "chunks",
+                "memories",
+                "telegram_updates",
+                "telegram_inbox",
+            ):
                 cur.execute("SELECT to_regclass(%s)", (f"public.{tbl}",))
                 assert cur.fetchone()[0] in (f"public.{tbl}", tbl)
 

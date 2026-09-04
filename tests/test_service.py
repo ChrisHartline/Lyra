@@ -52,6 +52,29 @@ def test_capability_report_uses_explicit_states_without_secret_values():
     assert "[UNAVAILABLE] database" in rendered
 
 
+def test_telegram_capability_requires_token_and_both_allowlists():
+    ready = capability_report(
+        environ={
+            "TELEGRAM_BOT_TOKEN": "not-printed",
+            "LYRA_TELEGRAM_ALLOWED_USER_IDS": "42",
+            "LYRA_TELEGRAM_ALLOWED_CHAT_IDS": "84",
+        },
+        database_check=lambda _settings: Capability(
+            "database", "ready", "PostgreSQL is reachable"
+        ),
+    )
+    partial = capability_report(
+        environ={"TELEGRAM_BOT_TOKEN": "not-printed"},
+        database_check=lambda _settings: Capability(
+            "database", "ready", "PostgreSQL is reachable"
+        ),
+    )
+
+    assert next(item for item in ready if item.name == "telegram").state == "ready"
+    assert next(item for item in partial if item.name == "telegram").state == "degraded"
+    assert "not-printed" not in render_capability_report(ready)
+
+
 def test_rotating_logging_creates_gitignored_bounded_files():
     case = ROOT / "data" / "test_tmp" / "service" / "logging"
     path = configure_rotating_logging(case, max_bytes=80, backup_count=1)
