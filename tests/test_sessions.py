@@ -10,7 +10,7 @@ from lyra.sessions import ContextBuilder, SessionService, estimate_tokens
 TEST_DB = {
     "host": "127.0.0.1",
     "port": 55432,
-    "dbname": "lyra",
+    "dbname": "lyra_test",
     "user": "lyra",
     "password": "lyra",
 }
@@ -43,6 +43,28 @@ def test_named_session_resumes_after_service_restart_and_channel_binding(ensure_
     assert restarted.get_session(session["session_id"])["name"] == "Lyra runtime design"
     assert restarted.list_messages(session["session_id"])[0]["content"] == "Remember this turn."
     assert restarted.resolve_channel("telegram", "chat-42") == session["session_id"]
+
+
+def test_channel_rebind_moves_handoff_without_copying_history(ensure_db):
+    _reset()
+    service = SessionService(connection_factory=_conn)
+    first = service.create_session("First device session")
+    second = service.create_session("Handoff target")
+    service.append_message(first["session_id"], "user", "First-only history")
+    service.append_message(second["session_id"], "user", "Target history")
+    service.bind_channel(first["session_id"], "telegram", "chat-42")
+
+    service.bind_channel(second["session_id"], "telegram", "chat-42")
+
+    assert service.resolve_channel("telegram", "chat-42") == second["session_id"]
+    assert service.list_channels(first["session_id"]) == []
+    assert service.list_channels(second["session_id"])[0]["channel"] == "telegram"
+    assert [item["content"] for item in service.list_messages(first["session_id"])] == [
+        "First-only history"
+    ]
+    assert [item["content"] for item in service.list_messages(second["session_id"])] == [
+        "Target history"
+    ]
 
 
 def test_session_delete_cascades_but_does_not_touch_knowledge_planes(ensure_db):
@@ -211,3 +233,32 @@ def test_context_budget_keeps_newest_complete_messages(ensure_db):
     assert total <= 20
     assert "new-" in content
     assert "old-" not in content
+
+
+def test_context_labels_channel_provenance_without_mutating_stored_text(ensure_db):
+    _reset()
+    service = SessionService(connection_factory=_conn)
+    session = service.create_session("Channel provenance")
+    service.append_message(
+        session["session_id"],
+        "user",
+        "From the phone",
+        metadata={"channel": "telegram"},
+    )
+    service.append_message(
+        session["session_id"],
+        "assistant",
+        "Phone reply",
+        metadata={"channel": "telegram"},
+    )
+
+    context = ContextBuilder(service).build(
+        session["session_id"],
+        system_prompt="You are Lyra.",
+        presentation_instruction="Keep this response concise.",
+    )
+
+    assert context[1] == {"role": "system", "content": "Keep this response concise."}
+    assert context[2]["content"] == "[Channel: telegram]\nFrom the phone"
+    assert context[3]["content"] == "[Channel: telegram]\nPhone reply"
+    assert service.list_messages(session["session_id"])[0]["content"] == "From the phone"

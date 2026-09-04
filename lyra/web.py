@@ -5,8 +5,10 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager, suppress
+from datetime import time
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -14,6 +16,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from lyra.away import AwayModeService
 from lyra.corpus_mcp import CorpusService, MCPToolRouter
 from lyra.embeddings import EmbeddingService
 from lyra.ingest import IngestPipeline
@@ -34,7 +37,7 @@ LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
 class TurnLoop(Protocol):
     def stream_turn(
-        self, session_id: str, user_text: str
+        self, session_id: str, user_text: str, *, channel: str = "web"
     ) -> AsyncIterator[RuntimeEvent]: ...
 
 
@@ -51,6 +54,18 @@ class SessionUpdate(BaseModel):
 
 class TurnCreate(BaseModel):
     content: str = Field(min_length=1, max_length=100_000)
+
+
+class PresentationUpdate(BaseModel):
+    presentation_mode: str = Field(pattern="^(standard|concise)$")
+
+
+class AwayUpdate(BaseModel):
+    enabled: bool
+    quiet_start: time | None = None
+    quiet_end: time | None = None
+    timezone: str = Field(min_length=1, max_length=100)
+    daily_notification_budget: int = Field(ge=0, le=1000)
 
 
 def validate_bind_host(host: str) -> str:
@@ -87,6 +102,9 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
         corpus_router=corpus_router, memory_router=memory_router
     )
     context = ContextBuilder(sessions, memory_search=corpus.search_memories)
+    presentation = AwayModeService(
+        getattr(sessions, "connection_factory", SessionService().connection_factory)
+    )
     system_prompt = compose_runtime_context()
 
     class UnavailableLoop:
@@ -94,10 +112,12 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
             self.message = message
 
         async def stream_turn(
-            self, session_id: str, user_text: str
+            self, session_id: str, user_text: str, *, channel: str = "web"
         ) -> AsyncIterator[RuntimeEvent]:
             sessions.recover_interrupted_turns(session_id)
-            sessions.append_message(session_id, "user", user_text)
+            sessions.append_message(
+                session_id, "user", user_text, metadata={"channel": channel}
+            )
             turn = sessions.start_turn(session_id, "running")
             sessions.update_turn(
                 turn["turn_id"], "failed", error_code="runtime_not_configured"
@@ -115,6 +135,7 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
             context=context,
             runner=ModelToolRunner(provider, profile, registry),
             system_prompt=system_prompt,
+            presentation=presentation,
         )
 
     return factory
@@ -124,6 +145,7 @@ def create_app(
     sessions: SessionService | None = None,
     loop_factory: LoopFactory | None = None,
     telegram_runner: Callable[[SessionService, LoopFactory], Any] | None = run_configured_bot,
+    away_service: AwayModeService | None = None,
 ) -> FastAPI:
     session_service = sessions or SessionService()
     factory = loop_factory or default_loop_factory(session_service)
@@ -144,6 +166,13 @@ def create_app(
                     await task
 
     app = FastAPI(title="Lyra", version="0.2.0", lifespan=lifespan)
+    away = away_service or AwayModeService(
+        getattr(
+            session_service,
+            "connection_factory",
+            SessionService().connection_factory,
+        )
+    )
 
     @app.get("/", include_in_schema=False)
     async def index():
@@ -203,6 +232,74 @@ def create_app(
             )
         }
 
+    @app.get("/api/sessions/{session_id}/channels")
+    async def list_channels(session_id: str):
+        try:
+            session_service.get_session(session_id)
+            return {"channels": session_service.list_channels(session_id)}
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail="Session not found") from exc
+
+    @app.post("/api/sessions/{session_id}/handoff/telegram")
+    async def handoff_to_telegram(session_id: str):
+        try:
+            session_service.get_session(session_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail="Session not found") from exc
+        chat_ids = [
+            item.strip()
+            for item in os.getenv("LYRA_TELEGRAM_ALLOWED_CHAT_IDS", "").split(",")
+            if item.strip()
+        ]
+        if len(chat_ids) != 1:
+            raise HTTPException(
+                status_code=409,
+                detail="Exactly one Telegram private chat must be configured",
+            )
+        return session_service.bind_channel(session_id, "telegram", chat_ids[0])
+
+    @app.get("/api/preferences/{channel}")
+    async def get_channel_preference(channel: str):
+        try:
+            return away.get_channel_preference(channel)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.patch("/api/preferences/{channel}")
+    async def set_channel_preference(channel: str, request: PresentationUpdate):
+        try:
+            return away.set_channel_preference(channel, request.presentation_mode)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/api/away")
+    async def get_away_policy():
+        return away.policy_dict()
+
+    @app.get("/api/away/batched")
+    async def list_batched_notifications():
+        return {"notifications": away.list_batched()}
+
+    @app.put("/api/away")
+    async def set_away_policy(request: AwayUpdate):
+        try:
+            policy = away.set_policy(
+                enabled=request.enabled,
+                quiet_start=request.quiet_start,
+                quiet_end=request.quiet_end,
+                timezone=request.timezone,
+                daily_notification_budget=request.daily_notification_budget,
+            )
+            return {
+                "enabled": policy.enabled,
+                "quiet_start": policy.quiet_start,
+                "quiet_end": policy.quiet_end,
+                "timezone": policy.timezone,
+                "daily_notification_budget": policy.daily_notification_budget,
+            }
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
     @app.post("/api/sessions/{session_id}/turns")
     async def create_turn(session_id: str, turn: TurnCreate, request: Request):
         try:
@@ -217,7 +314,9 @@ def create_app(
             failed = False
             try:
                 loop = factory(session_id)
-                async for event in loop.stream_turn(session_id, turn.content):
+                async for event in loop.stream_turn(
+                    session_id, turn.content, channel="web"
+                ):
                     if await request.is_disconnected():
                         break
                     if event.kind is EventKind.ERROR:

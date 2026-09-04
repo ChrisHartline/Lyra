@@ -64,6 +64,40 @@ CREATE TABLE IF NOT EXISTS session_channels (
   UNIQUE (session_id, channel)
 );
 
+CREATE TABLE IF NOT EXISTS channel_preferences (
+  channel TEXT PRIMARY KEY,
+  presentation_mode TEXT NOT NULL DEFAULT 'standard'
+    CHECK (presentation_mode IN ('standard', 'concise')),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS away_policy (
+  singleton BOOLEAN PRIMARY KEY DEFAULT true CHECK (singleton),
+  enabled BOOLEAN NOT NULL DEFAULT false,
+  quiet_start TIME,
+  quiet_end TIME,
+  timezone TEXT NOT NULL DEFAULT 'America/Chicago',
+  daily_notification_budget SMALLINT NOT NULL DEFAULT 6
+    CHECK (daily_notification_budget >= 0),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS notification_events (
+  id BIGSERIAL PRIMARY KEY,
+  channel TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (
+    category IN ('security', 'safety', 'service_failure', 'user_requested',
+                 'digest', 'commitment', 'research', 'social', 'status')
+  ),
+  disposition TEXT NOT NULL CHECK (disposition IN ('send', 'batch', 'suppress')),
+  reason TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notification_events_created
+  ON notification_events (created_at DESC);
+
 CREATE TABLE IF NOT EXISTS session_turns (
   id UUID PRIMARY KEY,
   session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,

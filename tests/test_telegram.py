@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TEST_DB = {
     "host": "127.0.0.1",
     "port": 55432,
-    "dbname": "lyra",
+    "dbname": "lyra_test",
     "user": "lyra",
     "password": "lyra",
 }
@@ -97,8 +97,8 @@ class FakeLoop:
         self.calls = calls
         self.session_id = session_id
 
-    async def stream_turn(self, session_id, user_text):
-        self.calls.append((session_id, user_text))
+    async def stream_turn(self, session_id, user_text, *, channel="web"):
+        self.calls.append((session_id, user_text, channel))
         yield RuntimeEvent.text_delta("Hello from the shared session.")
         yield RuntimeEvent.completion("stop")
 
@@ -157,7 +157,7 @@ def test_unauthorized_update_is_silent_and_authorized_retry_is_deduplicated():
     assert asyncio.run(bot.handle_update(update)) == "completed"
     assert asyncio.run(bot.handle_update(update)) == "duplicate"
 
-    assert calls == [("session-1", "Continue our conversation")]
+    assert calls == [("session-1", "Continue our conversation", "telegram")]
     assert sessions.channels[("telegram", "84")] == "session-1"
     assert client.sent == [("84", "Hello from the shared session.")]
 

@@ -35,7 +35,7 @@ class TelegramError(RuntimeError):
 
 class TurnLoop(Protocol):
     def stream_turn(
-        self, session_id: str, user_text: str
+        self, session_id: str, user_text: str, *, channel: str = "web"
     ) -> AsyncIterator[RuntimeEvent]: ...
 
 
@@ -364,7 +364,9 @@ class TelegramBot:
 
     async def _chat(self, session_id: str, text: str) -> str:
         parts: list[str] = []
-        async for event in self.loop_factory(session_id).stream_turn(session_id, text):
+        async for event in self.loop_factory(session_id).stream_turn(
+            session_id, text, channel="telegram"
+        ):
             if event.kind is EventKind.TEXT and event.text:
                 parts.append(event.text)
             elif event.kind is EventKind.ERROR:

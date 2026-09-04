@@ -13,7 +13,7 @@ from lyra.memory import MemoryService
 TEST_DB = {
     "host": "127.0.0.1",
     "port": 55432,
-    "dbname": "lyra",
+    "dbname": "lyra_test",
     "user": "lyra",
     "password": "lyra",
 }

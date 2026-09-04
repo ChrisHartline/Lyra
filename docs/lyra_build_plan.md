@@ -1,7 +1,7 @@
 # Lyra — Build Plan
 
 **Version:** 0.3
-**Companion to:** `docs/lyra_system_requirements.md` (SRS v0.13)
+**Companion to:** `docs/lyra_system_requirements.md` (SRS v0.14)
 **Audience:** The implementing agent (Cursor/Claude) and Christopher.
 
 This document controls **sequencing and verification**. The SRS controls **what** is built. If this plan and the SRS conflict, the SRS wins; flag the conflict instead of improvising.
@@ -541,7 +541,7 @@ Acceptance: both full suites pass; the secrecy, idempotency, recovery, and bucke
 | W4.5 | Gate passed (live) | Provider smoke: `.\\venv\\Scripts\\python.exe scripts\\check_model_providers.py --timeout 30` -> Grok conversation + Claude specialist `generation=ok`; browser live smoke: Grok replied `Hello Starlight. LYRA-LIVE-PASS` through the loopback UI, and the complete named session restored after reload/reopen; full suite: `.\\venv\\Scripts\\python.exe -m pytest -q --basetemp=data\\test_tmp\\pytest_w45_live_close -p no:cacheprovider` -> `77 passed`. |
 | W4.6 | Gate passed | Doctor: `.\\venv\\Scripts\\python.exe scripts\\lyra_doctor.py` reported runtime, database, both model profiles, Notion, KG, and logging `READY` with NSSM correctly `UNCONFIGURED`; focused service/backup/web tests -> `............. [100%]`; NSSM install dry-run produced loopback-only install/config/start commands with rotation; live full-database dump was 15,067 bytes and contained all four session tables; live process restart restored named session `W4.6 Restart Proof 2026-09-03` with both messages; full suite: `.\\venv\\Scripts\\python.exe -m pytest -q --basetemp=data\\test_tmp\\pytest_w46_full -p no:cacheprovider` -> `84 passed`. |
 | W5.1 | Implementation complete; live chat/handoff passed; inbox/authority sign-off pending | SRS v0.12 defines long-poll transport, dual allowlists, shared sessions, inbox provenance, and the remote-authority boundary; focused Telegram/service/backup/web/schema/session suite -> `.............................. [100%]` (`30 passed`); full suite: `.\\venv\\Scripts\\python.exe -m pytest -q --basetemp=data\\test_tmp\\pytest_w51_full -p no:cacheprovider` -> `93 passed`. Live 2026-09-04: BotFather token and matching private user/chat allowlists configured in `.env`; doctor reported Telegram `READY`; `@Lyra_avatar_bot` answered `/start` and “Hey. Is this working :)”; the loopback web API displayed that Telegram-bound session and Lyra correctly recalled “Is this working?” from its shared history. Remaining for full gate sign-off: live URL/document/photo/voice inbox routing and remote approval/execution refusal smoke. |
-| W5.2 | Not started | — |
+| W5.2 | Gate passed | SRS v0.14 defines atomic local-only handoff, channel provenance, presentation boundaries, and explicit Away Mode urgency/budget rules. Focused session/runtime/Telegram/web/schema/Away suite -> `................................... [100%]` (`35 passed`); full isolated suite -> `........................................................................ [ 72%] ............................ [100%]` (`100 passed`). Live schema initialization succeeded. Integration tests now provision and exclusively use `lyra_test`; a regression guard prevents destructive fixtures from targeting the runtime database. Operating guide: `docs/away_mode.md`. |
 | W5.3 | Not started | — |
 | W6.1 | Not started | — |
 | W6.2 | Not started | — |

@@ -14,6 +14,7 @@ class FakeSessions:
     def __init__(self) -> None:
         self.sessions: dict[str, dict] = {}
         self.messages: dict[str, list[dict]] = {}
+        self.channels: dict[tuple[str, str], str] = {}
 
     def create_session(self, name):
         session_id = str(uuid.uuid4())
@@ -69,12 +70,55 @@ class FakeSessions:
         }
         self.messages[session_id].append(message)
 
+    def bind_channel(self, session_id, channel, external_id):
+        for key, value in list(self.channels.items()):
+            if key == (channel, external_id) or (value == session_id and key[0] == channel):
+                del self.channels[key]
+        self.channels[(channel, external_id)] = session_id
+        return {"session_id": session_id, "channel": channel, "external_id": external_id}
+
+    def list_channels(self, session_id):
+        return [
+            {"session_id": value, "channel": key[0], "external_id": key[1]}
+            for key, value in self.channels.items()
+            if value == session_id
+        ]
+
+
+class FakeAway:
+    def __init__(self):
+        self.mode = "standard"
+        self.policy = {
+            "enabled": False,
+            "quiet_start": None,
+            "quiet_end": None,
+            "timezone": "America/Chicago",
+            "daily_notification_budget": 6,
+        }
+
+    def get_channel_preference(self, channel):
+        return {"channel": channel, "presentation_mode": self.mode}
+
+    def set_channel_preference(self, channel, mode):
+        self.mode = mode
+        return {"channel": channel, "presentation_mode": mode}
+
+    def policy_dict(self):
+        return dict(self.policy)
+
+    def set_policy(self, **kwargs):
+        self.policy = dict(kwargs)
+        return SimpleNamespace(**kwargs)
+
+    def list_batched(self):
+        return []
+
 
 class FakeLoop:
     def __init__(self, sessions: FakeSessions) -> None:
         self.sessions = sessions
 
-    async def stream_turn(self, session_id, user_text):
+    async def stream_turn(self, session_id, user_text, *, channel="web"):
         self.sessions.append(session_id, "user", user_text)
         yield RuntimeEvent.text_delta("Hello **from Lyra**.")
         self.sessions.append(session_id, "assistant", "Hello **from Lyra**.")
@@ -86,6 +130,7 @@ def _client():
     app = create_app(
         sessions=sessions,  # type: ignore[arg-type]
         loop_factory=lambda _session_id: FakeLoop(sessions),
+        away_service=FakeAway(),  # type: ignore[arg-type]
     )
     return TestClient(app), sessions
 
@@ -131,6 +176,42 @@ def test_session_crud_and_message_resume_contract():
     assert [item["content"] for item in resumed] == ["Hello", "Hello **from Lyra**."]
     assert client.delete(f"/api/sessions/{session_id}").status_code == 204
     assert client.get(f"/api/sessions/{session_id}").status_code == 404
+
+
+def test_local_handoff_and_away_preferences(monkeypatch):
+    monkeypatch.setenv("LYRA_TELEGRAM_ALLOWED_CHAT_IDS", "84")
+    client, sessions = _client()
+    first = client.post("/api/sessions", json={"name": "First"}).json()["session_id"]
+    target = client.post("/api/sessions", json={"name": "Target"}).json()["session_id"]
+    sessions.bind_channel(first, "telegram", "84")
+
+    handoff = client.post(f"/api/sessions/{target}/handoff/telegram")
+    concise = client.patch(
+        "/api/preferences/telegram", json={"presentation_mode": "concise"}
+    )
+    away = client.put(
+        "/api/away",
+        json={
+            "enabled": True,
+            "quiet_start": "22:00:00",
+            "quiet_end": "07:00:00",
+            "timezone": "America/Chicago",
+            "daily_notification_budget": 4,
+        },
+    )
+
+    assert handoff.json() == {
+        "session_id": target,
+        "channel": "telegram",
+        "external_id": "84",
+    }
+    assert sessions.channels == {("telegram", "84"): target}
+    assert client.get(f"/api/sessions/{target}/channels").json()["channels"][0][
+        "channel"
+    ] == "telegram"
+    assert concise.json()["presentation_mode"] == "concise"
+    assert away.json()["enabled"] is True
+    assert client.get("/api/away").json()["daily_notification_budget"] == 4
 
 
 def test_sse_stream_has_status_text_completion_and_resume_hint():
@@ -202,8 +283,8 @@ def test_default_missing_profile_persists_user_message(monkeypatch):
 
     # The real SessionService records this path; adapt the fake to its interface.
     sessions.recover_interrupted_turns = lambda session_id: 0
-    sessions.append_message = (
-        lambda session_id, role, content: sessions.append(session_id, role, content)
+    sessions.append_message = lambda session_id, role, content, **kwargs: sessions.append(
+        session_id, role, content
     )
     sessions.start_turn = lambda session_id, status: {"turn_id": "turn-1"}
     sessions.update_turn = lambda turn_id, status, error_code=None: None

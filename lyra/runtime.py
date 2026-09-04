@@ -37,6 +37,10 @@ class EmotionOutput(Protocol):
     async def emit(self, name: str, data: Mapping[str, Any]) -> None: ...
 
 
+class PresentationPolicy(Protocol):
+    def presentation_instruction(self, channel: str) -> str | None: ...
+
+
 class NoOpVoiceOutput:
     async def emit(self, text: str) -> None:
         return None
@@ -153,6 +157,7 @@ class AgentLoop:
     system_prompt: str
     voice: VoiceOutput = field(default_factory=NoOpVoiceOutput)
     emotion: EmotionOutput = field(default_factory=NoOpEmotionOutput)
+    presentation: PresentationPolicy | None = None
 
     async def stream_turn(
         self,
@@ -160,9 +165,15 @@ class AgentLoop:
         user_text: str,
         *,
         memory_buckets: tuple[str, ...] = ("biography",),
+        channel: str = "web",
     ) -> AsyncIterator[RuntimeEvent]:
         self.sessions.recover_interrupted_turns(session_id)
-        self.sessions.append_message(session_id, "user", user_text)
+        normalized_channel = channel.strip().lower()
+        if normalized_channel not in {"web", "telegram"}:
+            raise ValueError("Unsupported conversation channel")
+        self.sessions.append_message(
+            session_id, "user", user_text, metadata={"channel": normalized_channel}
+        )
         turn = self.sessions.start_turn(session_id, "running")
         assistant_parts: list[str] = []
         persisted = False
@@ -175,7 +186,11 @@ class AgentLoop:
                     session_id,
                     "assistant",
                     text,
-                    metadata={"partial": partial, "turn_id": turn["turn_id"]},
+                    metadata={
+                        "partial": partial,
+                        "turn_id": turn["turn_id"],
+                        "channel": normalized_channel,
+                    },
                 )
                 persisted = True
 
@@ -185,6 +200,11 @@ class AgentLoop:
                 system_prompt=self.system_prompt,
                 memory_query=user_text,
                 memory_buckets=memory_buckets,
+                presentation_instruction=(
+                    self.presentation.presentation_instruction(normalized_channel)
+                    if self.presentation
+                    else None
+                ),
             )
             async for event in self.runner.stream(messages):
                 if event.kind is EventKind.TEXT:

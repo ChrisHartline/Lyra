@@ -269,6 +269,13 @@ class SessionService:
             with conn.cursor() as cur:
                 cur.execute(
                     """
+                    DELETE FROM session_channels
+                    WHERE channel = %s AND external_id = %s AND session_id <> %s
+                    """,
+                    (channel, external_id, session_id),
+                )
+                cur.execute(
+                    """
                     INSERT INTO session_channels (session_id, channel, external_id)
                     VALUES (%s, %s, %s)
                     ON CONFLICT (session_id, channel)
@@ -284,6 +291,28 @@ class SessionService:
             "channel": row[1],
             "external_id": row[2],
         }
+
+    def list_channels(self, session_id: str | uuid.UUID) -> list[dict[str, str]]:
+        with self.connection_factory() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT session_id, channel, external_id
+                    FROM session_channels
+                    WHERE session_id = %s
+                    ORDER BY channel
+                    """,
+                    (session_id,),
+                )
+                rows = cur.fetchall()
+        return [
+            {
+                "session_id": str(row[0]),
+                "channel": row[1],
+                "external_id": row[2],
+            }
+            for row in rows
+        ]
 
     def resolve_channel(self, channel: str, external_id: str) -> str | None:
         with self.connection_factory() as conn:
@@ -407,6 +436,7 @@ class ContextBuilder:
         max_tokens: int = 8192,
         response_reserve: int = 2048,
         memory_limit_per_bucket: int = 3,
+        presentation_instruction: str | None = None,
     ) -> list[dict[str, str]]:
         available = max_tokens - response_reserve
         if available <= 0:
@@ -421,6 +451,10 @@ class ContextBuilder:
                     "role": "system",
                     "content": "Session synopsis:\n" + session["synopsis"],
                 }
+            )
+        if presentation_instruction:
+            prefix.append(
+                {"role": "system", "content": presentation_instruction.strip()}
             )
 
         approved_memory_lines: list[str] = []
@@ -463,10 +497,14 @@ class ContextBuilder:
         )
         selected: list[dict[str, str]] = []
         for item in reversed(history):
-            cost = estimate_tokens(item["content"])
+            content = item["content"]
+            channel = item["metadata"].get("channel")
+            if channel in {"web", "telegram"}:
+                content = f"[Channel: {channel}]\n{content}"
+            cost = estimate_tokens(content)
             if used + cost > available:
                 break
-            selected.append({"role": item["role"], "content": item["content"]})
+            selected.append({"role": item["role"], "content": content})
             used += cost
         selected.reverse()
         return prefix + selected
