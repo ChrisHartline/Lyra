@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import UTC, datetime
+import hashlib
 import os
 from pathlib import Path
 import shutil
@@ -13,7 +14,20 @@ from lyra.config import settings
 from lyra.service import SESSION_TABLES
 
 
-def verify_session_tables() -> None:
+REQUIRED_BACKUP_TABLES = (
+    "sources",
+    "chunks",
+    "memories",
+    *SESSION_TABLES,
+    "channel_preferences",
+    "away_policy",
+    "notification_events",
+    "telegram_updates",
+    "telegram_inbox",
+)
+
+
+def verify_required_tables() -> None:
     with psycopg.connect(
         host=settings.db_host,
         port=settings.db_port,
@@ -26,15 +40,38 @@ def verify_session_tables() -> None:
             cursor.execute(
                 "SELECT tablename FROM pg_tables WHERE schemaname = 'public' "
                 "AND tablename = ANY(%s)",
-                (list(SESSION_TABLES),),
+                (list(REQUIRED_BACKUP_TABLES),),
             )
             found = {row[0] for row in cursor.fetchall()}
-    missing = set(SESSION_TABLES) - found
+    missing = set(REQUIRED_BACKUP_TABLES) - found
     if missing:
         raise RuntimeError(
-            "Session backup coverage is incomplete; missing tables: "
+            "Database backup coverage is incomplete; missing tables: "
             + ", ".join(sorted(missing))
         )
+
+
+def verify_backup_file(path: Path) -> tuple[int, str]:
+    if not path.is_file() or path.stat().st_size == 0:
+        raise RuntimeError("Database backup is missing or empty")
+    digest = hashlib.sha256()
+    markers = {
+        table: f"COPY public.{table} ".encode() for table in REQUIRED_BACKUP_TABLES
+    }
+    found: set[str] = set()
+    with path.open("rb") as stream:
+        for line in stream:
+            digest.update(line)
+            for table, marker in markers.items():
+                if line.startswith(marker):
+                    found.add(table)
+    missing = set(REQUIRED_BACKUP_TABLES) - found
+    if missing:
+        raise RuntimeError(
+            "Backup dump is incomplete; missing table data sections: "
+            + ", ".join(sorted(missing))
+        )
+    return path.stat().st_size, digest.hexdigest()
 
 
 def create_backup(
@@ -52,13 +89,18 @@ def create_backup(
     if executable:
         runner(
             [
-            executable,
-            "-h", settings.db_host,
-            "-p", str(settings.db_port),
-            "-U", settings.db_user,
-            "-d", settings.db_name,
-            "--no-password",
-            "-f", str(out),
+                executable,
+                "-h",
+                settings.db_host,
+                "-p",
+                str(settings.db_port),
+                "-U",
+                settings.db_user,
+                "-d",
+                settings.db_name,
+                "--no-password",
+                "-f",
+                str(out),
             ],
             env=environment,
             check=True,
@@ -84,10 +126,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Back up the complete Lyra database")
     parser.add_argument("--output-dir", type=Path, default=Path("backups"))
     args = parser.parse_args(argv)
-    verify_session_tables()
+    verify_required_tables()
     out = create_backup(args.output_dir)
+    size, sha256 = verify_backup_file(out)
     print(f"Backup written: {out}")
-    print("Session tables covered: " + ", ".join(SESSION_TABLES))
+    print(f"Verified bytes: {size}")
+    print(f"SHA-256: {sha256}")
+    print("Tables covered: " + ", ".join(REQUIRED_BACKUP_TABLES))
     return 0
 
 

@@ -5,23 +5,15 @@ import shutil
 import uuid
 
 import numpy as np
-import psycopg
 import responses
 
 from lyra.corpus_mcp import CorpusService, MCPToolRouter
 from lyra.ingest import IngestPipeline
-
-TEST_DB = {
-    "host": "127.0.0.1",
-    "port": 55432,
-    "dbname": "lyra_test",
-    "user": "lyra",
-    "password": "lyra",
-}
+from tests.db_support import connect_test_db
 
 
 def _conn():
-    return psycopg.connect(**TEST_DB, connect_timeout=3)
+    return connect_test_db()
 
 
 def _reset_tables() -> None:

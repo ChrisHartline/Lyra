@@ -1,40 +1,27 @@
 from __future__ import annotations
 
-import os
 import subprocess
 import time
 from pathlib import Path
 import pytest
-import psycopg
+
+from tests.db_support import (
+    assert_safe_test_database,
+    connect_test_db,
+    ensure_test_database,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
-TEST_DB = {
-    "host": "127.0.0.1",
-    "port": 55432,
-    "dbname": "lyra_test",
-    "user": "lyra",
-    "password": "lyra",
-}
 
 
-def _ensure_test_database() -> None:
-    # Integration fixtures truncate tables, so they must never target Lyra's
-    # runtime database.
-    admin = dict(TEST_DB)
-    admin["dbname"] = "lyra"
-    with psycopg.connect(**admin, connect_timeout=3, autocommit=True) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT 1 FROM pg_database WHERE datname = 'lyra_test'")
-            if not cur.fetchone():
-                cur.execute("CREATE DATABASE lyra_test")
+def pytest_sessionstart(session):
+    del session
+    assert_safe_test_database()
 
 
 def _db_ready() -> bool:
     try:
-        with psycopg.connect(
-            **TEST_DB,
-            connect_timeout=3,
-        ) as conn:
+        with connect_test_db() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT 1")
                 cur.fetchone()
@@ -46,7 +33,7 @@ def _db_ready() -> bool:
 @pytest.fixture(scope="session")
 def ensure_db():
     subprocess.run(["docker", "compose", "up", "-d"], cwd=ROOT, check=True)
-    _ensure_test_database()
+    ensure_test_database()
     deadline = time.time() + 120
     while time.time() < deadline:
         if _db_ready():

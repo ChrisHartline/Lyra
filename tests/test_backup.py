@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from scripts import db_backup
 
 
@@ -61,3 +63,28 @@ def test_backup_falls_back_to_the_existing_database_container(monkeypatch):
 
     assert command[:4] == ["docker", "exec", "lyra-pgvector", "pg_dump"]
     assert kwargs["stdout"].name == str(output)
+
+
+def test_backup_verification_requires_nonempty_complete_dump():
+    target = ROOT / "data" / "test_tmp" / "service" / "verified" / "backup.sql"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        "".join(
+            f"COPY public.{table} (id) FROM stdin;\n\\.\n"
+            for table in db_backup.REQUIRED_BACKUP_TABLES
+        ),
+        encoding="utf-8",
+    )
+
+    size, digest = db_backup.verify_backup_file(target)
+
+    assert size > 0
+    assert len(digest) == 64
+
+    target.write_text("COPY public.chat_sessions (id) FROM stdin;\n\\.\n")
+    with pytest.raises(RuntimeError, match="incomplete"):
+        db_backup.verify_backup_file(target)
+
+    target.write_text("")
+    with pytest.raises(RuntimeError, match="empty"):
+        db_backup.verify_backup_file(target)

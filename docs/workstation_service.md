@@ -40,8 +40,10 @@ directory is gitignored.
 
 ## Backup and restart recovery
 
-`scripts/db_backup.py` verifies that all four session tables exist before
-running a full `pg_dump`. Because sessions share Lyra's PostgreSQL database,
-the full dump covers named sessions, messages, channel bindings, and turn
-state together with corpus and memory data. Follow `docs/db_restore.md` to
-restore and verify a dump.
+`scripts/db_backup.py` verifies the complete runtime table set before running a
+full `pg_dump`, then validates that the resulting file is nonempty and contains
+every required table data section. It reports the dump's size and SHA-256
+checksum. Because sessions share Lyra's PostgreSQL database, the full dump
+covers named sessions, messages, channel bindings, turn state, channel/Away
+preferences, Telegram state, corpus, and memory data. Follow
+`docs/db_restore.md` to restore and verify a dump.

@@ -5,8 +5,6 @@ from pathlib import Path
 import traceback
 
 import httpx
-import psycopg
-
 from lyra.runtime_events import RuntimeEvent
 from lyra.telegram import (
     BotAPI,
@@ -17,20 +15,12 @@ from lyra.telegram import (
     TelegramStore,
     parse_inbox_item,
 )
+from tests.db_support import connect_test_db
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TEST_DB = {
-    "host": "127.0.0.1",
-    "port": 55432,
-    "dbname": "lyra_test",
-    "user": "lyra",
-    "password": "lyra",
-}
-
-
 def _conn():
-    return psycopg.connect(**TEST_DB, connect_timeout=3)
+    return connect_test_db()
 
 
 class FakeStore:

@@ -2,30 +2,18 @@ from __future__ import annotations
 
 from pathlib import Path
 import numpy as np
-import psycopg
 from pgvector.psycopg import register_vector
 
-from lyra.config import settings
-
-TEST_DB = {
-    "host": "127.0.0.1",
-    "port": 55432,
-    "dbname": "lyra_test",
-    "user": "lyra",
-    "password": "lyra",
-}
+from tests.db_support import TEST_DB, assert_safe_test_database, connect_test_db
 
 
 def _conn():
-    return psycopg.connect(
-        **TEST_DB,
-        connect_timeout=3,
-    )
+    return connect_test_db()
 
 
 def test_integration_database_is_not_the_runtime_database():
     assert TEST_DB["dbname"] == "lyra_test"
-    assert TEST_DB["dbname"] != settings.db_name
+    assert_safe_test_database()
 
 
 def test_a1_schema_and_cosine_similarity(ensure_db):

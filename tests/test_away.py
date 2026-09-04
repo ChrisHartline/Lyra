@@ -3,22 +3,12 @@ from __future__ import annotations
 from datetime import UTC, datetime, time
 from pathlib import Path
 
-import psycopg
-
 from lyra.away import AwayModeService
-
-
-TEST_DB = {
-    "host": "127.0.0.1",
-    "port": 55432,
-    "dbname": "lyra_test",
-    "user": "lyra",
-    "password": "lyra",
-}
+from tests.db_support import connect_test_db
 
 
 def _conn():
-    return psycopg.connect(**TEST_DB, connect_timeout=3)
+    return connect_test_db()
 
 
 def _reset() -> AwayModeService:
