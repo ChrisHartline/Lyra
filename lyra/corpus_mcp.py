@@ -10,6 +10,7 @@ import psycopg
 from .db import connect
 from .embeddings import EmbeddingService
 from .ingest import IngestPipeline
+from .memory import sensitivity_flags, validate_persistable_text
 
 
 def _vector_literal(vec: np.ndarray) -> str:
@@ -129,18 +130,38 @@ class CorpusService:
         salience: int = 5,
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        vec = self.embedding_service.embed_texts([content])[0]
+        normalized = validate_persistable_text(content)
+        if memory_type == "observation" or (metadata or {}).get("plane") == "knowledge_graph":
+            raise ValueError("Knowledge-graph facts must use propose_observation")
+        if not 1 <= salience <= 10:
+            raise ValueError("Memory salience must be between 1 and 10")
+        meta = dict(metadata or {})
+        ledger = str(
+            meta.get("ledger")
+            or (memory_type if memory_type in {"story", "campaign"} else "biography")
+        )
+        if ledger not in {"biography", "story", "campaign"}:
+            raise ValueError("Memory ledger must be biography, story, or campaign")
+        meta["ledger"] = ledger
+        meta.setdefault("destination_plane", "semantic_memory")
+        meta.setdefault("source_type", "agent_proposal")
+        meta.setdefault("proposal_reason", "Agent-proposed durable memory")
+        meta.setdefault("sensitivity_flags", sensitivity_flags(normalized))
+        vec = self.embedding_service.embed_texts([normalized])[0]
         vector = _vector_literal(vec)
-        meta_json = json.dumps(metadata or {})
+        meta_json = json.dumps(meta)
         with self.connection_factory() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    INSERT INTO memories (content, embedding, memory_type, salience, metadata, approved)
-                    VALUES (%s, %s::vector, %s, %s, %s::jsonb, false)
+                    INSERT INTO memories (
+                        content, embedding, memory_type, salience, metadata,
+                        approved, review_status
+                    )
+                    VALUES (%s, %s::vector, %s, %s, %s::jsonb, false, 'pending')
                     RETURNING id
                     """,
-                    (content, vector, memory_type, salience, meta_json),
+                    (normalized, vector, memory_type, salience, meta_json),
                 )
                 memory_id = int(cur.fetchone()[0])
             conn.commit()

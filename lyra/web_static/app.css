@@ -22,6 +22,8 @@ aside { display: flex; flex-direction: column; gap: 18px; padding: 24px 18px; bo
 .session { width: 100%; border: 1px solid transparent; border-radius: 10px; padding: 10px 12px; color: var(--muted); text-align: left; background: transparent; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .session:hover, .session.active { color: var(--text); background: rgba(105, 224, 209, .08); border-color: var(--line); }
 .connection { color: var(--muted); font-size: 12px; padding: 8px; }
+.control-link { color: var(--accent); font-size: 13px; padding: 8px; text-decoration: none; }
+.control-link:hover { text-decoration: underline; }
 main { min-width: 0; display: grid; grid-template-rows: auto 1fr auto; height: 100vh; }
 header { display: flex; justify-content: space-between; align-items: center; padding: 23px 30px; border-bottom: 1px solid var(--line); }
 header h2 { margin: 2px 0 0; font-size: 19px; }
@@ -47,6 +49,18 @@ header h2 { margin: 2px 0 0; font-size: 19px; }
 #prompt:focus { border-color: rgba(105, 224, 209, .5); box-shadow: 0 0 0 3px rgba(105, 224, 209, .08); }
 #send { min-height: 48px; }
 #send:disabled, #prompt:disabled { opacity: .45; cursor: default; }
+
+.control-shell { width: min(1100px, calc(100% - 32px)); margin: 0 auto; padding: 28px 0 60px; }
+.control-header { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.control-header a { color: var(--accent); }
+.token-panel, .proposal-card, .audit-card { margin-top: 18px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+.token-panel { display: flex; gap: 10px; align-items: center; }
+.token-panel input { flex: 1; min-width: 0; padding: 11px; color: var(--text); background: #061019; border: 1px solid var(--line); border-radius: 9px; }
+.control-actions, .control-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.control-actions button, .control-tabs button, .token-panel button { padding: 9px 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--text); background: rgba(105, 224, 209, .08); cursor: pointer; }
+.proposal-meta { color: var(--muted); font-size: 12px; }
+.proposal-content { white-space: pre-wrap; line-height: 1.55; }
+.control-error { color: #ff9a9a; }
 
 @media (max-width: 720px) {
   .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }

@@ -1,7 +1,7 @@
 # Lyra — Build Plan
 
 **Version:** 0.3
-**Companion to:** `docs/lyra_system_requirements.md` (SRS v0.14)
+**Companion to:** `docs/lyra_system_requirements.md` (SRS v0.15)
 **Audience:** The implementing agent (Cursor/Claude) and Christopher.
 
 This document controls **sequencing and verification**. The SRS controls **what** is built. If this plan and the SRS conflict, the SRS wins; flag the conflict instead of improvising.
@@ -550,7 +550,7 @@ Acceptance: both full suites pass; the secrecy, idempotency, recovery, and bucke
 | W5.2 | Gate passed | SRS v0.14 defines atomic local-only handoff, channel provenance, presentation boundaries, and explicit Away Mode urgency/budget rules. Focused session/runtime/Telegram/web/schema/Away suite -> `................................... [100%]` (`35 passed`); full isolated suite -> `........................................................................ [ 72%] ............................ [100%]` (`100 passed`). Live schema initialization succeeded. Integration tests now provision and exclusively use `lyra_test`; a regression guard prevents destructive fixtures from targeting the runtime database. Operating guide: `docs/away_mode.md`. |
 | W5.2.1 | Gate passed | All destructive fixtures now use `tests/db_support.py`; session-start and per-connection guards reject the runtime database and names without `_test`. Focused database/backup/safety suite -> `........................................ [100%]` (`40 passed`); full suite -> `........................................................................ [ 69%] ............................... [100%]` (`103 passed`). Production counts for all 12 runtime tables were identical before and after the full run. Backup tests verify complete dumps and reject incomplete/empty files; the operator command now reports size and SHA-256. |
 | W5.3 | Deferred (user opt-in pending) | Christopher is completing Tailscale payment and installation; no dependency or network exposure introduced. |
-| W6.1 | Not started | — |
+| W6.1 | Gate passed | SRS v0.15 FR-M7/FR-M8 defines the authenticated local mutation boundary and curated-import routing. The unified control service/UI lists provenance, destination, flags, and proposal reason; approve/correct/reject/confirmed-forget flows cover pgvector and KG destinations; audit retains hashes rather than removed text. Unit web/auth/token/backup suite -> `.............. [100%]` (`14 passed`); expanded PostgreSQL/KG suite -> `................. [100%]` (`17 passed`); final control lifecycle suite -> `.... [100%]`; full suite -> `........................................................................ [ 65%] ...................................... [100%]` (`110 passed`). Compileall, JavaScript syntax, build-plan validation, and additive live schema initialization passed. Operator guide: `docs/memory_control.md`; dedicated `.env` token activation remains a local setup step. |
 | W6.2 | Not started | — |
 | W6.3 | Not started | — |
 | W7.1 | Not started | — |

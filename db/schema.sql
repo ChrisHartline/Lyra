@@ -27,8 +27,45 @@ CREATE TABLE IF NOT EXISTS memories (
   salience SMALLINT DEFAULT 5,
   created_at TIMESTAMPTZ DEFAULT now(),
   metadata JSONB DEFAULT '{}'::jsonb,
-  approved BOOLEAN DEFAULT false
+  approved BOOLEAN DEFAULT false,
+  review_status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (review_status IN ('pending', 'approved'))
 );
+
+ALTER TABLE memories ADD COLUMN IF NOT EXISTS review_status TEXT;
+UPDATE memories
+SET review_status = CASE WHEN approved THEN 'approved' ELSE 'pending' END
+WHERE review_status IS NULL;
+ALTER TABLE memories ALTER COLUMN review_status SET DEFAULT 'pending';
+ALTER TABLE memories ALTER COLUMN review_status SET NOT NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'memories_review_status_check'
+  ) THEN
+    ALTER TABLE memories
+      ADD CONSTRAINT memories_review_status_check
+      CHECK (review_status IN ('pending', 'approved'));
+  END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS memory_review_audit (
+  id BIGSERIAL PRIMARY KEY,
+  proposal_id BIGINT NOT NULL,
+  destination_plane TEXT NOT NULL
+    CHECK (destination_plane IN ('semantic_memory', 'knowledge_graph')),
+  action TEXT NOT NULL
+    CHECK (action IN ('approved', 'corrected', 'rejected', 'forgotten')),
+  actor TEXT NOT NULL DEFAULT 'local_user',
+  reason TEXT,
+  content_sha256 TEXT NOT NULL,
+  details JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_memory_review_audit_proposal
+  ON memory_review_audit (proposal_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS chat_sessions (
   id UUID PRIMARY KEY,

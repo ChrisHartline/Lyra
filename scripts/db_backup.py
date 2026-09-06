@@ -18,6 +18,7 @@ REQUIRED_BACKUP_TABLES = (
     "sources",
     "chunks",
     "memories",
+    "memory_review_audit",
     *SESSION_TABLES,
     "channel_preferences",
     "away_policy",

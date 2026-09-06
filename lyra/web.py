@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import json
 import os
+import secrets
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager, suppress
 from datetime import time
@@ -17,10 +18,13 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from lyra.away import AwayModeService
+from lyra.config import settings
 from lyra.corpus_mcp import CorpusService, MCPToolRouter
 from lyra.embeddings import EmbeddingService
 from lyra.ingest import IngestPipeline
 from lyra.kg_gatekeeper import build_gatekeeper_router
+from lyra.knowledge_graph import MCPKnowledgeGraphWriter
+from lyra.memory_control import MemoryControlService
 from lyra.packs import compose_runtime_context
 from lyra.providers import ModelProfiles, ProviderConfigurationError, adapter_for
 from lyra.runtime import AgentLoop, ModelToolRunner
@@ -66,6 +70,20 @@ class AwayUpdate(BaseModel):
     quiet_end: time | None = None
     timezone: str = Field(min_length=1, max_length=100)
     daily_notification_budget: int = Field(ge=0, le=1000)
+
+
+class ControlCorrection(BaseModel):
+    content: str = Field(min_length=1, max_length=20_000)
+    reason: str | None = Field(default=None, max_length=500)
+
+
+class ControlRejection(BaseModel):
+    reason: str = Field(min_length=1, max_length=500)
+
+
+class ControlForget(BaseModel):
+    confirmed: bool
+    reason: str | None = Field(default=None, max_length=500)
 
 
 def validate_bind_host(host: str) -> str:
@@ -146,6 +164,7 @@ def create_app(
     loop_factory: LoopFactory | None = None,
     telegram_runner: Callable[[SessionService, LoopFactory], Any] | None = run_configured_bot,
     away_service: AwayModeService | None = None,
+    memory_control: MemoryControlService | None = None,
 ) -> FastAPI:
     session_service = sessions or SessionService()
     factory = loop_factory or default_loop_factory(session_service)
@@ -173,6 +192,26 @@ def create_app(
             SessionService().connection_factory,
         )
     )
+    control = memory_control or MemoryControlService(
+        embedding_service=EmbeddingService(),
+        graph_writer=MCPKnowledgeGraphWriter(settings.kg_memory_file_path),
+        connection_factory=getattr(
+            session_service,
+            "connection_factory",
+            SessionService().connection_factory,
+        ),
+    )
+
+    def require_control_access(request: Request) -> None:
+        expected = os.getenv("LYRA_CONTROL_TOKEN", "").strip()
+        supplied = request.headers.get("X-Lyra-Control-Token", "")
+        if not expected:
+            raise HTTPException(
+                status_code=503,
+                detail="Memory control token is not configured",
+            )
+        if not supplied or not secrets.compare_digest(supplied, expected):
+            raise HTTPException(status_code=401, detail="Control access denied")
 
     @app.get("/", include_in_schema=False)
     async def index():
@@ -185,6 +224,14 @@ def create_app(
     @app.get("/app.js", include_in_schema=False)
     async def javascript():
         return FileResponse(STATIC_DIR / "app.js", media_type="text/javascript")
+
+    @app.get("/control", include_in_schema=False)
+    async def control_center():
+        return FileResponse(STATIC_DIR / "control.html", media_type="text/html")
+
+    @app.get("/control.js", include_in_schema=False)
+    async def control_javascript():
+        return FileResponse(STATIC_DIR / "control.js", media_type="text/javascript")
 
     @app.get("/api/health")
     async def health():
@@ -299,6 +346,75 @@ def create_app(
             }
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/api/control/proposals")
+    async def list_memory_proposals(
+        request: Request,
+        status: str = "pending",
+        limit: int = 100,
+    ):
+        require_control_access(request)
+        try:
+            return {"proposals": control.list_proposals(status=status, limit=limit)}
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/api/control/proposals/{proposal_id}/approve")
+    async def approve_memory_proposal(proposal_id: int, request: Request):
+        require_control_access(request)
+        try:
+            return control.approve(proposal_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/api/control/proposals/{proposal_id}/correct")
+    async def correct_memory_proposal(
+        proposal_id: int,
+        correction: ControlCorrection,
+        request: Request,
+    ):
+        require_control_access(request)
+        try:
+            return control.correct(
+                proposal_id,
+                correction.content,
+                reason=correction.reason,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/api/control/proposals/{proposal_id}/reject")
+    async def reject_memory_proposal(
+        proposal_id: int,
+        rejection: ControlRejection,
+        request: Request,
+    ):
+        require_control_access(request)
+        try:
+            return control.reject(proposal_id, reason=rejection.reason)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/api/control/proposals/{proposal_id}/forget")
+    async def forget_memory_proposal(
+        proposal_id: int,
+        forget: ControlForget,
+        request: Request,
+    ):
+        require_control_access(request)
+        try:
+            return control.forget(
+                proposal_id,
+                confirmed=forget.confirmed,
+                reason=forget.reason,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/api/control/audit")
+    async def list_memory_audit(request: Request, limit: int = 200):
+        require_control_access(request)
+        return {"audit": control.list_audit(limit=limit)}
 
     @app.post("/api/sessions/{session_id}/turns")
     async def create_turn(session_id: str, turn: TurnCreate, request: Request):

@@ -9,6 +9,13 @@ Insert a candidate memory row (`approved=false`) for later approval flow.
 - `salience` (integer, optional, default `5`)
 - `metadata` (object, optional)
 
+The service applies never-persist filtering, requires a biography/story/campaign
+ledger, adds provenance/reason/sensitivity defaults, and refuses KG observation
+content (use `propose_observation` for that destination).
+
 ## Output
 - `memory_id`
 - `approved` (always `false` at proposal time)
+
+The proposal appears in the authenticated local W6.1 control center. This tool
+cannot approve, correct, reject, or forget it.

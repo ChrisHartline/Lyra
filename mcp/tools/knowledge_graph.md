@@ -44,7 +44,8 @@ through the gatekeeper router.
 
 ## Write policy
 1. Agents propose only.
-2. Christopher approves via `scripts/approve_observation.py <id>`.
+2. Christopher approves through the authenticated local memory control center
+   (the explicit local CLI remains available for recovery/operations).
 3. Never-persist + biography-only filtering apply before candidates are created.
 4. Story/campaign content never becomes KG observations.
 5. Etiquette: `agents/lyra/references/observation_etiquette.md`.

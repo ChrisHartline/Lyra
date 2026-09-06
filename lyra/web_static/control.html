@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>Lyra — Memory Control</title>
+    <link rel="stylesheet" href="/app.css">
+  </head>
+  <body>
+    <main class="control-shell">
+      <div class="control-header">
+        <div>
+          <p class="eyebrow">Local approval boundary</p>
+          <h1>Memory &amp; Observation Control</h1>
+        </div>
+        <a href="/">Back to chat</a>
+      </div>
+      <section class="token-panel">
+        <input id="control-token" type="password" autocomplete="off" placeholder="LYRA_CONTROL_TOKEN">
+        <button id="connect-control" type="button">Unlock</button>
+      </section>
+      <p id="control-status" class="proposal-meta">Enter the local control token. It remains in this browser tab only.</p>
+      <div class="control-tabs">
+        <button type="button" data-view="pending">Pending</button>
+        <button type="button" data-view="approved">Approved</button>
+        <button type="button" data-view="audit">Audit</button>
+      </div>
+      <section id="control-list" aria-live="polite"></section>
+    </main>
+    <script src="/control.js" defer></script>
+  </body>
+</html>

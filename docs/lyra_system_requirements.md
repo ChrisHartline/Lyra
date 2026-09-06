@@ -1,6 +1,6 @@
 # Lyra — System Requirements Document
 
-**Version:** 0.14
+**Version:** 0.15
 **Date:** 2026-09-04
 **Author:** Christopher (with Claude)
 **Status:** In progress
@@ -128,6 +128,8 @@ contract.
   *(Policy confirmed v0.6. v1 stub enforces a regex subset of 1–3 and 8; full coverage is required when LLM write-back lands.)*
 - **FR-M5:** `state/relationship.md` remains the human-readable summary of relationship stage (with machine fields in `state/relationship.json`); it is regenerated from (not a replacement for) the memory store.
 - **FR-M6 (Structured observation plane — ADR-002):** Alongside pgvector (semantic recall of episodic memory + corpus chunks), a separate **MCP knowledge graph** plane holds structured, assistant-oriented facts as entities/relations/observations (people, projects, orgs, habits, commitments) via the official MCP Memory server, local JSONL store. The two planes never merge: pgvector answers "what did we discuss/read," the KG answers "what do we know about X." Observations that touch biography/relationship content are subject to the same approval (FR-M3) and never-persist (FR-M4) rules as pgvector memories before they are written — propose, then approve, then write. Agents never receive raw KG mutation tools directly; they see only a gatekeeper interface (search/read + `propose_observation`), with an approval step promoting a pending proposal to a real KG write. Notion (FR-N3) remains the dashboard view, not a store for either plane.
+- **FR-M7 (Memory and observation control center):** A loopback-only surface authenticated by a dedicated `.env` secret lists pending and approved semantic-memory/KG proposals with text, provenance, destination, sensitivity flags, and proposal reason. Only this local surface may approve, correct, reject, or forget. Correction re-runs never-persist and bucket-isolation checks and regenerates the embedding. Rejection deletes the candidate without writing a retrievable fact. Forget requires explicit confirmation, removes the semantic row and any promoted KG observation, and records only action metadata plus a content hash in an append-only audit table—not the forgotten text.
+- **FR-M8 (Curated import boundary):** Notes or wiki-memory exports from other assistants are untrusted source material, never pre-approved memory. Import preserves source/file provenance and stages each autobiographical fact or structured observation through FR-M7. Larger stable descriptions of people, places, lore, expertise, or creative constraints route to the read-only agent wiki (FR-P7/W9.3) instead of episodic memory. Story/campaign material remains in its canonical bucket, and duplicate imported facts must be reviewed rather than silently merged.
 
 ### 3.5 Notion Integration
 - **FR-N1 (inbound):** When told that Notion content changed (e.g., "I updated the task board — check it"), Lyra reads the relevant pages/databases via API and incorporates the changes into her working context.

@@ -44,6 +44,25 @@ def _contains_sensitive(text: str) -> bool:
     return any(p.search(text) for p in _SENSITIVE_PATTERNS)
 
 
+def validate_persistable_text(text: str) -> str:
+    normalized = _normalize_sentence(text)
+    if not normalized:
+        raise ValueError("Memory text must not be empty")
+    if _contains_sensitive(normalized):
+        raise ValueError("Memory text violates the never-persist policy")
+    return normalized
+
+
+def sensitivity_flags(text: str) -> list[str]:
+    lowered = text.lower()
+    flags: list[str] = []
+    if any(term in lowered for term in ("relationship", "girlfriend", "love", "intimate")):
+        flags.append("relationship")
+    if any(term in lowered for term in ("stress", "anxious", "overwhelmed", "wellbeing")):
+        flags.append("wellbeing")
+    return flags
+
+
 def _infer_ledger(sentence: str) -> str:
     s = sentence.lower()
     if any(k in s for k in ("campaign", "initiative", "encounter", "d20", "combat", "orc", "battle")):
@@ -123,10 +142,19 @@ class MemoryService:
                 for c, vec in zip(candidates, vectors):
                     meta = dict(c.metadata or {})
                     meta["writeback_at"] = datetime.now(timezone.utc).isoformat()
+                    meta.setdefault("source_type", "session")
+                    meta.setdefault("destination_plane", "semantic_memory")
+                    meta.setdefault(
+                        "proposal_reason", "Potential durable session memory"
+                    )
+                    meta.setdefault("sensitivity_flags", sensitivity_flags(c.content))
                     cur.execute(
                         """
-                        INSERT INTO memories (content, embedding, memory_type, salience, metadata, approved)
-                        VALUES (%s, %s::vector, %s, %s, %s::jsonb, false)
+                        INSERT INTO memories (
+                            content, embedding, memory_type, salience, metadata,
+                            approved, review_status
+                        )
+                        VALUES (%s, %s::vector, %s, %s, %s::jsonb, false, 'pending')
                         RETURNING id, approved
                         """,
                         (
@@ -153,7 +181,12 @@ class MemoryService:
         with self.connection_factory() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "UPDATE memories SET approved = true WHERE id = %s RETURNING id, approved",
+                    """
+                    UPDATE memories
+                    SET approved = true, review_status = 'approved'
+                    WHERE id = %s
+                    RETURNING id, approved
+                    """,
                     (memory_id,),
                 )
                 row = cur.fetchone()

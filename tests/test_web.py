@@ -114,6 +114,45 @@ class FakeAway:
         return []
 
 
+class FakeControl:
+    def __init__(self):
+        self.proposals = [
+            {
+                "proposal_id": 7,
+                "content": "A proposed memory",
+                "status": "pending",
+                "destination_plane": "semantic_memory",
+                "ledger": "biography",
+                "provenance": {"source_type": "session"},
+                "sensitivity_flags": [],
+                "proposal_reason": "Potential durable memory",
+            }
+        ]
+        self.calls = []
+
+    def list_proposals(self, status="pending", limit=100):
+        return [item for item in self.proposals if item["status"] == status][:limit]
+
+    def approve(self, proposal_id):
+        self.calls.append(("approve", proposal_id))
+        return {"proposal_id": proposal_id, "status": "approved"}
+
+    def correct(self, proposal_id, content, reason=None):
+        self.calls.append(("correct", proposal_id, content, reason))
+        return {"proposal_id": proposal_id, "status": "pending", "content": content}
+
+    def reject(self, proposal_id, reason):
+        self.calls.append(("reject", proposal_id, reason))
+        return {"proposal_id": proposal_id, "status": "rejected"}
+
+    def forget(self, proposal_id, confirmed, reason=None):
+        self.calls.append(("forget", proposal_id, confirmed, reason))
+        return {"proposal_id": proposal_id, "status": "forgotten"}
+
+    def list_audit(self, limit=200):
+        return [{"audit_id": 1, "action": "approved"}][:limit]
+
+
 class FakeLoop:
     def __init__(self, sessions: FakeSessions) -> None:
         self.sessions = sessions
@@ -127,20 +166,24 @@ class FakeLoop:
 
 def _client():
     sessions = FakeSessions()
+    control = FakeControl()
     app = create_app(
         sessions=sessions,  # type: ignore[arg-type]
         loop_factory=lambda _session_id: FakeLoop(sessions),
         away_service=FakeAway(),  # type: ignore[arg-type]
+        memory_control=control,  # type: ignore[arg-type]
     )
-    return TestClient(app), sessions
+    return TestClient(app), sessions, control
 
 
 def test_ui_assets_and_loopback_health_contract():
-    client, _sessions = _client()
+    client, _sessions, _control = _client()
 
     page = client.get("/")
     css = client.get("/app.css")
     javascript = client.get("/app.js")
+    control_page = client.get("/control")
+    control_js = client.get("/control.js")
     health = client.get("/api/health")
 
     assert page.status_code == 200
@@ -149,11 +192,13 @@ def test_ui_assets_and_loopback_health_contract():
     assert css.headers["content-type"].startswith("text/css")
     assert "--accent" in css.text
     assert "parseSseBlock" in javascript.text
+    assert "Memory &amp; Observation Control" in control_page.text
+    assert "X-Lyra-Control-Token" in control_js.text
     assert health.json() == {"status": "ready", "network": "loopback-only"}
 
 
 def test_session_crud_and_message_resume_contract():
-    client, _sessions = _client()
+    client, _sessions, _control = _client()
 
     created = client.post("/api/sessions", json={"name": "Roadmap"})
     session_id = created.json()["session_id"]
@@ -180,7 +225,7 @@ def test_session_crud_and_message_resume_contract():
 
 def test_local_handoff_and_away_preferences(monkeypatch):
     monkeypatch.setenv("LYRA_TELEGRAM_ALLOWED_CHAT_IDS", "84")
-    client, sessions = _client()
+    client, sessions, _control = _client()
     first = client.post("/api/sessions", json={"name": "First"}).json()["session_id"]
     target = client.post("/api/sessions", json={"name": "Target"}).json()["session_id"]
     sessions.bind_channel(first, "telegram", "84")
@@ -214,8 +259,64 @@ def test_local_handoff_and_away_preferences(monkeypatch):
     assert client.get("/api/away").json()["daily_notification_budget"] == 4
 
 
+def test_memory_control_api_is_authenticated_and_routes_local_actions(monkeypatch):
+    monkeypatch.setenv("LYRA_CONTROL_TOKEN", "local-control-secret")
+    client, _sessions, control = _client()
+    headers = {"X-Lyra-Control-Token": "local-control-secret"}
+
+    assert client.get("/api/control/proposals").status_code == 401
+    assert client.get(
+        "/api/control/proposals",
+        headers={"X-Lyra-Control-Token": "wrong"},
+    ).status_code == 401
+
+    pending = client.get("/api/control/proposals", headers=headers)
+    approved = client.post(
+        "/api/control/proposals/7/approve", headers=headers, json={}
+    )
+    corrected = client.post(
+        "/api/control/proposals/7/correct",
+        headers=headers,
+        json={"content": "Corrected", "reason": "Precision"},
+    )
+    rejected = client.post(
+        "/api/control/proposals/7/reject",
+        headers=headers,
+        json={"reason": "No longer useful"},
+    )
+    forgotten = client.post(
+        "/api/control/proposals/7/forget",
+        headers=headers,
+        json={"confirmed": True},
+    )
+    audit = client.get("/api/control/audit", headers=headers)
+
+    assert pending.json()["proposals"][0]["proposal_id"] == 7
+    assert approved.json()["status"] == "approved"
+    assert corrected.json()["content"] == "Corrected"
+    assert rejected.json()["status"] == "rejected"
+    assert forgotten.json()["status"] == "forgotten"
+    assert audit.json()["audit"][0]["action"] == "approved"
+    assert [call[0] for call in control.calls] == [
+        "approve",
+        "correct",
+        "reject",
+        "forget",
+    ]
+
+
+def test_memory_control_fails_closed_when_token_is_unconfigured(monkeypatch):
+    monkeypatch.delenv("LYRA_CONTROL_TOKEN", raising=False)
+    client, _sessions, _control = _client()
+
+    response = client.get("/api/control/proposals")
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Memory control token is not configured"
+
+
 def test_sse_stream_has_status_text_completion_and_resume_hint():
-    client, _sessions = _client()
+    client, _sessions, _control = _client()
     session_id = client.post("/api/sessions", json={"name": "SSE"}).json()[
         "session_id"
     ]
@@ -321,7 +422,7 @@ def test_bind_host_rejects_lan_and_public_addresses():
 
 
 def test_app_lifespan_starts_and_stops_optional_telegram_runner():
-    client, sessions = _client()
+    client, sessions, _control = _client()
     events = []
 
     async def runner(received_sessions, loop_factory):

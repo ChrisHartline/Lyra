@@ -13,7 +13,7 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 
 from .db import connect
 from .embeddings import EmbeddingService
-from .memory import MemoryService, _vector_literal
+from .memory import MemoryService, _vector_literal, sensitivity_flags
 
 
 class KnowledgeGraphWriter(Protocol):
@@ -21,6 +21,12 @@ class KnowledgeGraphWriter(Protocol):
         self,
         entity_name: str,
         entity_type: str,
+        content: str,
+    ) -> dict[str, Any]: ...
+
+    def delete_observation(
+        self,
+        entity_name: str,
         content: str,
     ) -> dict[str, Any]: ...
 
@@ -86,6 +92,44 @@ class MCPKnowledgeGraphWriter:
     ) -> dict[str, Any]:
         return asyncio.run(self._add_observation(entity_name, entity_type, content))
 
+    async def _delete_observation(
+        self,
+        entity_name: str,
+        content: str,
+    ) -> dict[str, Any]:
+        memory_path = Path(self.memory_file).resolve()
+        params = StdioServerParameters(
+            command=self.command,
+            args=["-y", self.package],
+            env={"MEMORY_FILE_PATH": str(memory_path)},
+        )
+        async with stdio_client(params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                deleted = await session.call_tool(
+                    "delete_observations",
+                    {
+                        "deletions": [
+                            {
+                                "entityName": entity_name,
+                                "observations": [content],
+                            }
+                        ]
+                    },
+                )
+                if deleted.is_error:
+                    raise RuntimeError(
+                        f"delete_observations failed: {deleted.content}"
+                    )
+                return deleted.structured_content or {}
+
+    def delete_observation(
+        self,
+        entity_name: str,
+        content: str,
+    ) -> dict[str, Any]:
+        return asyncio.run(self._delete_observation(entity_name, content))
+
 
 @dataclass
 class ObservationService:
@@ -125,6 +169,9 @@ class ObservationService:
                         "entity_type": entity_type,
                         "source_type": source_type,
                         "proposed_at": datetime.now(timezone.utc).isoformat(),
+                        "destination_plane": "knowledge_graph",
+                        "proposal_reason": "Potential structured observation",
+                        "sensitivity_flags": sensitivity_flags(content),
                     }
                     cur.execute(
                         """
@@ -134,9 +181,13 @@ class ObservationService:
                             memory_type,
                             salience,
                             metadata,
-                            approved
+                            approved,
+                            review_status
                         )
-                        VALUES (%s, %s::vector, 'observation', 5, %s::jsonb, false)
+                        VALUES (
+                            %s, %s::vector, 'observation', 5, %s::jsonb,
+                            false, 'pending'
+                        )
                         RETURNING id, approved
                         """,
                         (content, _vector_literal(vector), json.dumps(metadata)),
@@ -191,7 +242,9 @@ class ObservationService:
                 cur.execute(
                     """
                     UPDATE memories
-                    SET approved = true, metadata = %s::jsonb
+                    SET approved = true,
+                        review_status = 'approved',
+                        metadata = %s::jsonb
                     WHERE id = %s
                     RETURNING approved
                     """,
