@@ -1,6 +1,6 @@
 # Lyra — Build Plan
 
-**Version:** 0.3
+**Version:** 0.4
 **Companion to:** `docs/lyra_system_requirements.md` (SRS v0.15)
 **Audience:** The implementing agent (Cursor/Claude) and Christopher.
 
@@ -313,10 +313,13 @@ graph TD
     W61[W6.1: memory and observation control center]
     W62[W6.2: commitment radar]
     W63[W6.3: stuck mode]
+    W64[W6.4: local runtime resilience]
     W52 --> W61
     D41[D4.1: KG gatekeeper] --> W61
     W61 --> W62
     W61 --> W63
+    W62 --> W64
+    W63 --> W64
 ```
 
 ### W6.1 — Memory and observation control center
@@ -330,6 +333,10 @@ Acceptance: possible commitments are offered, never silently created; snoozed/dr
 ### W6.3 — Stuck mode
 Deliverables: an explicit "I'm stuck" interaction plus gentle observational offers that distinguish technical diagnosis, task decomposition, decision support, stress check-in, and simple companionship; user-selectable depth and an immediate dismiss path.
 Acceptance: observational triggers offer help without diagnosing Christopher or persisting a sensitive inference; dismissal suppresses repeated prompts for the configured period; technical questions inside in-fiction scenes preserve the Tier 0 register-transition contract; any proposed commitment or observation routes through W6.1/W6.2; full suite passes.
+
+### W6.4 — Local runtime resilience
+Deliverables: explicit container restart policies and health checks; a conservative workstation watchdog for Docker Engine, PostgreSQL, and the Lyra service; bounded retries, cooldowns, and recovery logging; startup registration and an operator runbook; a deployment-readiness note separating local recovery from a later always-on or hybrid deployment. Recovery automation may start existing components but must never install updates, reset Docker/WSL, delete or recreate volumes, restore backups, or expose Lyra beyond its approved loopback/private-access boundary.
+Acceptance: injected failure tests prove transient failures do not trigger recovery, repeated failures trigger one attributable recovery attempt, cooldown prevents restart loops, and an unsuccessful recovery leaves actionable diagnostics; container health/restart configuration validates; a live controlled restart preserves the runtime database and named sessions; Docker Desktop auto-start and watchdog startup registration receive Christopher's explicit opt-in; full suite passes.
 
 ## Build Wave 7 — Daily Rhythm and Re-engagement
 
@@ -553,6 +560,7 @@ Acceptance: both full suites pass; the secrecy, idempotency, recovery, and bucke
 | W6.1 | Gate passed | SRS v0.15 FR-M7/FR-M8 defines the authenticated local mutation boundary and curated-import routing. The unified control service/UI lists provenance, destination, flags, and proposal reason; approve/correct/reject/confirmed-forget flows cover pgvector and KG destinations; audit retains hashes rather than removed text. Unit web/auth/token/backup suite -> `.............. [100%]` (`14 passed`); expanded PostgreSQL/KG suite -> `................. [100%]` (`17 passed`); final control lifecycle suite -> `.... [100%]`; full suite -> `........................................................................ [ 65%] ...................................... [100%]` (`110 passed`). Compileall, JavaScript syntax, build-plan validation, and additive live schema initialization passed. Operator guide: `docs/memory_control.md`; dedicated `.env` token activation remains a local setup step. |
 | W6.2 | Not started | — |
 | W6.3 | Not started | — |
+| W6.4 | Not started | Added 2026-09-06 after repeated Docker Desktop backend exits; implementation waits for W6.2 and W6.3. Roadmap amendment: validator `VALID`; focused build-plan tests -> `.. [100%]`; full suite -> `........................................................................ [ 65%] ...................................... [100%]` (`110 passed`). |
 | W7.1 | Not started | — |
 | W7.2 | Not started | — |
 | W7.3 | Not started | — |
