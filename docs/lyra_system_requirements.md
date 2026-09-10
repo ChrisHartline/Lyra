@@ -1,7 +1,7 @@
 # Lyra — System Requirements Document
 
-**Version:** 0.15
-**Date:** 2026-09-04
+**Version:** 0.16
+**Date:** 2026-09-09
 **Author:** Christopher (with Claude)
 **Status:** In progress
 
@@ -146,6 +146,7 @@ contract.
 - **FR-T7 (Failure and retention):** Telegram API failures use bounded retry/backoff and sanitized local logs. Raw Telegram artifacts remain local and gitignored; deletion of a session does not silently delete independently ingested corpus sources, and deleting an inbox item does not erase a linked source without explicit confirmation.
 - **FR-T8 (Device handoff and provenance):** A local-only control may rebind the allowlisted Telegram private chat to an existing named session. Rebinding is atomic and preserves one conversation history without copying turns. New user and assistant messages record their originating channel, and runtime context exposes that provenance as metadata so Lyra can distinguish Telegram from web without changing identity or stored message text.
 - **FR-T9 (Away Mode):** Local-only settings control Away Mode, per-channel presentation (`standard` or `concise`), IANA-time-zone quiet hours, and a non-negative daily proactive-notification budget. Urgency categories are explicit: `security`, `safety`, `service_failure`, and `user_requested` may bypass quiet hours/budget; `digest`, `commitment`, `research`, `social`, and `status` may not. During quiet hours non-urgent notifications are batched; after the daily budget is exhausted they are suppressed. These controls alter delivery/presentation only and never Lyra's persona, stored conversation content, memory policy, or approval boundaries.
+- **FR-T10 (Private tailnet web access):** Optional Tailscale Serve may expose the loopback web chat through tailnet-only HTTPS while Lyra remains bound to `127.0.0.1`; the raw application port remains unavailable on LAN and tailnet interfaces. Tailscale Funnel/public ingress is prohibited. Only Christopher-controlled tailnet identities may access the route. Remote conversation does not expand authority: memory/observation control and other local-only mutations reject proxied or non-loopback clients even when a valid control token is supplied.
 
 ### 3.7 Roleplay & Campaign Mode (v2)
 - **FR-D1 (Foundry VTT boundary — decided):** The tabletop platform is Foundry VTT. Integration direction: **Lyra is a client; Foundry owns mechanical truth** (HP, initiative, inventory, dice results, scenes). Integration is **buy-not-build**: the existing Foundry API Bridge (MCP) module is installed in the Foundry world and connected via the **hosted relay** (foundry-mcp.com) for v2 — Foundry thereby becomes another MCP server available to Lyra's orchestrator alongside the corpus server (IF-4). **Self-hosted relay is a documented future option** (lightweight Node service, negligible compute — could co-locate with pgvector) if privacy or reliability later motivates it. Lyra-side scope (what we build): campaign session context assembly (Lyra in character as her PC, fed relevant Foundry state + campaign ledger), post-session write-back to `memory_type='campaign'` (A5 machinery), and orchestrator config registering the Foundry MCP endpoint. The campaign ledger (FR-D2) stores narrative memory only and never duplicates mechanical state — one system of record per data type.
@@ -269,7 +270,7 @@ CREATE INDEX ON memories USING hnsw (embedding vector_cosine_ops);
 
 **Phase 2 (v2 — Lyra as standalone agentic application):**
 1. Standalone conversation service, named PostgreSQL sessions, and local loopback web UI (FR-S6; ADR-004).
-2. Telegram inbox/chat, cross-device session handoff, and optional private Tailscale Serve access; no public web hosting (FR-T1–FR-T7).
+2. Telegram inbox/chat, cross-device session handoff, and optional private Tailscale Serve access; no public web hosting (FR-T1–FR-T10).
 3. Personal-agency, daily-rhythm, and private continuity features proceed through their approval and storage boundaries before repository authority expands.
 4. Personality/reference-wiki expansion plus selective scene, voice, and avatar prototypes behind renderer interfaces (FR-P7, FR-V1–FR-V6).
 5. Approval-gated repository collaboration ending at a Lyra-authored draft PR (FR-G1–FR-G5).

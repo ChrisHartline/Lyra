@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import ipaddress
 import json
 import os
 import secrets
@@ -90,6 +91,17 @@ def validate_bind_host(host: str) -> str:
     if host.strip().lower() not in LOOPBACK_HOSTS:
         raise ValueError("Lyra web chat may bind only to a loopback address")
     return host.strip().lower()
+
+
+def is_loopback_client(host: str | None) -> bool:
+    """Return true only for a client address originating on this workstation."""
+
+    if not host:
+        return False
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return host.strip().lower() == "localhost"
 
 
 def _event_payload(event: RuntimeEvent) -> dict[str, Any]:
@@ -202,7 +214,20 @@ def create_app(
         ),
     )
 
+    def require_local_control_client(request: Request) -> None:
+        # Tailscale Serve and other reverse proxies must not extend mutation
+        # authority beyond the workstation, even when the caller has a token.
+        forwarded = request.headers.get("X-Forwarded-For", "").strip()
+        tailscale_identity = request.headers.get("Tailscale-User-Login", "").strip()
+        client_host = request.client.host if request.client is not None else None
+        if forwarded or tailscale_identity or not is_loopback_client(client_host):
+            raise HTTPException(
+                status_code=403,
+                detail="Memory control is available only on this workstation",
+            )
+
     def require_control_access(request: Request) -> None:
+        require_local_control_client(request)
         expected = os.getenv("LYRA_CONTROL_TOKEN", "").strip()
         supplied = request.headers.get("X-Lyra-Control-Token", "")
         if not expected:
@@ -226,7 +251,8 @@ def create_app(
         return FileResponse(STATIC_DIR / "app.js", media_type="text/javascript")
 
     @app.get("/control", include_in_schema=False)
-    async def control_center():
+    async def control_center(request: Request):
+        require_local_control_client(request)
         return FileResponse(STATIC_DIR / "control.html", media_type="text/html")
 
     @app.get("/control.js", include_in_schema=False)

@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from fastapi.testclient import TestClient
 
 from lyra.runtime_events import RuntimeEvent
-from lyra.web import create_app, validate_bind_host
+from lyra.web import create_app, is_loopback_client, validate_bind_host
 
 
 class FakeSessions:
@@ -173,7 +173,7 @@ def _client():
         away_service=FakeAway(),  # type: ignore[arg-type]
         memory_control=control,  # type: ignore[arg-type]
     )
-    return TestClient(app), sessions, control
+    return TestClient(app, client=("127.0.0.1", 50000)), sessions, control
 
 
 def test_ui_assets_and_loopback_health_contract():
@@ -313,6 +313,42 @@ def test_memory_control_fails_closed_when_token_is_unconfigured(monkeypatch):
 
     assert response.status_code == 503
     assert response.json()["detail"] == "Memory control token is not configured"
+
+
+def test_memory_control_rejects_tailnet_and_forwarded_clients(monkeypatch):
+    monkeypatch.setenv("LYRA_CONTROL_TOKEN", "local-control-secret")
+    sessions = FakeSessions()
+    control = FakeControl()
+    app = create_app(
+        sessions=sessions,  # type: ignore[arg-type]
+        loop_factory=lambda _session_id: FakeLoop(sessions),
+        away_service=FakeAway(),  # type: ignore[arg-type]
+        memory_control=control,  # type: ignore[arg-type]
+    )
+    token = {"X-Lyra-Control-Token": "local-control-secret"}
+    remote = TestClient(app, client=("100.119.187.40", 50000))
+    local = TestClient(app, client=("127.0.0.1", 50000))
+
+    assert remote.get("/").status_code == 200
+    assert remote.get("/control").status_code == 403
+    assert remote.get("/api/control/proposals", headers=token).status_code == 403
+    assert local.get(
+        "/api/control/proposals",
+        headers={**token, "Tailscale-User-Login": "owner@example.invalid"},
+    ).status_code == 403
+    assert local.get(
+        "/api/control/proposals",
+        headers={**token, "X-Forwarded-For": "100.119.187.40"},
+    ).status_code == 403
+    assert control.calls == []
+
+
+def test_loopback_client_classification():
+    assert is_loopback_client("127.0.0.1") is True
+    assert is_loopback_client("::1") is True
+    assert is_loopback_client("localhost") is True
+    assert is_loopback_client("100.119.187.40") is False
+    assert is_loopback_client(None) is False
 
 
 def test_sse_stream_has_status_text_completion_and_resume_hint():
