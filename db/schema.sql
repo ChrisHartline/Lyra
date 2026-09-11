@@ -135,6 +135,56 @@ CREATE TABLE IF NOT EXISTS notification_events (
 CREATE INDEX IF NOT EXISTS idx_notification_events_created
   ON notification_events (created_at DESC);
 
+CREATE TABLE IF NOT EXISTS commitment_candidates (
+  id UUID PRIMARY KEY,
+  summary TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (
+    kind IN ('promise', 'deadline', 'follow_up', 'unresolved_decision', 'task')
+  ),
+  due_at TIMESTAMPTZ,
+  source_type TEXT NOT NULL CHECK (source_type IN ('session', 'dashboard')),
+  source_session_id UUID,
+  source_message_id BIGINT,
+  source_url TEXT,
+  source_approved BOOLEAN NOT NULL DEFAULT false,
+  detection_reason TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'offered'
+    CHECK (status IN ('offered', 'confirmed', 'dismissed', 'expired')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  resolved_at TIMESTAMPTZ,
+  CHECK (
+    (source_type = 'session' AND source_session_id IS NOT NULL
+      AND source_message_id IS NOT NULL)
+    OR
+    (source_type = 'dashboard' AND source_url IS NOT NULL
+      AND source_approved = true)
+  )
+);
+
+CREATE INDEX IF NOT EXISTS idx_commitment_candidates_session_status
+  ON commitment_candidates (source_session_id, status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS commitments (
+  id UUID PRIMARY KEY,
+  candidate_id UUID NOT NULL UNIQUE
+    REFERENCES commitment_candidates(id) ON DELETE RESTRICT,
+  summary TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (
+    kind IN ('promise', 'deadline', 'follow_up', 'unresolved_decision', 'task')
+  ),
+  status TEXT NOT NULL DEFAULT 'active'
+    CHECK (status IN ('active', 'done', 'snoozed', 'dropped')),
+  due_at TIMESTAMPTZ,
+  snoozed_until TIMESTAMPTZ,
+  last_reminded_at TIMESTAMPTZ,
+  confirmed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK (status = 'snoozed' OR snoozed_until IS NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_commitments_status_due
+  ON commitments (status, due_at);
+
 CREATE TABLE IF NOT EXISTS session_turns (
   id UUID PRIMARY KEY,
   session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,

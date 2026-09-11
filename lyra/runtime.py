@@ -41,6 +41,17 @@ class PresentationPolicy(Protocol):
     def presentation_instruction(self, channel: str) -> str | None: ...
 
 
+class CommitmentObserver(Protocol):
+    def observe_message(
+        self,
+        *,
+        session_id: str,
+        message_id: int,
+        text: str,
+        ledger: str = "biography",
+    ) -> Any: ...
+
+
 class NoOpVoiceOutput:
     async def emit(self, text: str) -> None:
         return None
@@ -158,6 +169,7 @@ class AgentLoop:
     voice: VoiceOutput = field(default_factory=NoOpVoiceOutput)
     emotion: EmotionOutput = field(default_factory=NoOpEmotionOutput)
     presentation: PresentationPolicy | None = None
+    commitment_radar: CommitmentObserver | None = None
 
     async def stream_turn(
         self,
@@ -171,9 +183,20 @@ class AgentLoop:
         normalized_channel = channel.strip().lower()
         if normalized_channel not in {"web", "telegram"}:
             raise ValueError("Unsupported conversation channel")
-        self.sessions.append_message(
+        user_message = self.sessions.append_message(
             session_id, "user", user_text, metadata={"channel": normalized_channel}
         )
+        radar_instruction: str | None = None
+        if self.commitment_radar is not None:
+            buckets = tuple(memory_buckets)
+            ledger = buckets[0] if len(buckets) == 1 else "mixed"
+            observation = self.commitment_radar.observe_message(
+                session_id=session_id,
+                message_id=int(user_message["message_id"]),
+                text=user_text,
+                ledger=ledger,
+            )
+            radar_instruction = observation.instruction
         turn = self.sessions.start_turn(session_id, "running")
         assistant_parts: list[str] = []
         persisted = False
@@ -195,16 +218,22 @@ class AgentLoop:
                 persisted = True
 
         try:
+            presentation_instructions = [
+                instruction
+                for instruction in (
+                    self.presentation.presentation_instruction(normalized_channel)
+                    if self.presentation
+                    else None,
+                    radar_instruction,
+                )
+                if instruction
+            ]
             messages = self.context.build(
                 session_id,
                 system_prompt=self.system_prompt,
                 memory_query=user_text,
                 memory_buckets=memory_buckets,
-                presentation_instruction=(
-                    self.presentation.presentation_instruction(normalized_channel)
-                    if self.presentation
-                    else None
-                ),
+                presentation_instruction="\n\n".join(presentation_instructions) or None,
             )
             async for event in self.runner.stream(messages):
                 if event.kind is EventKind.TEXT:

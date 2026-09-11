@@ -209,7 +209,7 @@ class FakeSessions:
 
     def append_message(self, session_id, role, content, **kwargs):
         self.messages.append((session_id, role, content, kwargs))
-        return {"sequence": len(self.messages)}
+        return {"message_id": len(self.messages), "sequence": len(self.messages)}
 
     def start_turn(self, session_id, status):
         self.statuses.append(("turn-1", status, None))
@@ -248,6 +248,47 @@ def test_agent_loop_persists_visible_reply_and_turn_status():
     assert sessions.messages[1][1:3] == ("assistant", "Hello")
     assert sessions.messages[1][3]["metadata"]["partial"] is False
     assert sessions.statuses[-1] == ("turn-1", "completed", None)
+
+
+def test_agent_loop_injects_commitment_offer_without_marking_it_active():
+    class Radar:
+        def __init__(self):
+            self.calls = []
+
+        def observe_message(self, **kwargs):
+            self.calls.append(kwargs)
+            return type(
+                "Observation",
+                (),
+                {"instruction": "Ask whether Christopher wants this tracked."},
+            )()
+
+    class Context(FakeContext):
+        def build(self, session_id, **kwargs):
+            return [
+                {"role": "system", "content": kwargs["system_prompt"]},
+                {"role": "system", "content": kwargs["presentation_instruction"]},
+                {"role": "user", "content": kwargs["memory_query"]},
+            ]
+
+    sessions = FakeSessions()
+    radar = Radar()
+    provider = FakeProvider(
+        [[RuntimeEvent.text_delta("Would you like me to track that?"), RuntimeEvent.completion("stop")]]
+    )
+    loop = AgentLoop(
+        sessions=sessions,  # type: ignore[arg-type]
+        context=Context(),  # type: ignore[arg-type]
+        runner=ModelToolRunner(provider, PROFILE, ToolRegistry()),
+        system_prompt="You are Lyra.",
+        commitment_radar=radar,  # type: ignore[arg-type]
+    )
+
+    asyncio.run(_collect(loop.stream_turn("session-1", "I need to finish this.")))
+
+    assert radar.calls[0]["message_id"] == 1
+    assert radar.calls[0]["ledger"] == "biography"
+    assert "wants this tracked" in provider.messages[0][1]["content"]
 
 
 def test_agent_loop_marks_closed_stream_disconnected_and_keeps_partial_reply():

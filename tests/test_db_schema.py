@@ -37,6 +37,8 @@ def test_a1_schema_and_cosine_similarity(ensure_db):
                 "channel_preferences",
                 "away_policy",
                 "notification_events",
+                "commitment_candidates",
+                "commitments",
             ):
                 cur.execute("SELECT to_regclass(%s)", (f"public.{tbl}",))
                 assert cur.fetchone()[0] in (f"public.{tbl}", tbl)

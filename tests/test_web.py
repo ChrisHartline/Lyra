@@ -153,6 +153,39 @@ class FakeControl:
         return [{"audit_id": 1, "action": "approved"}][:limit]
 
 
+class FakeCommitments:
+    def __init__(self):
+        self.calls = []
+
+    def list_offers(self, status="offered", session_id=None):
+        self.calls.append(("list_offers", status, session_id))
+        return [{"offer_id": "offer-1", "status": status}]
+
+    def confirm_offer(self, offer_id):
+        self.calls.append(("confirm", offer_id))
+        return {"commitment_id": "commitment-1", "status": "active"}
+
+    def dismiss_offer(self, offer_id):
+        self.calls.append(("dismiss", offer_id))
+        return {"offer_id": offer_id, "status": "dismissed"}
+
+    def list_commitments(self, status=None):
+        self.calls.append(("list", status))
+        return [{"commitment_id": "commitment-1", "status": status or "active"}]
+
+    def get_commitment(self, commitment_id):
+        self.calls.append(("get", commitment_id))
+        return {"commitment_id": commitment_id, "status": "active"}
+
+    def transition(self, commitment_id, status, snoozed_until=None):
+        self.calls.append(("transition", commitment_id, status, snoozed_until))
+        return {"commitment_id": commitment_id, "status": status}
+
+    def plan_due_reminders(self, *, away, channel, horizon):
+        self.calls.append(("reminders", away, channel, horizon))
+        return [{"commitment_id": "commitment-1", "disposition": "send"}]
+
+
 class FakeLoop:
     def __init__(self, sessions: FakeSessions) -> None:
         self.sessions = sessions
@@ -341,6 +374,77 @@ def test_memory_control_rejects_tailnet_and_forwarded_clients(monkeypatch):
         headers={**token, "X-Forwarded-For": "100.119.187.40"},
     ).status_code == 403
     assert control.calls == []
+
+
+def test_commitment_offer_lifecycle_and_reminder_api():
+    sessions = FakeSessions()
+    commitments = FakeCommitments()
+    away = FakeAway()
+    app = create_app(
+        sessions=sessions,  # type: ignore[arg-type]
+        loop_factory=lambda _session_id: FakeLoop(sessions),
+        away_service=away,  # type: ignore[arg-type]
+        memory_control=FakeControl(),  # type: ignore[arg-type]
+        commitment_service=commitments,  # type: ignore[arg-type]
+    )
+    client = TestClient(app, client=("127.0.0.1", 50000))
+
+    offers = client.get("/api/commitment-offers?status=offered&session_id=s-1")
+    confirmed = client.post("/api/commitment-offers/offer-1/confirm")
+    dismissed = client.post("/api/commitment-offers/offer-2/dismiss")
+    listed = client.get("/api/commitments?status=active")
+    fetched = client.get("/api/commitments/commitment-1")
+    transitioned = client.patch(
+        "/api/commitments/commitment-1", json={"status": "done"}
+    )
+    reminders = client.post(
+        "/api/commitment-reminders/plan",
+        json={"channel": "telegram", "horizon_hours": 48},
+    )
+
+    assert offers.json()["offers"][0]["offer_id"] == "offer-1"
+    assert confirmed.json()["status"] == "active"
+    assert dismissed.json()["status"] == "dismissed"
+    assert listed.json()["commitments"][0]["status"] == "active"
+    assert fetched.json()["commitment_id"] == "commitment-1"
+    assert transitioned.json()["status"] == "done"
+    assert reminders.json()["reminders"][0]["disposition"] == "send"
+    assert [call[0] for call in commitments.calls] == [
+        "list_offers",
+        "confirm",
+        "dismiss",
+        "list",
+        "get",
+        "transition",
+        "reminders",
+    ]
+
+
+def test_commitment_mutations_reject_tailnet_and_forwarded_clients():
+    sessions = FakeSessions()
+    commitments = FakeCommitments()
+    app = create_app(
+        sessions=sessions,  # type: ignore[arg-type]
+        loop_factory=lambda _session_id: FakeLoop(sessions),
+        away_service=FakeAway(),  # type: ignore[arg-type]
+        memory_control=FakeControl(),  # type: ignore[arg-type]
+        commitment_service=commitments,  # type: ignore[arg-type]
+    )
+    remote = TestClient(app, client=("100.119.187.40", 50000))
+    proxied = TestClient(app, client=("127.0.0.1", 50000))
+
+    assert remote.get("/api/commitments").status_code == 200
+    assert remote.post("/api/commitment-offers/offer-1/confirm").status_code == 403
+    assert remote.post("/api/commitment-offers/offer-1/dismiss").status_code == 403
+    assert remote.patch(
+        "/api/commitments/commitment-1", json={"status": "done"}
+    ).status_code == 403
+    assert proxied.post(
+        "/api/commitment-reminders/plan",
+        headers={"Tailscale-User-Login": "owner@example.invalid"},
+        json={"channel": "telegram", "horizon_hours": 24},
+    ).status_code == 403
+    assert commitments.calls == [("list", None)]
 
 
 def test_loopback_client_classification():

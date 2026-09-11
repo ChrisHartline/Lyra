@@ -23,6 +23,8 @@ REQUIRED_BACKUP_TABLES = (
     "channel_preferences",
     "away_policy",
     "notification_events",
+    "commitment_candidates",
+    "commitments",
     "telegram_updates",
     "telegram_inbox",
 )

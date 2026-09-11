@@ -10,7 +10,7 @@ import os
 import secrets
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager, suppress
-from datetime import time
+from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -19,6 +19,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from lyra.away import AwayModeService
+from lyra.commitments import CommitmentService
 from lyra.config import settings
 from lyra.corpus_mcp import CorpusService, MCPToolRouter
 from lyra.embeddings import EmbeddingService
@@ -87,6 +88,16 @@ class ControlForget(BaseModel):
     reason: str | None = Field(default=None, max_length=500)
 
 
+class CommitmentTransition(BaseModel):
+    status: str = Field(pattern="^(active|done|snoozed|dropped)$")
+    snoozed_until: datetime | None = None
+
+
+class ReminderPlan(BaseModel):
+    channel: str = Field(default="telegram", pattern="^(web|telegram)$")
+    horizon_hours: int = Field(default=24, ge=1, le=720)
+
+
 def validate_bind_host(host: str) -> str:
     if host.strip().lower() not in LOOPBACK_HOSTS:
         raise ValueError("Lyra web chat may bind only to a loopback address")
@@ -135,6 +146,9 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
     presentation = AwayModeService(
         getattr(sessions, "connection_factory", SessionService().connection_factory)
     )
+    commitment_radar = CommitmentService(
+        getattr(sessions, "connection_factory", SessionService().connection_factory)
+    )
     system_prompt = compose_runtime_context()
 
     class UnavailableLoop:
@@ -166,6 +180,7 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
             runner=ModelToolRunner(provider, profile, registry),
             system_prompt=system_prompt,
             presentation=presentation,
+            commitment_radar=commitment_radar,
         )
 
     return factory
@@ -177,6 +192,7 @@ def create_app(
     telegram_runner: Callable[[SessionService, LoopFactory], Any] | None = run_configured_bot,
     away_service: AwayModeService | None = None,
     memory_control: MemoryControlService | None = None,
+    commitment_service: CommitmentService | None = None,
 ) -> FastAPI:
     session_service = sessions or SessionService()
     factory = loop_factory or default_loop_factory(session_service)
@@ -196,7 +212,7 @@ def create_app(
                 with suppress(asyncio.CancelledError):
                     await task
 
-    app = FastAPI(title="Lyra", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="Lyra", version="0.3.0", lifespan=lifespan)
     away = away_service or AwayModeService(
         getattr(
             session_service,
@@ -212,6 +228,13 @@ def create_app(
             "connection_factory",
             SessionService().connection_factory,
         ),
+    )
+    commitments = commitment_service or CommitmentService(
+        getattr(
+            session_service,
+            "connection_factory",
+            SessionService().connection_factory,
+        )
     )
 
     def require_local_control_client(request: Request) -> None:
@@ -352,6 +375,74 @@ def create_app(
     @app.get("/api/away/batched")
     async def list_batched_notifications():
         return {"notifications": away.list_batched()}
+
+    @app.get("/api/commitment-offers")
+    async def list_commitment_offers(
+        status: str = "offered", session_id: str | None = None
+    ):
+        try:
+            return {
+                "offers": commitments.list_offers(
+                    status=status, session_id=session_id
+                )
+            }
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/api/commitment-offers/{offer_id}/confirm")
+    async def confirm_commitment_offer(offer_id: str, request: Request):
+        require_local_control_client(request)
+        try:
+            return commitments.confirm_offer(offer_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/api/commitment-offers/{offer_id}/dismiss")
+    async def dismiss_commitment_offer(offer_id: str, request: Request):
+        require_local_control_client(request)
+        try:
+            return commitments.dismiss_offer(offer_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/api/commitments")
+    async def list_commitments(status: str | None = None):
+        try:
+            return {"commitments": commitments.list_commitments(status=status)}
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/api/commitments/{commitment_id}")
+    async def get_commitment(commitment_id: str):
+        try:
+            return commitments.get_commitment(commitment_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.patch("/api/commitments/{commitment_id}")
+    async def transition_commitment(
+        commitment_id: str, transition: CommitmentTransition, request: Request
+    ):
+        require_local_control_client(request)
+        try:
+            return commitments.transition(
+                commitment_id,
+                transition.status,
+                snoozed_until=transition.snoozed_until,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/api/commitment-reminders/plan")
+    async def plan_commitment_reminders(plan: ReminderPlan, request: Request):
+        require_local_control_client(request)
+        return {
+            "reminders": commitments.plan_due_reminders(
+                away=away,
+                channel=plan.channel,
+                horizon=timedelta(hours=plan.horizon_hours),
+            )
+        }
 
     @app.put("/api/away")
     async def set_away_policy(request: AwayUpdate):
