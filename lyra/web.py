@@ -34,6 +34,7 @@ from lyra.runtime_events import EventKind, RuntimeEvent
 from lyra.runtime_tools import build_conversation_registry
 from lyra.service import configure_rotating_logging
 from lyra.sessions import ContextBuilder, SessionService
+from lyra.stuck import StuckModeService
 from lyra.telegram import run_configured_bot
 
 
@@ -149,6 +150,9 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
     commitment_radar = CommitmentService(
         getattr(sessions, "connection_factory", SessionService().connection_factory)
     )
+    stuck_mode = StuckModeService(
+        getattr(sessions, "connection_factory", SessionService().connection_factory)
+    )
     system_prompt = compose_runtime_context()
 
     class UnavailableLoop:
@@ -181,6 +185,7 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
             system_prompt=system_prompt,
             presentation=presentation,
             commitment_radar=commitment_radar,
+            stuck_mode=stuck_mode,
         )
 
     return factory
@@ -193,6 +198,7 @@ def create_app(
     away_service: AwayModeService | None = None,
     memory_control: MemoryControlService | None = None,
     commitment_service: CommitmentService | None = None,
+    stuck_service: StuckModeService | None = None,
 ) -> FastAPI:
     session_service = sessions or SessionService()
     factory = loop_factory or default_loop_factory(session_service)
@@ -212,7 +218,7 @@ def create_app(
                 with suppress(asyncio.CancelledError):
                     await task
 
-    app = FastAPI(title="Lyra", version="0.3.0", lifespan=lifespan)
+    app = FastAPI(title="Lyra", version="0.4.0", lifespan=lifespan)
     away = away_service or AwayModeService(
         getattr(
             session_service,
@@ -230,6 +236,13 @@ def create_app(
         ),
     )
     commitments = commitment_service or CommitmentService(
+        getattr(
+            session_service,
+            "connection_factory",
+            SessionService().connection_factory,
+        )
+    )
+    stuck = stuck_service or StuckModeService(
         getattr(
             session_service,
             "connection_factory",
@@ -443,6 +456,10 @@ def create_app(
                 horizon=timedelta(hours=plan.horizon_hours),
             )
         }
+
+    @app.get("/api/stuck-mode/{session_id}")
+    async def get_stuck_mode(session_id: str):
+        return {"interaction": stuck.get_state(session_id)}
 
     @app.put("/api/away")
     async def set_away_policy(request: AwayUpdate):

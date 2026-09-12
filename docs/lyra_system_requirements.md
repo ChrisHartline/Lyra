@@ -1,7 +1,7 @@
 # Lyra — System Requirements Document
 
-**Version:** 0.17
-**Date:** 2026-09-10
+**Version:** 0.18
+**Date:** 2026-09-11
 **Author:** Christopher (with Claude)
 **Status:** In progress
 
@@ -152,6 +152,9 @@ contract.
 - **FR-C3 (Commitment provenance):** Every commitment retains the originating session/message IDs or the URL of an explicitly approved dashboard item, along with its detected kind, reason, confirmation time, due time when recognized, and current state. Unapproved dashboard material cannot become a commitment.
 - **FR-C4 (Reminder policy):** Only active commitments with recognized due times are eligible for reminders. Reminder planning uses the existing `commitment` notification category and therefore obeys Away Mode, quiet hours, channel presentation, and daily budgets. Done, snoozed, dropped, declined, and merely offered items never generate reminders.
 - **FR-C5 (Reality and privacy boundary):** Story/campaign dialogue and mixed-ledger context cannot create real commitments. The never-persist filter runs before an offer is recorded; secret-bearing or third-party personal detail is silently excluded. Commitment state does not write to semantic memory, the knowledge graph, or Notion automatically.
+- **FR-C6 (Stuck Mode entry and support modes):** An explicit first-person "I'm stuck" request always offers Stuck Mode. Conservative first-person struggle signals may make a gentle observational offer. Support is distinguished as `technical_diagnosis`, `task_decomposition`, `decision_support`, `stress_check_in`, or `companionship`; Christopher selects the mode and `light`, `standard`, or `deep` assistance before an offered interaction becomes active.
+- **FR-C7 (Dismissal and cooldown):** "Not now", "no thanks", and equivalent immediate dismissals end the current Stuck Mode offer or interaction and suppress further observational offers for a configurable cooldown (24 hours by default). A later explicit request overrides cooldown. Christopher may resolve an active interaction or change its support mode/depth conversationally.
+- **FR-C8 (Stuck Mode privacy and routing):** Stuck Mode stores operational state and source message identifiers but never raw trigger text, diagnoses, emotional inferences, semantic memory, KG facts, or Notion content. Any commitment or durable observation independently arising in the conversation continues through FR-C1-C5 or FR-M7. Technical help requested inside story/campaign context preserves the established fictional register; non-technical story dialogue cannot become a real-world struggle observation.
 
 ### 3.7 Roleplay & Campaign Mode (v2)
 - **FR-D1 (Foundry VTT boundary — decided):** The tabletop platform is Foundry VTT. Integration direction: **Lyra is a client; Foundry owns mechanical truth** (HP, initiative, inventory, dice results, scenes). Integration is **buy-not-build**: the existing Foundry API Bridge (MCP) module is installed in the Foundry world and connected via the **hosted relay** (foundry-mcp.com) for v2 — Foundry thereby becomes another MCP server available to Lyra's orchestrator alongside the corpus server (IF-4). **Self-hosted relay is a documented future option** (lightweight Node service, negligible compute — could co-locate with pgvector) if privacy or reliability later motivates it. Lyra-side scope (what we build): campaign session context assembly (Lyra in character as her PC, fed relevant Foundry state + campaign ledger), post-session write-back to `memory_type='campaign'` (A5 machinery), and orchestrator config registering the Foundry MCP endpoint. The campaign ledger (FR-D2) stores narrative memory only and never duplicates mechanical state — one system of record per data type.

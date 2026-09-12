@@ -25,6 +25,7 @@ REQUIRED_BACKUP_TABLES = (
     "notification_events",
     "commitment_candidates",
     "commitments",
+    "stuck_interactions",
     "telegram_updates",
     "telegram_inbox",
 )

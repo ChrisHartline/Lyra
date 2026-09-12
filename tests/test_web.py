@@ -186,6 +186,21 @@ class FakeCommitments:
         return [{"commitment_id": "commitment-1", "disposition": "send"}]
 
 
+class FakeStuck:
+    def __init__(self):
+        self.calls = []
+
+    def get_state(self, session_id):
+        self.calls.append(("get", session_id))
+        return {
+            "interaction_id": "stuck-1",
+            "session_id": session_id,
+            "status": "active",
+            "selected_mode": "task_decomposition",
+            "depth": "standard",
+        }
+
+
 class FakeLoop:
     def __init__(self, sessions: FakeSessions) -> None:
         self.sessions = sessions
@@ -445,6 +460,26 @@ def test_commitment_mutations_reject_tailnet_and_forwarded_clients():
         json={"channel": "telegram", "horizon_hours": 24},
     ).status_code == 403
     assert commitments.calls == [("list", None)]
+
+
+def test_stuck_mode_status_api_is_channel_neutral_and_read_only():
+    sessions = FakeSessions()
+    stuck = FakeStuck()
+    app = create_app(
+        sessions=sessions,  # type: ignore[arg-type]
+        loop_factory=lambda _session_id: FakeLoop(sessions),
+        away_service=FakeAway(),  # type: ignore[arg-type]
+        memory_control=FakeControl(),  # type: ignore[arg-type]
+        commitment_service=FakeCommitments(),  # type: ignore[arg-type]
+        stuck_service=stuck,  # type: ignore[arg-type]
+    )
+    remote = TestClient(app, client=("100.119.187.40", 50000))
+
+    response = remote.get("/api/stuck-mode/session-1")
+
+    assert response.status_code == 200
+    assert response.json()["interaction"]["selected_mode"] == "task_decomposition"
+    assert stuck.calls == [("get", "session-1")]
 
 
 def test_loopback_client_classification():

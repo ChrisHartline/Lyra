@@ -52,6 +52,17 @@ class CommitmentObserver(Protocol):
     ) -> Any: ...
 
 
+class StuckObserver(Protocol):
+    def observe_message(
+        self,
+        *,
+        session_id: str,
+        message_id: int,
+        text: str,
+        ledger: str = "biography",
+    ) -> Any: ...
+
+
 class NoOpVoiceOutput:
     async def emit(self, text: str) -> None:
         return None
@@ -170,6 +181,7 @@ class AgentLoop:
     emotion: EmotionOutput = field(default_factory=NoOpEmotionOutput)
     presentation: PresentationPolicy | None = None
     commitment_radar: CommitmentObserver | None = None
+    stuck_mode: StuckObserver | None = None
 
     async def stream_turn(
         self,
@@ -186,10 +198,10 @@ class AgentLoop:
         user_message = self.sessions.append_message(
             session_id, "user", user_text, metadata={"channel": normalized_channel}
         )
+        buckets = tuple(memory_buckets)
+        ledger = buckets[0] if len(buckets) == 1 else "mixed"
         radar_instruction: str | None = None
         if self.commitment_radar is not None:
-            buckets = tuple(memory_buckets)
-            ledger = buckets[0] if len(buckets) == 1 else "mixed"
             observation = self.commitment_radar.observe_message(
                 session_id=session_id,
                 message_id=int(user_message["message_id"]),
@@ -197,6 +209,15 @@ class AgentLoop:
                 ledger=ledger,
             )
             radar_instruction = observation.instruction
+        stuck_instruction: str | None = None
+        if self.stuck_mode is not None:
+            stuck_observation = self.stuck_mode.observe_message(
+                session_id=session_id,
+                message_id=int(user_message["message_id"]),
+                text=user_text,
+                ledger=ledger,
+            )
+            stuck_instruction = stuck_observation.instruction
         turn = self.sessions.start_turn(session_id, "running")
         assistant_parts: list[str] = []
         persisted = False
@@ -225,6 +246,7 @@ class AgentLoop:
                     if self.presentation
                     else None,
                     radar_instruction,
+                    stuck_instruction,
                 )
                 if instruction
             ]

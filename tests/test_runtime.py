@@ -291,6 +291,61 @@ def test_agent_loop_injects_commitment_offer_without_marking_it_active():
     assert "wants this tracked" in provider.messages[0][1]["content"]
 
 
+def test_agent_loop_injects_stuck_guidance_with_ledger_and_provenance():
+    class Stuck:
+        def __init__(self):
+            self.calls = []
+
+        def observe_message(self, **kwargs):
+            self.calls.append(kwargs)
+            return type(
+                "Observation",
+                (),
+                {"instruction": "Preserve the scene and diagnose technically."},
+            )()
+
+    class Context(FakeContext):
+        def build(self, session_id, **kwargs):
+            return [
+                {"role": "system", "content": kwargs["system_prompt"]},
+                {"role": "system", "content": kwargs["presentation_instruction"]},
+                {"role": "user", "content": kwargs["memory_query"]},
+            ]
+
+    sessions = FakeSessions()
+    stuck = Stuck()
+    provider = FakeProvider(
+        [[RuntimeEvent.text_delta("Let's trace it."), RuntimeEvent.completion("stop")]]
+    )
+    loop = AgentLoop(
+        sessions=sessions,  # type: ignore[arg-type]
+        context=Context(),  # type: ignore[arg-type]
+        runner=ModelToolRunner(provider, PROFILE, ToolRegistry()),
+        system_prompt="You are Lyra.",
+        stuck_mode=stuck,  # type: ignore[arg-type]
+    )
+
+    asyncio.run(
+        _collect(
+            loop.stream_turn(
+                "session-1",
+                "I'm stuck debugging the regulator.",
+                memory_buckets=("story",),
+            )
+        )
+    )
+
+    assert stuck.calls == [
+        {
+            "session_id": "session-1",
+            "message_id": 1,
+            "text": "I'm stuck debugging the regulator.",
+            "ledger": "story",
+        }
+    ]
+    assert "Preserve the scene" in provider.messages[0][1]["content"]
+
+
 def test_agent_loop_marks_closed_stream_disconnected_and_keeps_partial_reply():
     class HangingProvider(FakeProvider):
         async def stream(self, profile, messages, tools=(), *, environ=None):

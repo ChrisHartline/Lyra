@@ -185,6 +185,50 @@ CREATE TABLE IF NOT EXISTS commitments (
 CREATE INDEX IF NOT EXISTS idx_commitments_status_due
   ON commitments (status, due_at);
 
+CREATE TABLE IF NOT EXISTS stuck_interactions (
+  id UUID PRIMARY KEY,
+  session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+  trigger_message_id BIGINT NOT NULL REFERENCES session_messages(id) ON DELETE CASCADE,
+  trigger_kind TEXT NOT NULL CHECK (trigger_kind IN ('explicit', 'observational')),
+  suggested_mode TEXT NOT NULL CHECK (
+    suggested_mode IN ('technical_diagnosis', 'task_decomposition',
+                       'decision_support', 'stress_check_in', 'companionship')
+  ),
+  selected_mode TEXT CHECK (
+    selected_mode IN ('technical_diagnosis', 'task_decomposition',
+                      'decision_support', 'stress_check_in', 'companionship')
+  ),
+  depth TEXT CHECK (depth IN ('light', 'standard', 'deep')),
+  status TEXT NOT NULL DEFAULT 'offered'
+    CHECK (status IN ('offered', 'active', 'dismissed', 'resolved', 'expired')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  cooldown_until TIMESTAMPTZ,
+  CHECK (
+    (status = 'active' AND selected_mode IS NOT NULL AND depth IS NOT NULL)
+    OR status <> 'active'
+  ),
+  CHECK (status = 'dismissed' OR cooldown_until IS NULL)
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'stuck_interactions_trigger_message_id_fkey'
+      AND conrelid = 'stuck_interactions'::regclass
+  ) THEN
+    ALTER TABLE stuck_interactions
+      ADD CONSTRAINT stuck_interactions_trigger_message_id_fkey
+      FOREIGN KEY (trigger_message_id) REFERENCES session_messages(id)
+      ON DELETE CASCADE;
+  END IF;
+END
+$$;
+
+CREATE INDEX IF NOT EXISTS idx_stuck_interactions_session_status
+  ON stuck_interactions (session_id, status, updated_at DESC);
+
 CREATE TABLE IF NOT EXISTS session_turns (
   id UUID PRIMARY KEY,
   session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
