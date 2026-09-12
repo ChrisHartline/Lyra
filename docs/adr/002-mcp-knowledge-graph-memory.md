@@ -21,8 +21,11 @@ Risk: two “memories” that drift or bypass Lyra’s approval/DLP rules.
 ## Consequences
 
 - Clear split: **corpus** (documents) / **episodic memory** (approved summaries) / **KG** (structured observations) / **Notion** (human-readable board + digests).
-- Phase 2 work: register `@modelcontextprotocol/server-memory` (or pinned equivalent), define entity taxonomy, wire digests → optional KG observation extraction, daily/weekly assistant jobs.
-- SRS follow-up required before implementation gates (new FRs for personal-assistant digests + KG boundary).
+- Implemented in D3/D4/D4.1: the official memory server is registered behind
+  Lyra's search/read/propose-only gatekeeper, with explicit approval performing
+  the underlying write. Digest-to-observation proposals and daily/weekly jobs
+  remain separately gated work.
+- The SRS follow-up is complete in FR-M6/FR-M7 and the associated build gates.
 
 ## Alternatives considered
 

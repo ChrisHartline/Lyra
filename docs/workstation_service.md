@@ -1,8 +1,10 @@
 # Lyra Workstation Service
 
-Lyra's application service remains bound to `127.0.0.1:8765`. NSSM keeps the
-process running across logoff/restart without exposing it to the LAN or public
-internet.
+Lyra's application service remains bound to `127.0.0.1:8765`. When NSSM is
+explicitly installed and configured, it can keep the process running across
+logoff/restart without exposing it to the LAN or public internet. Until then,
+Lyra is launched manually and does not self-heal; W6.4 owns that resilience
+work.
 
 ## Readiness
 
@@ -44,6 +46,10 @@ directory is gitignored.
 full `pg_dump`, then validates that the resulting file is nonempty and contains
 every required table data section. It reports the dump's size and SHA-256
 checksum. Because sessions share Lyra's PostgreSQL database, the full dump
-covers named sessions, messages, channel bindings, turn state, channel/Away
-preferences, Telegram state, corpus, and memory data. Follow
+currently covers all 16 required tables: corpus and memory data, review audit,
+named sessions/messages/turns/channel bindings, channel/Away and notification
+state, Commitment Radar, Stuck Mode, and Telegram state. Follow
 `docs/db_restore.md` to restore and verify a dump.
+
+Commitment and Stuck Mode behavior is documented in
+`docs/commitment_radar.md` and `docs/stuck_mode.md`.

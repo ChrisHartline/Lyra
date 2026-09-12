@@ -53,8 +53,9 @@ remain resumable without becoming approved semantic memory by accident.
   from approved long-term memory.
 - Coding autonomy can grow behind explicit job and publication approvals
   without weakening the conversational tool boundary.
-- Tailscale, GitHub contribution, and campaign integration remain later gates;
-  this ADR defines their boundaries but does not install or authorize them.
+- W5.3 subsequently delivered tailnet-only Tailscale Serve under this boundary;
+  it did not expose the raw application port or expand remote mutation
+  authority. GitHub contribution and campaign integration remain later gates.
 
 ## Alternatives considered
 

@@ -61,6 +61,7 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8765/api/away"
 Invoke-RestMethod -Uri "http://127.0.0.1:8765/api/away/batched"
 ```
 
-The delivery policy is local infrastructure for later digest, commitment, and
-research producers. It records every send, batch, or suppression decision in
-PostgreSQL so the behavior is testable and auditable.
+Commitment Radar already uses this delivery policy for due-reminder planning.
+Digest and research producers will reuse it in later waves. Every send, batch,
+or suppression decision is recorded in PostgreSQL so behavior remains testable
+and auditable.

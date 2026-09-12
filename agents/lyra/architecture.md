@@ -10,7 +10,9 @@
 - `subagents/**`: canonical definitions for isolated specialist workers
 - `references/**`: operational docs and unpacked host lore (not a second SoT)
 - `assets/**`: visual references and static artifacts
-- `mcp/**`: prompts, resources, tool definitions and integration context
+- `mcp/server/**`: executable corpus and gated knowledge-graph MCP servers
+- `mcp/tools/**`: tool contracts and integration context; prompts/resources are
+  added only when a concrete runtime consumer exists
 
 ## Why This Split
 - Keeps persona stable while technical knowledge evolves quickly.

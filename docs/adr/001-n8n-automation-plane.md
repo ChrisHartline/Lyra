@@ -1,6 +1,6 @@
 # ADR-001 — n8n as optional capability onboarding plane
 
-**Status:** Accepted  
+**Status:** Accepted; native Telegram delivered in W5.1, no live n8n workflow yet
 **Date:** 2026-07-26  
 **SRS sections affected:** §2.4, §2.5, IF-1, Appendix B; related: FR-T1–T3 (Telegram may use n8n as an early bridge)
 
@@ -23,7 +23,10 @@ Risk to avoid: a second brain — n8n must not own persona, memory, or corpus re
    4. Add/extend the MCP server handler to call the webhook.
    5. Add a pytest that mocks the webhook (no live n8n required in CI).
    6. If the workflow touches Notion/Telegram/etc., keep Lyra's FR boundaries (e.g. Notion stays human dashboard; corpus stays pgvector).
-4. **Telegram.** Native Bot API remains Phase 2 (FR-T1–T3). Until then, n8n may bridge "notify Christopher" workflows. Replacing the bridge with a first-party bot later does not require changing memory/corpus contracts.
+4. **Telegram (historical sequencing).** Native Bot API was originally assigned
+   to Phase 2, with n8n permitted as an early notification bridge. W5.1 later
+   delivered the first-party long-polling bot without changing the
+   memory/corpus contracts; n8n is no longer needed for basic Telegram access.
 5. **Stack coherence (NFR-8).** n8n appears on the deployment map as optional. No second vector DB, no n8n-owned long-term memory.
 
 ## Consequences
