@@ -67,6 +67,22 @@ CREATE TABLE IF NOT EXISTS memory_review_audit (
 CREATE INDEX IF NOT EXISTS idx_memory_review_audit_proposal
   ON memory_review_audit (proposal_id, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS memory_policy (
+  singleton BOOLEAN PRIMARY KEY DEFAULT true CHECK (singleton),
+  private_shared_mode TEXT NOT NULL DEFAULT 'auto'
+    CHECK (private_shared_mode IN ('auto', 'review', 'off')),
+  professional_mode TEXT NOT NULL DEFAULT 'review'
+    CHECK (professional_mode IN ('auto', 'review', 'off')),
+  story_mode TEXT NOT NULL DEFAULT 'auto'
+    CHECK (story_mode IN ('auto', 'review', 'off')),
+  campaign_mode TEXT NOT NULL DEFAULT 'auto'
+    CHECK (campaign_mode IN ('auto', 'review', 'off')),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO memory_policy (singleton) VALUES (true)
+ON CONFLICT (singleton) DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS chat_sessions (
   id UUID PRIMARY KEY,
   name TEXT NOT NULL,
@@ -90,6 +106,23 @@ CREATE TABLE IF NOT EXISTS session_messages (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (session_id, sequence)
 );
+
+CREATE TABLE IF NOT EXISTS memory_control_intents (
+  id UUID PRIMARY KEY,
+  session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+  source_message_id BIGINT NOT NULL
+    REFERENCES session_messages(id) ON DELETE CASCADE,
+  action TEXT NOT NULL CHECK (action IN ('forget', 'correct')),
+  target_memory_id BIGINT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'completed', 'cancelled', 'expired')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ NOT NULL,
+  resolved_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_memory_control_intents_session_status
+  ON memory_control_intents (session_id, status, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS session_channels (
   id BIGSERIAL PRIMARY KEY,

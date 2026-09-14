@@ -63,6 +63,13 @@ class StuckObserver(Protocol):
     ) -> Any: ...
 
 
+class NaturalMemoryObserver(Protocol):
+    def observe_message(
+        self, *, session_id: str, message_id: int, text: str,
+        ledger: str = "biography", channel: str = "web",
+    ) -> Any: ...
+
+
 class NoOpVoiceOutput:
     async def emit(self, text: str) -> None:
         return None
@@ -182,6 +189,7 @@ class AgentLoop:
     presentation: PresentationPolicy | None = None
     commitment_radar: CommitmentObserver | None = None
     stuck_mode: StuckObserver | None = None
+    natural_memory: NaturalMemoryObserver | None = None
 
     async def stream_turn(
         self,
@@ -200,6 +208,16 @@ class AgentLoop:
         )
         buckets = tuple(memory_buckets)
         ledger = buckets[0] if len(buckets) == 1 else "mixed"
+        memory_instruction: str | None = None
+        if self.natural_memory is not None:
+            memory_observation = self.natural_memory.observe_message(
+                session_id=session_id,
+                message_id=int(user_message["message_id"]),
+                text=user_text,
+                ledger=ledger,
+                channel=normalized_channel,
+            )
+            memory_instruction = memory_observation.instruction
         radar_instruction: str | None = None
         if self.commitment_radar is not None:
             observation = self.commitment_radar.observe_message(
@@ -247,6 +265,7 @@ class AgentLoop:
                     else None,
                     radar_instruction,
                     stuck_instruction,
+                    memory_instruction,
                 )
                 if instruction
             ]

@@ -291,6 +291,37 @@ def test_agent_loop_injects_commitment_offer_without_marking_it_active():
     assert "wants this tracked" in provider.messages[0][1]["content"]
 
 
+def test_agent_loop_injects_natural_memory_instruction_with_channel():
+    class Observer:
+        def __init__(self):
+            self.calls = []
+
+        def observe_message(self, **kwargs):
+            self.calls.append(kwargs)
+            return type("Observation", (), {"instruction": "Acknowledge remembered detail."})()
+
+    class Context(FakeContext):
+        def build(self, session_id, **kwargs):
+            return [{"role": "system", "content": kwargs["presentation_instruction"]}]
+
+    sessions = FakeSessions()
+    observer = Observer()
+    provider = FakeProvider([[RuntimeEvent.text_delta("I will remember."), RuntimeEvent.completion("stop")]])
+    loop = AgentLoop(
+        sessions=sessions,  # type: ignore[arg-type]
+        context=Context(),  # type: ignore[arg-type]
+        runner=ModelToolRunner(provider, PROFILE, ToolRegistry()),
+        system_prompt="You are Lyra.",
+        natural_memory=observer,  # type: ignore[arg-type]
+    )
+
+    asyncio.run(_collect(loop.stream_turn("session-1", "Remember that I like tea", channel="telegram")))
+
+    assert observer.calls[0]["channel"] == "telegram"
+    assert observer.calls[0]["message_id"] == 1
+    assert "remembered detail" in provider.messages[0][0]["content"]
+
+
 def test_agent_loop_injects_stuck_guidance_with_ledger_and_provenance():
     class Stuck:
         def __init__(self):

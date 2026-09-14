@@ -6,13 +6,14 @@ and explicit privacy boundaries between biography, story, and campaign state.
 
 ## Current build status
 
-Wave 5 is closed. W6.1 through W6.3 are complete: memory/observation
-control, Commitment Radar, and Stuck Mode are implemented and live. W6.4
+Wave 5 is closed. W6.1a's natural memory-policy refinement and W6.1 through
+W6.3 are complete. Memory/observation control, Commitment Radar, and Stuck Mode
+are implemented and live. W6.4
 (local runtime resilience) is next.
 
 The authoritative status and acceptance evidence live in the
 [build plan](docs/lyra_build_plan.md). Product behavior is defined by the
-[system requirements](docs/lyra_system_requirements.md), currently SRS v0.18.
+[system requirements](docs/lyra_system_requirements.md), currently SRS v0.19.
 
 ## Run and check Lyra
 

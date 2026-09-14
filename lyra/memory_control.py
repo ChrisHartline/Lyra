@@ -100,6 +100,8 @@ class MemoryControlService:
                     "proposal_reason": metadata.get(
                         "proposal_reason", "Legacy candidate"
                     ),
+                    "approval_mode": metadata.get("approval_mode", "review"),
+                    "trust_lane": metadata.get("trust_lane", "legacy_review"),
                     "approved": bool(row[5]),
                     "status": row[6],
                     "created_at": row[7],
@@ -107,7 +109,13 @@ class MemoryControlService:
             )
         return proposals
 
-    def approve(self, proposal_id: int) -> dict[str, Any]:
+    def approve(
+        self,
+        proposal_id: int,
+        *,
+        actor: str = "local_user",
+        details: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         row = self._get(proposal_id)
         if row[5] == "approved":
             return {
@@ -137,7 +145,13 @@ class MemoryControlService:
                         (proposal_id,),
                     )
                     self._audit(
-                        cur, proposal_id, destination, "approved", content
+                        cur,
+                        proposal_id,
+                        destination,
+                        "approved",
+                        content,
+                        actor=actor,
+                        details=details,
                     )
                 conn.commit()
             result = {"approved": True}
@@ -145,7 +159,13 @@ class MemoryControlService:
             with self.connection_factory() as conn:
                 with conn.cursor() as cur:
                     self._audit(
-                        cur, proposal_id, destination, "approved", content
+                        cur,
+                        proposal_id,
+                        destination,
+                        "approved",
+                        content,
+                        actor=actor,
+                        details=details,
                     )
                 conn.commit()
         return {
@@ -201,6 +221,58 @@ class MemoryControlService:
             "sensitivity_flags": metadata["sensitivity_flags"],
         }
 
+    def correct_approved(
+        self,
+        proposal_id: int,
+        content: str,
+        *,
+        reason: str | None = None,
+        actor: str = "explicit_user",
+    ) -> dict[str, Any]:
+        row = self._get(proposal_id)
+        if row[5] != "approved":
+            raise ValueError("Only approved memories may be corrected conversationally")
+        metadata = dict(row[4] or {})
+        normalized, destination = _validate_target(content, row[2], metadata)
+        if destination != "semantic_memory":
+            raise ValueError("Natural-language correction cannot mutate KG observations")
+        reason = _safe_reason(reason)
+        metadata["sensitivity_flags"] = sensitivity_flags(normalized)
+        metadata["last_control_mode"] = "natural_language"
+        vector = self.embedding_service.embed_texts([normalized])[0]
+        with self.connection_factory() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE memories
+                    SET content = %s, embedding = %s::vector, metadata = %s::jsonb
+                    WHERE id = %s AND review_status = 'approved'
+                    """,
+                    (
+                        normalized,
+                        _vector_literal(vector),
+                        json.dumps(metadata),
+                        proposal_id,
+                    ),
+                )
+                self._audit(
+                    cur,
+                    proposal_id,
+                    destination,
+                    "corrected",
+                    normalized,
+                    actor=actor,
+                    reason=reason,
+                    details={"previous_sha256": _content_hash(row[1])},
+                )
+            conn.commit()
+        return {
+            "proposal_id": proposal_id,
+            "status": "approved",
+            "content": normalized,
+            "sensitivity_flags": metadata["sensitivity_flags"],
+        }
+
     def reject(self, proposal_id: int, *, reason: str) -> dict[str, Any]:
         reason = _safe_reason(reason)
         row = self._get(proposal_id)
@@ -223,6 +295,7 @@ class MemoryControlService:
         *,
         confirmed: bool,
         reason: str | None = None,
+        actor: str = "local_user",
     ) -> dict[str, Any]:
         if not confirmed:
             raise ValueError("Forget requires explicit confirmation")
@@ -242,6 +315,7 @@ class MemoryControlService:
                     destination,
                     "forgotten",
                     content,
+                    actor=actor,
                     reason=reason,
                 )
                 cur.execute("DELETE FROM memories WHERE id = %s", (proposal_id,))
@@ -278,6 +352,16 @@ class MemoryControlService:
             for row in rows
         ]
 
+    def list_recent_natural(self, *, limit: int = 20) -> list[dict[str, Any]]:
+        bounded = max(1, min(limit, 100))
+        approved = self.list_proposals(status="approved", limit=500)
+        return [
+            item
+            for item in approved
+            if item["destination_plane"] == "semantic_memory"
+            and item["approval_mode"] in {"auto", "explicit"}
+        ][:bounded]
+
     def _get(self, proposal_id: int) -> tuple[Any, ...]:
         with self.connection_factory() as conn:
             with conn.cursor() as cur:
@@ -302,21 +386,23 @@ class MemoryControlService:
         action: str,
         content: str,
         *,
+        actor: str = "local_user",
         reason: str | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
         cursor.execute(
             """
             INSERT INTO memory_review_audit (
-                proposal_id, destination_plane, action, reason,
+                proposal_id, destination_plane, action, actor, reason,
                 content_sha256, details
             )
-            VALUES (%s, %s, %s, %s, %s, %s::jsonb)
+            VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb)
             """,
             (
                 proposal_id,
                 destination,
                 action,
+                actor,
                 reason,
                 _content_hash(content),
                 json.dumps(details or {}),

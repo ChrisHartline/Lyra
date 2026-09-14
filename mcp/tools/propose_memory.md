@@ -19,3 +19,7 @@ content (use `propose_observation` for that destination).
 
 The proposal appears in the authenticated local W6.1 control center. This tool
 cannot approve, correct, reject, or forget it.
+
+W6.1a does not change this MCP contract: agent/tool proposals remain pending.
+Only the deterministic conversation policy may promote safe lane-qualified
+content, and every promotion records its source message, lane, mode, and actor.

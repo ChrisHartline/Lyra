@@ -1,7 +1,7 @@
 # Lyra — Build Plan
 
 **Version:** 0.4
-**Companion to:** `docs/lyra_system_requirements.md` (SRS v0.18)
+**Companion to:** `docs/lyra_system_requirements.md` (SRS v0.19)
 **Audience:** The implementing agent (Cursor/Claude) and Christopher.
 
 This document controls **sequencing and verification**. The SRS controls **what** is built. If this plan and the SRS conflict, the SRS wins; flag the conflict instead of improvising.
@@ -311,13 +311,16 @@ Companion intent (SRS to be updated before gates open): make Lyra observant and 
 ```mermaid
 graph TD
     W61[W6.1: memory and observation control center]
+    W61A[W6.1a: natural memory policy]
     W62[W6.2: commitment radar]
     W63[W6.3: stuck mode]
     W64[W6.4: local runtime resilience]
     W52 --> W61
     D41[D4.1: KG gatekeeper] --> W61
+    W61 --> W61A
     W61 --> W62
     W61 --> W63
+    W61A --> W64
     W62 --> W64
     W63 --> W64
 ```
@@ -325,6 +328,10 @@ graph TD
 ### W6.1 — Memory and observation control center
 Deliverables: a local authenticated control surface for pending memories and KG observations showing proposal text, provenance, destination plane, sensitivity flags, and the reason Lyra proposed it; approve, reject, correct, and explicit forget flows with audit records; read-only pending summaries may be shown on Telegram, but mutation remains local-only until separately approved.
 Acceptance: every durable mutation is attributable and requires an explicit action; corrected text is re-run through never-persist and bucket-isolation checks; rejection writes no memory/KG fact; forget requires confirmation and removes the item from retrieval; secrets, intimate detail, and story/campaign boundaries retain their existing protections; full suite passes.
+
+### W6.1a — Natural memory policy
+Deliverables: replace blanket semantic-memory approval with persisted trust lanes; auto-approve safe stable private/shared context and explicit story/campaign continuity, keep inferred professional material in batch review, and leave transient emotion conversational; add natural-language remember/exclude/recent/forget/correct flows with provenance, audit, and one confirmation for ambiguous deletion; show recently remembered items separately in the local control center.
+Acceptance: ordinary low-risk sharing can become attributable, reversible memory without a DBA-style approval step; explicit "remember" counts as approval; professional candidates remain pending by default; secrets, third-party detail, diagnoses, external actions, and bucket crossing remain blocked; natural forget/correct re-run safety rules and cannot mutate KG observations; full suite passes.
 
 ### W6.2 — Commitment radar
 Deliverables: observational detection of possible promises, deadlines, follow-ups, and unresolved decisions; conversational confirmation before persistence; explicit active/done/snoozed/dropped states; source links back to the originating session or approved dashboard item.
@@ -522,6 +529,7 @@ Acceptance: both full suites pass; the secrecy, idempotency, recovery, and bucke
 
 | Task | Status | Test evidence (commit / run) |
 |---|---|---|
+| W6.1a | Gate passed | 2026-09-14: Replaced blanket semantic-memory approval with persisted `private_shared`, `professional`, `story`, and `campaign` trust lanes. Safe stable private/shared context auto-approves; inferred professional context defaults to review; explicit `remember` counts as approval; transient emotion remains conversational. Deterministic recent/exclude/correct/confirmed-forget commands work through allowlisted conversation without exposing KG, policy, filesystem, Git, or Notion authority. All automatic/explicit items retain session/message/channel provenance, lane, mode, reason, flags, and policy/user audit attribution; private/shared items are excluded from digest/briefing collection. The local control center adds a recent view plus correction/forget controls. Pre-migration backup `backups/lyra_20260914_000408.sql` (35,275 bytes, SHA-256 `7ecbf0f9f3f929bafe0e9b82d9f84173d11f8d2c95c83014cf34f69d0c252625`); post-migration backup `backups/lyra_20260914_014514.sql` (39,042 bytes, SHA-256 `940eb8ff56c0074f1b14989fda844686cdf4a4e5c5981465d29380f978c5b4f8`) covers all 18 required tables. Focused memory/runtime/web/outbound-privacy gate -> `38 passed`; final focused regression -> `28 passed`; full suite -> `132 passed`; compileall, JavaScript syntax, documentation freshness, build-plan validation, and additive live schema initialization passed. Rationale and operator contract: `docs/memory_trust_policy.md`. |
 | A1 | Gate passed | `venv\Scripts\python -m pytest tests/test_db_schema.py -q` -> `. [100%]` |
 | A2 | Gate passed | `venv\Scripts\python -m pytest tests/test_embeddings.py tests/test_notion_sync.py tests/test_subagents_sync.py tests/test_persona_reorg.py -q` -> `.... [100%]` |
 | A3 | Gate passed | `venv\Scripts\python -m pytest tests/test_ingest.py -q` -> `.. [100%]`; full suite: `venv\Scripts\python -m pytest -q` -> `....... [100%]` |

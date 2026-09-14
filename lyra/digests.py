@@ -237,6 +237,7 @@ class DigestService:
                     FROM memories
                     WHERE approved = true
                       AND COALESCE(metadata->>'ledger', 'biography') = 'biography'
+                      AND COALESCE(metadata->>'trust_lane', '') <> 'private_shared'
                       AND COALESCE(memory_type, 'fact') NOT IN ('story', 'campaign', 'observation')
                     ORDER BY created_at DESC, id DESC
                     LIMIT 8

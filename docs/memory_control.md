@@ -3,7 +3,12 @@
 W6.1 provides a loopback-only, token-authenticated review surface at
 `http://127.0.0.1:8765/control`. It governs both semantic memories in
 PostgreSQL and structured observations promoted to the local knowledge graph.
-Telegram may summarize pending work later, but it cannot perform mutations.
+The control center remains workstation-local. W6.1a additionally permits a
+narrow set of semantic-memory commands in ordinary allowlisted conversation;
+it does not expose KG, policy, filesystem, Git, Notion, or general tool authority.
+
+See [memory trust policy](memory_trust_policy.md) for the rationale, lanes, and
+natural-language behavior.
 
 ## Configure access
 
@@ -22,13 +27,16 @@ receive no proposal data.
 
 - **Approve** makes a semantic memory retrievable or promotes an observation
   into the KG.
-- **Correct** is pending-only, applies the never-persist and bucket rules
-  again, and creates a fresh embedding.
+- **Correct** applies to pending and approved semantic memories, re-runs the
+  never-persist and bucket rules, and creates a fresh embedding. KG correction
+  remains in the local review flow.
 - **Reject** deletes the candidate and never writes a retrievable fact.
 - **Forget** is approved-only, requires confirmation, and removes both the
   proposal row and a promoted KG observation when applicable.
 - **Audit** records actor, destination, action, reason, timestamps, and content
   hashes. Rejected or forgotten text is not copied into the audit record.
+- **Recently remembered** distinguishes automatic and explicit conversational
+  memory from review candidates and retains correction/forget controls.
 
 ## Clara/Rhea wiki-memory imports
 

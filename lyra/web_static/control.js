@@ -41,6 +41,9 @@ function action(label, handler) {
 function proposalCard(item) {
   const card = document.createElement("article");
   card.className = "proposal-card";
+  if (item.approval_mode) {
+    card.append(text("p", `${item.trust_lane} / ${item.approval_mode}`, "proposal-meta"));
+  }
   card.append(text("p", `${item.destination_plane} · ${item.ledger} · ${item.status}`, "proposal-meta"));
   card.append(text("p", item.content, "proposal-content"));
   card.append(text("p", `Why: ${item.proposal_reason}`, "proposal-meta"));
@@ -62,6 +65,12 @@ function proposalCard(item) {
       if (reason) await mutate(item.proposal_id, "reject", { reason });
     }));
   } else {
+    if (item.destination_plane === "semantic_memory") {
+      actions.append(action("Correct", async () => {
+        const content = prompt("Corrected memory text", item.content);
+        if (content !== null) await mutate(item.proposal_id, "correct-approved", { content });
+      }));
+    }
     actions.append(action("Forget", async () => {
       if (confirm("Permanently remove this item from retrieval?")) {
         await mutate(item.proposal_id, "forget", { confirmed: true });
@@ -86,7 +95,9 @@ async function refresh() {
   try {
     const payload = currentView === "audit"
       ? await api("/api/control/audit")
-      : await api(`/api/control/proposals?status=${currentView}`);
+      : currentView === "recent"
+        ? await api("/api/control/recent")
+        : await api(`/api/control/proposals?status=${currentView}`);
     const items = currentView === "audit" ? payload.audit : payload.proposals;
     items.forEach((item) => {
       list.append(currentView === "audit" ? auditCard(item) : proposalCard(item));

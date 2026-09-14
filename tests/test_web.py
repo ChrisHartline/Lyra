@@ -141,6 +141,10 @@ class FakeControl:
         self.calls.append(("correct", proposal_id, content, reason))
         return {"proposal_id": proposal_id, "status": "pending", "content": content}
 
+    def correct_approved(self, proposal_id, content, reason=None):
+        self.calls.append(("correct-approved", proposal_id, content, reason))
+        return {"proposal_id": proposal_id, "status": "approved", "content": content}
+
     def reject(self, proposal_id, reason):
         self.calls.append(("reject", proposal_id, reason))
         return {"proposal_id": proposal_id, "status": "rejected"}
@@ -151,6 +155,21 @@ class FakeControl:
 
     def list_audit(self, limit=200):
         return [{"audit_id": 1, "action": "approved"}][:limit]
+
+    def list_recent_natural(self, limit=20):
+        return [{"proposal_id": 8, "approval_mode": "auto"}][:limit]
+
+
+class FakePolicy:
+    def __init__(self):
+        self.policy = {"private_shared": "auto", "professional": "review", "story": "auto", "campaign": "auto"}
+
+    def get_policy(self):
+        return dict(self.policy)
+
+    def set_policy(self, **modes):
+        self.policy.update(modes)
+        return dict(self.policy)
 
 
 class FakeCommitments:
@@ -220,6 +239,7 @@ def _client():
         loop_factory=lambda _session_id: FakeLoop(sessions),
         away_service=FakeAway(),  # type: ignore[arg-type]
         memory_control=control,  # type: ignore[arg-type]
+        memory_policy=FakePolicy(),  # type: ignore[arg-type]
     )
     return TestClient(app, client=("127.0.0.1", 50000)), sessions, control
 
@@ -327,6 +347,11 @@ def test_memory_control_api_is_authenticated_and_routes_local_actions(monkeypatc
         headers=headers,
         json={"content": "Corrected", "reason": "Precision"},
     )
+    corrected_approved = client.post(
+        "/api/control/proposals/7/correct-approved",
+        headers=headers,
+        json={"content": "Approved correction"},
+    )
     rejected = client.post(
         "/api/control/proposals/7/reject",
         headers=headers,
@@ -338,16 +363,28 @@ def test_memory_control_api_is_authenticated_and_routes_local_actions(monkeypatc
         json={"confirmed": True},
     )
     audit = client.get("/api/control/audit", headers=headers)
+    recent = client.get("/api/control/recent", headers=headers)
+    policy = client.get("/api/control/memory-policy", headers=headers)
+    updated_policy = client.put(
+        "/api/control/memory-policy",
+        headers=headers,
+        json={"private_shared": "review", "professional": "review", "story": "auto", "campaign": "auto"},
+    )
 
     assert pending.json()["proposals"][0]["proposal_id"] == 7
     assert approved.json()["status"] == "approved"
     assert corrected.json()["content"] == "Corrected"
+    assert corrected_approved.json()["content"] == "Approved correction"
     assert rejected.json()["status"] == "rejected"
     assert forgotten.json()["status"] == "forgotten"
     assert audit.json()["audit"][0]["action"] == "approved"
+    assert recent.json()["proposals"][0]["approval_mode"] == "auto"
+    assert policy.json()["policy"]["private_shared"] == "auto"
+    assert updated_policy.json()["policy"]["private_shared"] == "review"
     assert [call[0] for call in control.calls] == [
         "approve",
         "correct",
+        "correct-approved",
         "reject",
         "forget",
     ]

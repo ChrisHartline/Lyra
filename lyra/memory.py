@@ -32,7 +32,11 @@ _SENSITIVE_PATTERNS = [
     re.compile(r"\bssn\b", re.I),
     re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
     re.compile(r"\b\d{3}-\d{3}-\d{4}\b"),
-    re.compile(r"\bmy\s+(friend|colleague|coworker|neighbor|family)\b", re.I),
+    re.compile(
+        r"\bmy\s+(friend|colleague|coworker|neighbor|family|spouse|partner|"
+        r"son|daughter|mother|father|brother|sister)\b",
+        re.I,
+    ),
     re.compile(r"\boff\s+the\s+record\b", re.I),
 ]
 

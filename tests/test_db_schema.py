@@ -32,6 +32,8 @@ def test_a1_schema_and_cosine_similarity(ensure_db):
                 "chunks",
                 "memories",
                 "memory_review_audit",
+                "memory_policy",
+                "memory_control_intents",
                 "telegram_updates",
                 "telegram_inbox",
                 "channel_preferences",

@@ -27,6 +27,7 @@ from lyra.ingest import IngestPipeline
 from lyra.kg_gatekeeper import build_gatekeeper_router
 from lyra.knowledge_graph import MCPKnowledgeGraphWriter
 from lyra.memory_control import MemoryControlService
+from lyra.natural_memory import MemoryPolicyService, NaturalMemoryService
 from lyra.packs import compose_runtime_context
 from lyra.providers import ModelProfiles, ProviderConfigurationError, adapter_for
 from lyra.runtime import AgentLoop, ModelToolRunner
@@ -87,6 +88,13 @@ class ControlRejection(BaseModel):
 class ControlForget(BaseModel):
     confirmed: bool
     reason: str | None = Field(default=None, max_length=500)
+
+
+class MemoryPolicyUpdate(BaseModel):
+    private_shared: str = Field(pattern="^(auto|review|off)$")
+    professional: str = Field(pattern="^(auto|review|off)$")
+    story: str = Field(pattern="^(auto|review|off)$")
+    campaign: str = Field(pattern="^(auto|review|off)$")
 
 
 class CommitmentTransition(BaseModel):
@@ -153,6 +161,18 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
     stuck_mode = StuckModeService(
         getattr(sessions, "connection_factory", SessionService().connection_factory)
     )
+    connection_factory = getattr(
+        sessions, "connection_factory", SessionService().connection_factory
+    )
+    natural_memory = NaturalMemoryService(
+        corpus=corpus,
+        control=MemoryControlService(
+            embedding_service=embedding,
+            graph_writer=MCPKnowledgeGraphWriter(settings.kg_memory_file_path),
+            connection_factory=connection_factory,
+        ),
+        connection_factory=connection_factory,
+    )
     system_prompt = compose_runtime_context()
 
     class UnavailableLoop:
@@ -186,6 +206,7 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
             presentation=presentation,
             commitment_radar=commitment_radar,
             stuck_mode=stuck_mode,
+            natural_memory=natural_memory,
         )
 
     return factory
@@ -197,6 +218,7 @@ def create_app(
     telegram_runner: Callable[[SessionService, LoopFactory], Any] | None = run_configured_bot,
     away_service: AwayModeService | None = None,
     memory_control: MemoryControlService | None = None,
+    memory_policy: MemoryPolicyService | None = None,
     commitment_service: CommitmentService | None = None,
     stuck_service: StuckModeService | None = None,
 ) -> FastAPI:
@@ -234,6 +256,13 @@ def create_app(
             "connection_factory",
             SessionService().connection_factory,
         ),
+    )
+    policy = memory_policy or MemoryPolicyService(
+        getattr(
+            session_service,
+            "connection_factory",
+            SessionService().connection_factory,
+        )
     )
     commitments = commitment_service or CommitmentService(
         getattr(
@@ -517,6 +546,20 @@ def create_app(
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
+    @app.post("/api/control/proposals/{proposal_id}/correct-approved")
+    async def correct_approved_memory(
+        proposal_id: int,
+        correction: ControlCorrection,
+        request: Request,
+    ):
+        require_control_access(request)
+        try:
+            return control.correct_approved(
+                proposal_id, correction.content, reason=correction.reason
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
     @app.post("/api/control/proposals/{proposal_id}/reject")
     async def reject_memory_proposal(
         proposal_id: int,
@@ -549,6 +592,24 @@ def create_app(
     async def list_memory_audit(request: Request, limit: int = 200):
         require_control_access(request)
         return {"audit": control.list_audit(limit=limit)}
+
+    @app.get("/api/control/recent")
+    async def recent_memories(request: Request, limit: int = 20):
+        require_control_access(request)
+        return {"proposals": control.list_recent_natural(limit=limit)}
+
+    @app.get("/api/control/memory-policy")
+    async def get_memory_policy(request: Request):
+        require_control_access(request)
+        return {"policy": policy.get_policy()}
+
+    @app.put("/api/control/memory-policy")
+    async def update_memory_policy(update: MemoryPolicyUpdate, request: Request):
+        require_control_access(request)
+        try:
+            return {"policy": policy.set_policy(**update.model_dump())}
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @app.post("/api/sessions/{session_id}/turns")
     async def create_turn(session_id: str, turn: TurnCreate, request: Request):
