@@ -14,6 +14,10 @@ Run Python helpers from the repository root with
   [database restore](../docs/db_restore.md) before recovery.
 - `manage_service.py` previews or applies idempotent NSSM install/status/remove
   commands. NSSM is optional until explicitly configured.
+- `watchdog.py` performs one conservative health/recovery tick or runs the
+  bounded after-logon monitor.
+- `register_watchdog.py` previews or manages the per-user hidden Startup-folder
+  watchdog launcher; registration requires explicit opt-in.
 - `doctor.ps1` is the PowerShell entry point for environment checks.
 
 ## Access and approval

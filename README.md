@@ -6,14 +6,13 @@ and explicit privacy boundaries between biography, story, and campaign state.
 
 ## Current build status
 
-Wave 5 is closed. W6.1a's natural memory-policy refinement and W6.1 through
-W6.3 are complete. Memory/observation control, Commitment Radar, and Stuck Mode
-are implemented and live. W6.4
-(local runtime resilience) is next.
+Waves 5 and 6 are closed. Natural memory control, Commitment Radar, Stuck Mode,
+and bounded local runtime recovery are implemented and live. W7.1 (morning
+briefing) is next.
 
 The authoritative status and acceptance evidence live in the
 [build plan](docs/lyra_build_plan.md). Product behavior is defined by the
-[system requirements](docs/lyra_system_requirements.md), currently SRS v0.19.
+[system requirements](docs/lyra_system_requirements.md), currently SRS v0.20.
 
 ## Run and check Lyra
 
@@ -32,6 +31,7 @@ provided by Tailscale Serve, not by exposing the application port.
 | Capability | Guide |
 |---|---|
 | Workstation process, logs, backups, NSSM | [Workstation service](docs/workstation_service.md) |
+| Watchdog and deployment boundary | [Runtime resilience](docs/runtime_resilience.md) |
 | Private Tailscale HTTPS | [Tailscale access](docs/tailscale_access.md) |
 | Telegram bot and allowlists | [Telegram setup](docs/telegram_setup.md) |
 | Device handoff and Away Mode | [Away Mode](docs/away_mode.md) |

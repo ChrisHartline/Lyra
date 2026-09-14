@@ -3,8 +3,8 @@
 Lyra's application service remains bound to `127.0.0.1:8765`. When NSSM is
 explicitly installed and configured, it can keep the process running across
 logoff/restart without exposing it to the LAN or public internet. Until then,
-Lyra is launched manually and does not self-heal; W6.4 owns that resilience
-work.
+Lyra can be launched manually or by NSSM. W6.4 adds a conservative user-level
+watchdog that can start an existing process when health repeatedly fails.
 
 ## Readiness
 
@@ -16,6 +16,7 @@ Run the secret-safe capability report from the repository root:
 
 The report uses four states: `READY`, `DEGRADED`, `UNCONFIGURED`, and
 `UNAVAILABLE`. It reports only presence and health, never credential values.
+It also reports Docker Desktop auto-start and per-user watchdog registration.
 
 ## NSSM management
 
@@ -54,3 +55,6 @@ state, Commitment Radar, Stuck Mode, and Telegram state. Follow
 
 Commitment and Stuck Mode behavior is documented in
 `docs/commitment_radar.md` and `docs/stuck_mode.md`.
+
+See `docs/runtime_resilience.md` for watchdog operation, startup registration,
+failure diagnostics, and the local-versus-deployed readiness boundary.

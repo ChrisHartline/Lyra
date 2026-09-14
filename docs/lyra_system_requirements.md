@@ -1,6 +1,6 @@
 # Lyra — System Requirements Document
 
-**Version:** 0.19
+**Version:** 0.20
 **Date:** 2026-09-14
 **Author:** Christopher (with Claude)
 **Status:** In progress
@@ -63,6 +63,7 @@ Every runtime component MUST appear in this table (see NFR-8). Default posture: 
 | Session history | Host memory | PostgreSQL on workstation | Named raw chat sessions; operational state, not semantic memory |
 | Repository coding worker | Cursor/manual | Isolated local job workspace | Separate approvals; no GitHub credential in worker context |
 | Telegram bot | — | Workstation service | Long-polls outbound — no inbound ports required |
+| Runtime watchdog | — | Per-user workstation process | After-logon, bounded recovery only; no repair/update/network authority (NFR-10) |
 | Notion | SaaS | SaaS | Human dashboard only (FR-N3); Lyra shared working space IDs in `.env` |
 | n8n (optional) | Workstation / existing host | Same | Glue workflows → MCP/webhook tools; never owns memory/corpus (ADR-001) |
 | Foundry VTT + MCP relay | — | Foundry world + hosted relay (foundry-mcp.com) | Self-hosted relay = future option (FR-D1) |
@@ -250,6 +251,7 @@ CREATE INDEX ON memories USING hnsw (embedding vector_cosine_ops);
   - **Deployment-map completeness:** every runtime component appears in §2.5. A component with no row does not get built; a row with no FR gets deleted.
   - **No orphan tech:** every technology in the stack must be traceable to at least one requirement. (If PostgreSQL+pgvector is the store, we don't also stand up a second vector DB "because it was easy.")
 - **NFR-9 (Backup & recovery):** Continuity is the defining requirement (§1), so its data is protected: scheduled `pg_dump` of the Lyra database plus backup of `data/` raw artifacts to a second medium (external drive or NAS; encrypted cloud bucket acceptable later via ADR). The restore procedure is documented and exercised at least once during Phase 1 — an untested backup is a hope, not a control.
+- **NFR-10 (Bounded local recovery):** PostgreSQL uses an explicit container restart policy and health check. A user-level workstation watchdog observes Docker Engine, PostgreSQL, and Lyra; it ignores transient failures, performs at most one attributable start action after repeated failures, enforces a cooldown, and emits actionable local diagnostics. It may start only already-installed components. It never installs or updates software, resets Docker/WSL, deletes/recreates volumes, restores backups, changes network exposure, or bypasses loopback/private-access controls. Startup registration and Docker Desktop auto-start require Christopher's opt-in.
 
 ## 6. Interfaces
 

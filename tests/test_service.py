@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import logging
+import json
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 import sys
@@ -142,3 +143,22 @@ def test_install_dry_run_accepts_a_future_explicit_nssm_path(capsys):
     assert "DRY-RUN:" in output
     assert " install Lyra " in output
     assert "127.0.0.1" in output
+
+
+def test_capability_report_detects_opted_in_autostart_and_watchdog():
+    case = ROOT / "data" / "test_tmp" / "service" / "startup"
+    docker_settings = case / "Docker" / "settings-store.json"
+    watchdog = case / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup" / "LyraWatchdog.vbs"
+    docker_settings.parent.mkdir(parents=True, exist_ok=True)
+    watchdog.parent.mkdir(parents=True, exist_ok=True)
+    docker_settings.write_text(json.dumps({"AutoStart": True}), encoding="utf-8")
+    watchdog.write_text("safe test launcher", encoding="utf-8")
+
+    report = capability_report(
+        environ={"APPDATA": str(case)},
+        database_check=lambda _settings: Capability("database", "ready", "reachable"),
+    )
+    states = {item.name: item.state for item in report}
+
+    assert states["docker-autostart"] == "ready"
+    assert states["watchdog-startup"] == "ready"

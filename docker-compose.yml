@@ -2,6 +2,7 @@ services:
   lyra-db:
     image: pgvector/pgvector:pg16
     container_name: lyra-pgvector
+    restart: unless-stopped
     environment:
       POSTGRES_DB: lyra
       POSTGRES_USER: lyra
@@ -13,6 +14,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+      start_period: 10s
     volumes:
       - lyra_pgdata:/var/lib/postgresql/data
 

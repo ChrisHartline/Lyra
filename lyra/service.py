@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import json
 import os
 import shutil
 import subprocess
@@ -180,6 +181,42 @@ def capability_report(
             if nssm
             else "provide --nssm or add NSSM to PATH",
         )
+    )
+    appdata = env.get("APPDATA", "").strip()
+    docker_autostart = False
+    watchdog_registered = False
+    if appdata:
+        docker_settings = Path(appdata) / "Docker" / "settings-store.json"
+        try:
+            docker_autostart = bool(
+                json.loads(docker_settings.read_text(encoding="utf-8")).get("AutoStart")
+            )
+        except (OSError, ValueError, TypeError):
+            pass
+        watchdog_registered = (
+            Path(appdata)
+            / "Microsoft"
+            / "Windows"
+            / "Start Menu"
+            / "Programs"
+            / "Startup"
+            / "LyraWatchdog.vbs"
+        ).is_file()
+    capabilities.extend(
+        [
+            Capability(
+                "docker-autostart",
+                "ready" if docker_autostart else "unconfigured",
+                "Docker Desktop starts after sign-in"
+                if docker_autostart else "enable Docker Desktop auto-start after opt-in",
+            ),
+            Capability(
+                "watchdog-startup",
+                "ready" if watchdog_registered else "unconfigured",
+                "per-user watchdog launcher is registered"
+                if watchdog_registered else "register the watchdog after opt-in",
+            ),
+        ]
     )
     return capabilities
 
