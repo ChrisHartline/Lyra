@@ -34,6 +34,16 @@ def launcher_content(root: Path = ROOT) -> str:
     )
 
 
+def _hidden_popen_options() -> dict[str, object]:
+    if os.name != "nt":
+        return {}
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = subprocess.SW_HIDE
+    return {"creationflags": subprocess.CREATE_NO_WINDOW,
+            "startupinfo": startupinfo, "close_fds": True}
+
+
 def install(root: Path = ROOT, *, environ: dict[str, str] | None = None, start_now: bool = False) -> Path:
     pythonw = root / "venv" / "Scripts" / "pythonw.exe"
     if not pythonw.is_file():
@@ -47,11 +57,10 @@ def install(root: Path = ROOT, *, environ: dict[str, str] | None = None, start_n
         subprocess.Popen(
             [str(pythonw), str(root / "scripts" / "watchdog.py"), "--monitor"],
             cwd=str(root),
-            creationflags=(
-                subprocess.CREATE_NEW_PROCESS_GROUP
-                | subprocess.DETACHED_PROCESS
-                | subprocess.CREATE_NO_WINDOW
-            ),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            **_hidden_popen_options(),
         )
     return target
 

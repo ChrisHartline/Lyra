@@ -25,12 +25,21 @@ or changes Lyra's `127.0.0.1:8765` binding. Failed recovery logs point to Docker
 diagnostics, `docker compose ps`, and Lyra's local logs rather than escalating to
 destructive repair.
 
+Browsers are explicitly outside the watchdog boundary. It does not enumerate,
+stop, restart, or otherwise manage Chrome, Edge, the Codex browser, or their tabs.
+
 ## Operator commands
 
 Run a single non-destructive check:
 
 ```powershell
 .\venv\Scripts\python.exe scripts\watchdog.py
+```
+
+Run a bounded three-poll monitor validation without installing it:
+
+```powershell
+.\venv\Scripts\python.exe scripts\watchdog.py --monitor --interval 10 --iterations 3
 ```
 
 Preview per-user after-logon registration:
@@ -50,6 +59,23 @@ Registration creates a hidden `LyraWatchdog.vbs` launcher in Christopher's
 per-user Startup folder; it requires no administrator privileges. Docker Desktop's own
 “Start Docker Desktop when you sign in” setting is separately enabled in Docker
 Desktop under Settings → General; the watchdog does not modify it.
+
+On Windows, both the monitor and every console child use `CREATE_NO_WINDOW` plus
+an explicit hidden `STARTUPINFO`. This covers Docker and Compose health checks,
+NSSM checks, and Lyra recovery; Lyra recovery uses `pythonw.exe`. Flags that make
+Windows ignore `CREATE_NO_WINDOW` are prohibited. If hidden execution cannot be
+established, leave the Startup launcher disabled and run checks manually.
+
+### Quiet-mode validation — 2026-09-15
+
+- Focused watchdog suite: `11 passed` in 1.91 seconds.
+- Full repository suite: 151 tests, 0 failures, 0 errors in 162.35 seconds.
+- A bounded three-poll hidden monitor advanced watchdog state without invoking a
+  recovery action; its validation processes were then stopped.
+- After restoring the per-user Startup launcher, the permanent monitor advanced
+  state from `2026-09-15 14:43:58Z` to `14:44:29Z` while Lyra remained `ready`.
+- Lyra and the monitor each use an expected virtual-environment launcher/base
+  interpreter pair. No browser process belongs to either pair.
 
 ## Deployment-readiness boundary
 

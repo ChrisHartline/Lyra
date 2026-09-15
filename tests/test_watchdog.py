@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import subprocess
 from pathlib import Path
 
 from lyra.watchdog import HealthSnapshot, WorkstationWatchdog
@@ -119,6 +120,29 @@ def test_startup_registration_writes_only_the_user_startup_launcher():
     assert target.read_text(encoding="utf-8").splitlines() == register_watchdog.launcher_content(ROOT).splitlines()
 
 
+def test_start_now_registration_uses_non_conflicting_hidden_flags():
+    options = register_watchdog._hidden_popen_options()
+    if __import__("os").name == "nt":
+        assert options["creationflags"] == subprocess.CREATE_NO_WINDOW
+        assert not options["creationflags"] & subprocess.DETACHED_PROCESS
+        assert options["startupinfo"].wShowWindow == subprocess.SW_HIDE
+
+
+def test_start_now_registration_disconnects_monitor_standard_handles(monkeypatch):
+    calls = []
+    monkeypatch.setattr(register_watchdog.subprocess, "Popen",
+                        lambda command, **options: calls.append((command, options)))
+    root = ROOT
+    environment = {"APPDATA": str(_case("registration_handles") / "appdata")}
+
+    register_watchdog.install(root, environ=environment, start_now=True)
+
+    options = calls[0][1]
+    assert options["stdin"] is subprocess.DEVNULL
+    assert options["stdout"] is subprocess.DEVNULL
+    assert options["stderr"] is subprocess.DEVNULL
+
+
 def test_compose_has_restart_policy_and_bounded_healthcheck():
     compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
 
@@ -127,3 +151,58 @@ def test_compose_has_restart_policy_and_bounded_healthcheck():
     assert "timeout: 3s" in compose
     assert "retries: 20" in compose
     assert "start_period: 10s" in compose
+
+
+def test_watchdog_has_no_browser_process_control():
+    source = (ROOT / "lyra" / "watchdog.py").read_text(encoding="utf-8").lower()
+
+    assert "chrome.exe" not in source
+    assert "msedge.exe" not in source
+    assert "taskkill" not in source
+
+
+def test_watchdog_health_commands_are_hidden_on_windows():
+    case = _case("hidden_commands")
+    calls = []
+
+    def runner(command, **options):
+        calls.append((command, options))
+        return subprocess.CompletedProcess(command, 0, "ok", "")
+
+    watchdog = WorkstationWatchdog(
+        ROOT,
+        runner=runner,
+        state_path=case / "state.json",
+        log_path=case / "watchdog.log",
+    )
+    watchdog._run(["docker", "info"])
+
+    expected = subprocess.CREATE_NO_WINDOW if __import__("os").name == "nt" else None
+    assert calls[0][1].get("creationflags") == expected
+    if expected is not None:
+        assert calls[0][1]["startupinfo"].wShowWindow == subprocess.SW_HIDE
+
+
+def test_lyra_recovery_uses_pythonw_and_non_conflicting_hidden_flags():
+    case = _case("hidden_recovery")
+    calls = []
+
+    def starter(command, **options):
+        calls.append((command, options))
+        return object()
+
+    watchdog = WorkstationWatchdog(
+        ROOT,
+        process_starter=starter,
+        state_path=case / "state.json",
+        log_path=case / "watchdog.log",
+    )
+    recovered, _detail = watchdog._recover("start_lyra")
+
+    assert recovered is True
+    assert calls[0][0][0].endswith("pythonw.exe")
+    if __import__("os").name == "nt":
+        flags = calls[0][1]["creationflags"]
+        assert flags == subprocess.CREATE_NO_WINDOW
+        assert not flags & subprocess.DETACHED_PROCESS
+        assert calls[0][1]["startupinfo"].wShowWindow == subprocess.SW_HIDE

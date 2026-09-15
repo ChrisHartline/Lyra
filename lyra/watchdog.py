@@ -153,7 +153,7 @@ class WorkstationWatchdog:
             if nssm and self._command_ok([nssm, "status", SERVICE_NAME]):
                 result = self._run([nssm, "restart", SERVICE_NAME], timeout=30)
                 return result.returncode == 0, self._safe_process_detail(result)
-            python = self.root / "venv" / "Scripts" / "python.exe"
+            python = self.root / "venv" / "Scripts" / "pythonw.exe"
             if not python.is_file():
                 return False, f"Runtime executable is missing: {python}"
             self.log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -187,7 +187,7 @@ class WorkstationWatchdog:
         try:
             return self.runner(
                 list(command), cwd=self.root, capture_output=True, text=True,
-                check=False, timeout=timeout,
+                check=False, timeout=timeout, **self._hidden_run_options(),
             )
         except (OSError, subprocess.SubprocessError) as exc:
             return subprocess.CompletedProcess(command, 1, "", f"{type(exc).__name__}: {exc}")
@@ -214,11 +214,22 @@ class WorkstationWatchdog:
     def _detached_options() -> dict[str, Any]:
         if os.name != "nt":
             return {}
-        return {
-            "creationflags": subprocess.CREATE_NEW_PROCESS_GROUP
-            | subprocess.DETACHED_PROCESS
-            | subprocess.CREATE_NO_WINDOW,
-        }
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+        return {"creationflags": subprocess.CREATE_NO_WINDOW,
+                "startupinfo": startupinfo, "close_fds": True}
+
+    @staticmethod
+    def _hidden_run_options() -> dict[str, Any]:
+        """Keep recurring CLI health checks invisible on Windows."""
+        if os.name != "nt":
+            return {}
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+        return {"creationflags": subprocess.CREATE_NO_WINDOW,
+                "startupinfo": startupinfo}
 
     @staticmethod
     def _safe_process_detail(result: subprocess.CompletedProcess) -> str:
