@@ -8,9 +8,10 @@ import ipaddress
 import json
 import os
 import secrets
+from dataclasses import asdict
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager, suppress
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -26,6 +27,7 @@ from lyra.embeddings import EmbeddingService
 from lyra.ingest import IngestPipeline
 from lyra.kg_gatekeeper import build_gatekeeper_router
 from lyra.knowledge_graph import MCPKnowledgeGraphWriter
+from lyra.notion_sync import NotionClient
 from lyra.memory_control import MemoryControlService
 from lyra.natural_memory import MemoryPolicyService, NaturalMemoryService
 from lyra.packs import compose_runtime_context
@@ -33,10 +35,12 @@ from lyra.providers import ModelProfiles, ProviderConfigurationError, adapter_fo
 from lyra.runtime import AgentLoop, ModelToolRunner
 from lyra.runtime_events import EventKind, RuntimeEvent
 from lyra.runtime_tools import build_conversation_registry
+from lyra.rituals import RitualService
+from lyra.briefings import BriefingService
 from lyra.service import configure_rotating_logging
 from lyra.sessions import ContextBuilder, SessionService
 from lyra.stuck import StuckModeService
-from lyra.telegram import run_configured_bot
+from lyra.telegram import run_configured_bot, run_configured_rituals
 
 
 STATIC_DIR = Path(__file__).resolve().parent / "web_static"
@@ -105,6 +109,21 @@ class CommitmentTransition(BaseModel):
 class ReminderPlan(BaseModel):
     channel: str = Field(default="telegram", pattern="^(web|telegram)$")
     horizon_hours: int = Field(default=24, ge=1, le=720)
+
+
+class RitualPolicyUpdate(BaseModel):
+    morning_enabled: bool
+    evening_enabled: bool
+    morning_time: time
+    evening_time: time
+    timezone: str = Field(min_length=1, max_length=100)
+    channel: str = Field(pattern="^(web|telegram)$")
+    notion_publish: bool = False
+    vacation_until: date | None = None
+
+
+class RitualSnooze(BaseModel):
+    until: datetime
 
 
 def validate_bind_host(host: str) -> str:
@@ -216,27 +235,30 @@ def create_app(
     sessions: SessionService | None = None,
     loop_factory: LoopFactory | None = None,
     telegram_runner: Callable[[SessionService, LoopFactory], Any] | None = run_configured_bot,
+    ritual_runner: Callable[[SessionService, RitualService], Any] | None = run_configured_rituals,
     away_service: AwayModeService | None = None,
     memory_control: MemoryControlService | None = None,
     memory_policy: MemoryPolicyService | None = None,
     commitment_service: CommitmentService | None = None,
     stuck_service: StuckModeService | None = None,
+    ritual_service: RitualService | None = None,
 ) -> FastAPI:
     session_service = sessions or SessionService()
     factory = loop_factory or default_loop_factory(session_service)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
-        task = (
-            asyncio.create_task(telegram_runner(session_service, factory))
-            if telegram_runner is not None
-            else None
-        )
+        tasks = []
+        if telegram_runner is not None:
+            tasks.append(asyncio.create_task(telegram_runner(session_service, factory)))
+        if ritual_runner is not None:
+            tasks.append(asyncio.create_task(ritual_runner(session_service, rituals)))
         try:
             yield
         finally:
-            if task is not None:
+            for task in tasks:
                 task.cancel()
+            for task in tasks:
                 with suppress(asyncio.CancelledError):
                     await task
 
@@ -277,6 +299,25 @@ def create_app(
             "connection_factory",
             SessionService().connection_factory,
         )
+    )
+    rituals = ritual_service or RitualService(
+        briefing=BriefingService(
+            digests_database_id=settings.notion_digests_database_id or "unset",
+            title_property=settings.notion_digest_title_property,
+            kg_memory_file=settings.kg_memory_file_path,
+            connection_factory=getattr(
+                session_service, "connection_factory", SessionService().connection_factory
+            ),
+            publisher=(
+                NotionClient(token=settings.notion_token)
+                if settings.notion_token and settings.notion_digests_database_id
+                else None
+            ),
+        ),
+        away=away,
+        connection_factory=getattr(
+            session_service, "connection_factory", SessionService().connection_factory
+        ),
     )
 
     def require_local_control_client(request: Request) -> None:
@@ -597,6 +638,43 @@ def create_app(
     async def recent_memories(request: Request, limit: int = 20):
         require_control_access(request)
         return {"proposals": control.list_recent_natural(limit=limit)}
+
+    @app.get("/api/control/rituals")
+    async def get_ritual_policy(request: Request):
+        require_control_access(request)
+        return {"policy": rituals.policy_dict()}
+
+    @app.put("/api/control/rituals")
+    async def update_ritual_policy(update: RitualPolicyUpdate, request: Request):
+        require_control_access(request)
+        try:
+            return {"policy": asdict(rituals.set_policy(**update.model_dump()))}
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/api/control/rituals/{ritual_type}/preview")
+    async def preview_ritual(ritual_type: str, request: Request):
+        require_control_access(request)
+        try:
+            return rituals.build(ritual_type)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/api/control/rituals/{ritual_type}/skip")
+    async def skip_ritual(ritual_type: str, request: Request):
+        require_control_access(request)
+        try:
+            return rituals.skip(ritual_type)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/api/control/rituals/{ritual_type}/snooze")
+    async def snooze_ritual(ritual_type: str, snooze: RitualSnooze, request: Request):
+        require_control_access(request)
+        try:
+            return {"policy": asdict(rituals.snooze(ritual_type, snooze.until))}
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @app.get("/api/control/memory-policy")
     async def get_memory_policy(request: Request):

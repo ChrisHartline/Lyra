@@ -15,7 +15,7 @@ from .digests import DigestPublisher, _task_title
 from .notion_sync import NotionClient
 from .safety import is_notion_safe, safe_lines
 
-BriefingPeriod = Literal["morning", "weekly"]
+BriefingPeriod = Literal["morning", "evening", "weekly"]
 
 _STORY_CAMPAIGN_MARKERS = (
     "story canon",

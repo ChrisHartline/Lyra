@@ -1,7 +1,7 @@
 # Lyra — Build Plan
 
 **Version:** 0.4
-**Companion to:** `docs/lyra_system_requirements.md` (SRS v0.20)
+**Companion to:** `docs/lyra_system_requirements.md` (SRS v0.21)
 **Audience:** The implementing agent (Cursor/Claude) and Christopher.
 
 This document controls **sequencing and verification**. The SRS controls **what** is built. If this plan and the SRS conflict, the SRS wins; flag the conflict instead of improvising.
@@ -410,6 +410,7 @@ graph TD
     W93[W9.3: agent wiki and knowledge routing]
     W94[W9.4: scene direction and still insertion]
     W95[W9.5: voice and avatar evaluation]
+    W95A[W9.5a: scoped text-to-speech]
     W96[W9.6: Everwood selfie-tool adaptation]
     W97[W9.7: embodied companion pilot]
     E5[E5: pack runtime injection] --> W91
@@ -419,7 +420,8 @@ graph TD
     W93 --> W94
     W94 --> W95
     W94 --> W96
-    W95 --> W97
+    W95 --> W95A
+    W95A --> W97
     W96 --> W97
     W83[W8.3: ship continuity] --> W97
 ```
@@ -443,6 +445,10 @@ Acceptance: text conversation does not wait on image generation; scenes are clea
 ### W9.5 — Voice and avatar evaluation
 Deliverables: a fixed test script and representative scene set comparing ElevenLabs, HeyGen, and D-ID for Lyra's target experience; measurements for voice/identity consistency, emotional control, first-audio/frame latency, interruption behavior, render time, API ergonomics, privacy/retention controls, cost, and export ownership; one disposable prototype per relevant mode rather than permanent provider coupling.
 Acceptance: credentials come only from `.env`; the evaluation distinguishes streaming voice, talking portrait, cinematic scene, and asynchronous video rather than naming a single overall winner; outputs and costs are recorded against the same inputs; Christopher selects or defers each renderer independently.
+
+### W9.5a — Scoped text-to-speech
+Deliverables: a provider-neutral TTS renderer for explicit speak requests and separately enabled ritual/scene allowlists; disabled-by-default controls for voice, length, rate, cost, caching/retention, and channel; text-first asynchronous delivery with local artifact provenance and safe fallback. Speech recognition, microphone capture, barge-in, and speech-to-speech are explicitly deferred to a later gate.
+Acceptance: ordinary replies never speak automatically; renderer input contains only selected text and minimal prosody hints; secrets and unrelated history never leave the workstation; quiet hours and media budgets apply; provider failure leaves the complete text response intact; focused mock tests and one live requested utterance pass before routine use is enabled.
 
 ### W9.6 — Everwood selfie-tool adaptation
 Deliverables: a Lyra-native, provider-neutral scene-image tool adapted from Everwood's conversation-aware reference-image pipeline; explicit `selfie`, `portrait`, `location`, and `storyboard_frame` intents; approved Lyra/ship/location references; local output storage and provenance; Silent Drift location generation; MCP contracts under `mcp/tools/` with the reusable agent workflow expressed as a Lyra skill.
@@ -569,7 +575,7 @@ Acceptance: both full suites pass; the secrecy, idempotency, recovery, and bucke
 | W6.2 | Gate passed | 2026-09-10: Added confirmation-gated commitment offers and explicit `active`/`done`/`snoozed`/`dropped` lifecycle with session/message or approved-dashboard provenance; reminder planning uses Away Mode category `commitment`, so quiet hours and notification budgets apply; story/campaign, mixed-ledger, secret-bearing, and third-party-personal candidates fail closed. Commitment mutations are workstation-local; remote/proxied controls return `403`. Pre-migration backup `backups/lyra_20260910_220240.sql` (27,992 bytes, SHA-256 `365f7da45616267cc4cde561fe1f868b32cb23d9c19f74064a09c2a51bfe1a3a`); post-migration backup `backups/lyra_20260910_220524.sql` (32,190 bytes, SHA-256 `e9043bf9e5676ed06ddb9615d5956c5fdaa2b70bbc2713ceedd921e412e14129`) contains all 15 required tables. Focused commitment/runtime/web/Away/schema/backup/plan gate -> `36 passed`; focused remote-boundary gate -> `16 passed`; full suite -> `120 passed`; build-plan validator -> `VALID`. Live loopback and private Tailscale health returned `200 ready`; live `/api/commitments` returned an empty initialized collection. |
 | W6.3 | Gate passed | 2026-09-12: Added explicit and conservative observational Stuck Mode with `technical_diagnosis`, `task_decomposition`, `decision_support`, `stress_check_in`, and `companionship` modes plus `light`/`standard`/`deep` user-selected depth. Immediate dismissal establishes a configurable 24-hour observational cooldown; explicit requests override it; active interactions may change mode/depth or resolve conversationally. The operational table stores identifiers/state only—no raw trigger text, emotional inference, diagnosis, semantic memory, KG observation, commitment, or Notion write. Story/campaign context ignores non-technical distress while technical requests preserve the Tier 0 in-fiction register transition. Pre-migration backup `backups/lyra_20260911_175015.sql` (32,190 bytes, SHA-256 `16517c58dd3241f33dd63e0135e0243dd8b459f4dde8c872c6e6c40490a31c15`); final post-migration backup `backups/lyra_20260912_013151.sql` (35,275 bytes, SHA-256 `ed3b245fb2b6be73bc98efa43985177746ce42188af8c24832533e9c3d896f0e`) covers all 16 required tables and the trigger-message provenance constraint. Focused cross-feature gate -> `41 passed`; final schema/Unicode gate -> `7 passed`; full suite -> `127 passed`; build-plan validator -> `VALID`. Live loopback and private Tailscale health returned `200 ready`; private read-only Stuck Mode status returned an empty initialized state. |
 | W6.4 | Gate passed | 2026-09-14: Added `unless-stopped` PostgreSQL restart behavior and the existing bounded Docker health check; implemented a stateful user-level watchdog for Docker Engine, PostgreSQL, and Lyra with three-failure qualification, one dependency-ordered start action, five-minute cooldown, bounded verification, atomic gitignored state, rotated attributable logs, and actionable failure guidance. Recovery cannot install/update, reset Docker/WSL, delete/recreate volumes, restore backups, or alter loopback/Tailscale exposure. Christopher's earlier opt-in was verified: Docker Desktop `AutoStart=true`; per-user hidden Startup launcher `LyraWatchdog.vbs` installed and its monitor process confirmed. The secret-safe doctor reports both startup capabilities `READY`; NSSM remains optional/unconfigured. Injected failure/configuration/service/documentation gate -> `16 passed`; full suite -> `139 passed`; Compose validation, compileall, JavaScript syntax, documentation freshness, and build-plan validation passed. Live controlled container restart/recreation reported `healthy`, `restart=unless-stopped`, retained named volume `lyra_lyra_pgdata`, recovered session `e2cfec79-309b-456e-95b7-710594a3f4aa` (`W6.4 Restart Proof 2026-09-14`) with two messages, and left Lyra loopback health `ready`. Deployment boundary/runbook: `docs/runtime_resilience.md`. Wave 6 closed. |
-| W7.1 | Not started | — |
+| W7.1 | Gate passed | 2026-09-15: Added independently configurable morning/evening rituals over confirmed commitments, recent sessions, digest/observation/approved-memory briefing planes, with web/Telegram delivery, optional Notion-safe publication, Away Mode quiet/budget enforcement, vacation/snooze/skip controls, and idempotent date/type run records that retain hashes rather than duplicate bodies. Pre-migration backup `backups/lyra_20260914_215555.sql` (39,397 bytes, SHA-256 `8f41203acbfd556e6d85532d2020155098dc718a957a3a4fd98b435df2b46262`); post-migration backup `backups/lyra_20260914_221245.sql` (42,859 bytes, SHA-256 `e168db578a11810e757aed55632c237742acfbbe963de58eaeaad8026fede6bc`) covers all 20 tables. Focused ritual/Telegram/web/schema/backup/briefing suite -> `33 passed`; full suite -> `151 passed`. One live web-channel morning and evening cycle delivered into ordinary session history; defaults were restored disabled. Runbook: `docs/daily_rituals.md`. |
 | W7.2 | Not started | — |
 | W7.3 | Not started | — |
 | W8.1 | Not started | — |

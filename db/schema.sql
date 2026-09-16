@@ -165,6 +165,38 @@ CREATE TABLE IF NOT EXISTS notification_events (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS ritual_policy (
+  singleton BOOLEAN PRIMARY KEY DEFAULT true CHECK (singleton),
+  morning_enabled BOOLEAN NOT NULL DEFAULT false,
+  evening_enabled BOOLEAN NOT NULL DEFAULT false,
+  morning_time TIME NOT NULL DEFAULT '08:00',
+  evening_time TIME NOT NULL DEFAULT '21:00',
+  timezone TEXT NOT NULL DEFAULT 'America/Chicago',
+  channel TEXT NOT NULL DEFAULT 'telegram' CHECK (channel IN ('telegram', 'web')),
+  notion_publish BOOLEAN NOT NULL DEFAULT false,
+  vacation_until DATE,
+  morning_snoozed_until TIMESTAMPTZ,
+  evening_snoozed_until TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO ritual_policy (singleton) VALUES (true)
+ON CONFLICT (singleton) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS ritual_runs (
+  id UUID PRIMARY KEY,
+  ritual_type TEXT NOT NULL CHECK (ritual_type IN ('morning', 'evening')),
+  local_date DATE NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('planned', 'delivered', 'skipped', 'batched', 'suppressed', 'failed')),
+  channel TEXT NOT NULL CHECK (channel IN ('telegram', 'web')),
+  session_id UUID REFERENCES chat_sessions(id) ON DELETE SET NULL,
+  source_planes JSONB NOT NULL DEFAULT '[]'::jsonb,
+  content_sha256 TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  delivered_at TIMESTAMPTZ,
+  UNIQUE (ritual_type, local_date)
+);
+
 CREATE INDEX IF NOT EXISTS idx_notification_events_created
   ON notification_events (created_at DESC);
 

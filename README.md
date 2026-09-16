@@ -7,12 +7,12 @@ and explicit privacy boundaries between biography, story, and campaign state.
 ## Current build status
 
 Waves 5 and 6 are closed. Natural memory control, Commitment Radar, Stuck Mode,
-and bounded local runtime recovery are implemented and live. W7.1 (morning
-briefing) is next.
+bounded local runtime recovery, and W7.1 daily rituals are implemented. W7.2
+Catch Me Up is next.
 
 The authoritative status and acceptance evidence live in the
 [build plan](docs/lyra_build_plan.md). Product behavior is defined by the
-[system requirements](docs/lyra_system_requirements.md), currently SRS v0.20.
+[system requirements](docs/lyra_system_requirements.md), currently SRS v0.21.
 
 ## Run and check Lyra
 
@@ -32,6 +32,7 @@ provided by Tailscale Serve, not by exposing the application port.
 |---|---|
 | Workstation process, logs, backups, NSSM | [Workstation service](docs/workstation_service.md) |
 | Watchdog and deployment boundary | [Runtime resilience](docs/runtime_resilience.md) |
+| Morning/evening scheduling and controls | [Daily rituals](docs/daily_rituals.md) |
 | Private Tailscale HTTPS | [Tailscale access](docs/tailscale_access.md) |
 | Telegram bot and allowlists | [Telegram setup](docs/telegram_setup.md) |
 | Device handoff and Away Mode | [Away Mode](docs/away_mode.md) |

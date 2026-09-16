@@ -39,6 +39,8 @@ def test_a1_schema_and_cosine_similarity(ensure_db):
                 "channel_preferences",
                 "away_policy",
                 "notification_events",
+                "ritual_policy",
+                "ritual_runs",
                 "commitment_candidates",
                 "commitments",
                 "stuck_interactions",

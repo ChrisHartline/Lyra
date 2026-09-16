@@ -172,6 +172,33 @@ class FakePolicy:
         return dict(self.policy)
 
 
+class FakeRituals:
+    def __init__(self):
+        self.policy = {
+            "morning_enabled": False, "evening_enabled": False,
+            "morning_time": "08:00:00", "evening_time": "21:00:00",
+            "timezone": "America/Chicago", "channel": "telegram",
+            "notion_publish": False, "vacation_until": None,
+            "morning_snoozed_until": None, "evening_snoozed_until": None,
+        }
+
+    def policy_dict(self):
+        return dict(self.policy)
+
+    def set_policy(self, **values):
+        self.policy.update(values)
+        return SimpleNamespace(**self.policy)
+
+    def build(self, ritual_type):
+        return {"ritual_type": ritual_type, "body": "[digest] Preview"}
+
+    def skip(self, ritual_type):
+        return {"ritual_type": ritual_type, "status": "skipped"}
+
+    def snooze(self, ritual_type, until):
+        self.policy[f"{ritual_type}_snoozed_until"] = until
+        return SimpleNamespace(**self.policy)
+
 class FakeCommitments:
     def __init__(self):
         self.calls = []
@@ -240,6 +267,7 @@ def _client():
         away_service=FakeAway(),  # type: ignore[arg-type]
         memory_control=control,  # type: ignore[arg-type]
         memory_policy=FakePolicy(),  # type: ignore[arg-type]
+        ritual_service=FakeRituals(),  # type: ignore[arg-type]
     )
     return TestClient(app, client=("127.0.0.1", 50000)), sessions, control
 
@@ -370,6 +398,9 @@ def test_memory_control_api_is_authenticated_and_routes_local_actions(monkeypatc
         headers=headers,
         json={"private_shared": "review", "professional": "review", "story": "auto", "campaign": "auto"},
     )
+    rituals = client.get("/api/control/rituals", headers=headers)
+    preview = client.get("/api/control/rituals/morning/preview", headers=headers)
+    skipped = client.post("/api/control/rituals/evening/skip", headers=headers)
 
     assert pending.json()["proposals"][0]["proposal_id"] == 7
     assert approved.json()["status"] == "approved"
@@ -381,6 +412,9 @@ def test_memory_control_api_is_authenticated_and_routes_local_actions(monkeypatc
     assert recent.json()["proposals"][0]["approval_mode"] == "auto"
     assert policy.json()["policy"]["private_shared"] == "auto"
     assert updated_policy.json()["policy"]["private_shared"] == "review"
+    assert rituals.json()["policy"]["morning_enabled"] is False
+    assert preview.json()["body"] == "[digest] Preview"
+    assert skipped.json()["status"] == "skipped"
     assert [call[0] for call in control.calls] == [
         "approve",
         "correct",

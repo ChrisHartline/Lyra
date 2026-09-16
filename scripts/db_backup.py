@@ -25,6 +25,8 @@ REQUIRED_BACKUP_TABLES = (
     "channel_preferences",
     "away_policy",
     "notification_events",
+    "ritual_policy",
+    "ritual_runs",
     "commitment_candidates",
     "commitments",
     "stuck_interactions",
