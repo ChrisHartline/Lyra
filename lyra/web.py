@@ -20,6 +20,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from lyra.away import AwayModeService
+from lyra.catch_up import CatchUpService, NotionChangeReader
 from lyra.commitments import CommitmentService
 from lyra.config import settings
 from lyra.corpus_mcp import CorpusService, MCPToolRouter
@@ -192,6 +193,20 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
         ),
         connection_factory=connection_factory,
     )
+    notion = NotionClient(token=settings.notion_token) if settings.notion_token else None
+    catch_up = CatchUpService(
+        connection_factory=connection_factory,
+        change_reader=(
+            NotionChangeReader(
+                client=notion,
+                projects_database_id=settings.notion_tasks_database_id,
+                digests_database_id=settings.notion_digests_database_id,
+                project_title_property=settings.notion_task_title_property,
+                digest_title_property=settings.notion_digest_title_property,
+            )
+            if notion else None
+        ),
+    )
     system_prompt = compose_runtime_context()
 
     class UnavailableLoop:
@@ -201,6 +216,22 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
         async def stream_turn(
             self, session_id: str, user_text: str, *, channel: str = "web"
         ) -> AsyncIterator[RuntimeEvent]:
+            response = catch_up.respond(user_text)
+            if response is not None:
+                sessions.recover_interrupted_turns(session_id)
+                sessions.append_message(
+                    session_id, "user", user_text, metadata={"channel": channel}
+                )
+                turn = sessions.start_turn(session_id, "running")
+                sessions.append_message(
+                    session_id, "assistant", response["body"],
+                    metadata={"channel": channel, "catch_up": True,
+                              "turn_id": turn["turn_id"]},
+                )
+                sessions.update_turn(turn["turn_id"], "completed")
+                yield RuntimeEvent.text_delta(response["body"])
+                yield RuntimeEvent.completion("catch_up", source_planes=True)
+                return
             sessions.recover_interrupted_turns(session_id)
             sessions.append_message(
                 session_id, "user", user_text, metadata={"channel": channel}
@@ -226,6 +257,7 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
             commitment_radar=commitment_radar,
             stuck_mode=stuck_mode,
             natural_memory=natural_memory,
+            catch_up=catch_up,
         )
 
     return factory

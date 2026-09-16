@@ -70,6 +70,12 @@ class NaturalMemoryObserver(Protocol):
     ) -> Any: ...
 
 
+class CatchUpResponder(Protocol):
+    def respond(
+        self, text: str, *, memory_buckets: Sequence[str] = ("biography",)
+    ) -> Mapping[str, Any] | None: ...
+
+
 class NoOpVoiceOutput:
     async def emit(self, text: str) -> None:
         return None
@@ -190,6 +196,7 @@ class AgentLoop:
     commitment_radar: CommitmentObserver | None = None
     stuck_mode: StuckObserver | None = None
     natural_memory: NaturalMemoryObserver | None = None
+    catch_up: CatchUpResponder | None = None
 
     async def stream_turn(
         self,
@@ -203,6 +210,34 @@ class AgentLoop:
         normalized_channel = channel.strip().lower()
         if normalized_channel not in {"web", "telegram"}:
             raise ValueError("Unsupported conversation channel")
+        catch_up_response = (
+            self.catch_up.respond(user_text, memory_buckets=memory_buckets)
+            if self.catch_up is not None else None
+        )
+        if catch_up_response is not None:
+            self.sessions.append_message(
+                session_id, "user", user_text, metadata={"channel": normalized_channel}
+            )
+            turn = self.sessions.start_turn(session_id, "running")
+            body = str(catch_up_response["body"])
+            self.sessions.append_message(
+                session_id,
+                "assistant",
+                body,
+                metadata={
+                    "partial": False,
+                    "turn_id": turn["turn_id"],
+                    "channel": normalized_channel,
+                    "catch_up": True,
+                    "since": str(catch_up_response.get("since") or ""),
+                    "until": str(catch_up_response.get("until") or ""),
+                    "mode": catch_up_response.get("mode"),
+                },
+            )
+            self.sessions.update_turn(turn["turn_id"], "completed")
+            yield RuntimeEvent.text_delta(body)
+            yield RuntimeEvent.completion("catch_up", source_planes=True)
+            return
         user_message = self.sessions.append_message(
             session_id, "user", user_text, metadata={"channel": normalized_channel}
         )
