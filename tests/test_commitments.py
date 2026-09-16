@@ -34,7 +34,7 @@ def _offer(
     text: str,
     *,
     name: str = "Commitment test",
-    now: datetime = datetime(2026, 9, 9, 15, 0, tzinfo=UTC),
+    now: datetime | None = None,
 ):
     session = sessions.create_session(name)
     message = sessions.append_message(session["session_id"], "user", text)
@@ -42,7 +42,7 @@ def _offer(
         session_id=session["session_id"],
         message_id=message["message_id"],
         text=text,
-        now=now,
+        now=now or datetime.now(UTC),
     )
     return session, result
 
@@ -53,6 +53,7 @@ def test_offer_requires_conversational_confirmation_before_commitment(ensure_db)
         radar,
         sessions,
         "I need to decide which model to use by Friday.",
+        now=datetime(2026, 9, 9, 15, 0, tzinfo=UTC),
     )
 
     assert result.action == "offered"
@@ -114,6 +115,7 @@ def test_states_and_reminders_obey_away_mode(ensure_db):
         radar,
         sessions,
         "I will submit the draft by 2026-09-10.",
+        now=datetime(2026, 9, 9, 15, 0, tzinfo=UTC),
     )
     commitment = radar.confirm_offer(offer.offer["offer_id"])
 

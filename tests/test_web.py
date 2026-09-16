@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from dataclasses import dataclass
 from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
@@ -199,6 +200,57 @@ class FakeRituals:
         self.policy[f"{ritual_type}_snoozed_until"] = until
         return SimpleNamespace(**self.policy)
 
+
+@dataclass
+class FakeGardenPolicy:
+    enabled: bool = False
+    channel: str = "telegram"
+    interval_hours: int = 168
+    min_dormant_days: int = 14
+    max_suggestions: int = 3
+    last_run_at: object | None = None
+
+
+class FakeGarden:
+    def __init__(self):
+        self.policy = FakeGardenPolicy()
+        self.mutes = []
+        self.dismissed = []
+
+    def policy_dict(self):
+        return vars(self.policy)
+
+    def set_policy(self, **values):
+        for key, value in values.items():
+            setattr(self.policy, key, value)
+        return self.policy
+
+    def discover(self):
+        return []
+
+    def list_suggestions(self):
+        return [{"suggestion_id": "garden-1", "status": "delivered"}]
+
+    def list_mutes(self):
+        return list(self.mutes)
+
+    def mute_topic(self, topic, expires_at=None):
+        item = {"topic_key": topic.lower(), "topic_label": topic,
+                "expires_at": expires_at}
+        self.mutes.append(item)
+        return item
+
+    def unmute_topic(self, topic):
+        self.mutes = [item for item in self.mutes if item["topic_key"] != topic]
+        return True
+
+    def dismiss(self, suggestion_id):
+        self.dismissed.append(suggestion_id)
+        return {"suggestion_id": suggestion_id, "status": "dismissed"}
+
+    def draft_digest(self, suggestion_id):
+        return {"suggestion_id": suggestion_id, "body": "Draft", "published": False}
+
 class FakeCommitments:
     def __init__(self):
         self.calls = []
@@ -268,6 +320,7 @@ def _client():
         memory_control=control,  # type: ignore[arg-type]
         memory_policy=FakePolicy(),  # type: ignore[arg-type]
         ritual_service=FakeRituals(),  # type: ignore[arg-type]
+        garden_service=FakeGarden(),  # type: ignore[arg-type]
     )
     return TestClient(app, client=("127.0.0.1", 50000)), sessions, control
 
@@ -401,6 +454,24 @@ def test_memory_control_api_is_authenticated_and_routes_local_actions(monkeypatc
     rituals = client.get("/api/control/rituals", headers=headers)
     preview = client.get("/api/control/rituals/morning/preview", headers=headers)
     skipped = client.post("/api/control/rituals/evening/skip", headers=headers)
+    garden = client.get("/api/control/research-garden", headers=headers)
+    updated_garden = client.put(
+        "/api/control/research-garden",
+        headers=headers,
+        json={"enabled": True, "channel": "web", "interval_hours": 72,
+              "min_dormant_days": 21, "max_suggestions": 2},
+    )
+    muted = client.post(
+        "/api/control/research-garden/mutes",
+        headers=headers,
+        json={"topic": "quantum"},
+    )
+    draft = client.get(
+        "/api/control/research-garden/garden-1/draft", headers=headers
+    )
+    dismissed = client.post(
+        "/api/control/research-garden/garden-1/dismiss", headers=headers
+    )
 
     assert pending.json()["proposals"][0]["proposal_id"] == 7
     assert approved.json()["status"] == "approved"
@@ -415,6 +486,11 @@ def test_memory_control_api_is_authenticated_and_routes_local_actions(monkeypatc
     assert rituals.json()["policy"]["morning_enabled"] is False
     assert preview.json()["body"] == "[digest] Preview"
     assert skipped.json()["status"] == "skipped"
+    assert garden.json()["suggestions"][0]["suggestion_id"] == "garden-1"
+    assert updated_garden.json()["policy"]["channel"] == "web"
+    assert muted.json()["topic_key"] == "quantum"
+    assert draft.json()["published"] is False
+    assert dismissed.json()["status"] == "dismissed"
     assert [call[0] for call in control.calls] == [
         "approve",
         "correct",
@@ -684,6 +760,8 @@ def test_app_lifespan_starts_and_stops_optional_telegram_runner():
         sessions=sessions,  # type: ignore[arg-type]
         loop_factory=lambda _session_id: FakeLoop(sessions),
         telegram_runner=runner,
+        ritual_runner=None,
+        garden_runner=None,
     )
     with TestClient(app) as live_client:
         assert live_client.get("/api/health").status_code == 200

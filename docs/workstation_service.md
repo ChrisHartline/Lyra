@@ -47,10 +47,11 @@ directory is gitignored.
 full `pg_dump`, then validates that the resulting file is nonempty and contains
 every required table data section. It reports the dump's size and SHA-256
 checksum. Because sessions share Lyra's PostgreSQL database, the full dump
-currently covers all 20 required tables: corpus and memory data, policy/control
+currently covers all 23 required tables: corpus and memory data, policy/control
 intent state, review audit,
 named sessions/messages/turns/channel bindings, channel/Away and notification
-state, Commitment Radar, Stuck Mode, and Telegram state. Follow
+state, Commitment Radar, Stuck Mode, Research Garden policy/mutes/suggestions,
+and Telegram state. Follow
 `docs/db_restore.md` to restore and verify a dump.
 
 Commitment and Stuck Mode behavior is documented in

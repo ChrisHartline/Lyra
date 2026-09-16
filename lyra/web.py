@@ -33,6 +33,7 @@ from lyra.memory_control import MemoryControlService
 from lyra.natural_memory import MemoryPolicyService, NaturalMemoryService
 from lyra.packs import compose_runtime_context
 from lyra.providers import ModelProfiles, ProviderConfigurationError, adapter_for
+from lyra.research_garden import ResearchGardenService
 from lyra.runtime import AgentLoop, ModelToolRunner
 from lyra.runtime_events import EventKind, RuntimeEvent
 from lyra.runtime_tools import build_conversation_registry
@@ -41,7 +42,11 @@ from lyra.briefings import BriefingService
 from lyra.service import configure_rotating_logging
 from lyra.sessions import ContextBuilder, SessionService
 from lyra.stuck import StuckModeService
-from lyra.telegram import run_configured_bot, run_configured_rituals
+from lyra.telegram import (
+    run_configured_bot,
+    run_configured_research_garden,
+    run_configured_rituals,
+)
 
 
 STATIC_DIR = Path(__file__).resolve().parent / "web_static"
@@ -125,6 +130,19 @@ class RitualPolicyUpdate(BaseModel):
 
 class RitualSnooze(BaseModel):
     until: datetime
+
+
+class GardenPolicyUpdate(BaseModel):
+    enabled: bool
+    channel: str = Field(pattern="^(web|telegram)$")
+    interval_hours: int = Field(ge=1, le=720)
+    min_dormant_days: int = Field(ge=1, le=365)
+    max_suggestions: int = Field(ge=1, le=10)
+
+
+class GardenTopicMute(BaseModel):
+    topic: str = Field(min_length=1, max_length=120)
+    expires_at: datetime | None = None
 
 
 def validate_bind_host(host: str) -> str:
@@ -268,12 +286,14 @@ def create_app(
     loop_factory: LoopFactory | None = None,
     telegram_runner: Callable[[SessionService, LoopFactory], Any] | None = run_configured_bot,
     ritual_runner: Callable[[SessionService, RitualService], Any] | None = run_configured_rituals,
+    garden_runner: Callable[[SessionService, ResearchGardenService], Any] | None = run_configured_research_garden,
     away_service: AwayModeService | None = None,
     memory_control: MemoryControlService | None = None,
     memory_policy: MemoryPolicyService | None = None,
     commitment_service: CommitmentService | None = None,
     stuck_service: StuckModeService | None = None,
     ritual_service: RitualService | None = None,
+    garden_service: ResearchGardenService | None = None,
 ) -> FastAPI:
     session_service = sessions or SessionService()
     factory = loop_factory or default_loop_factory(session_service)
@@ -285,6 +305,8 @@ def create_app(
             tasks.append(asyncio.create_task(telegram_runner(session_service, factory)))
         if ritual_runner is not None:
             tasks.append(asyncio.create_task(ritual_runner(session_service, rituals)))
+        if garden_runner is not None:
+            tasks.append(asyncio.create_task(garden_runner(session_service, garden)))
         try:
             yield
         finally:
@@ -346,6 +368,12 @@ def create_app(
                 else None
             ),
         ),
+        away=away,
+        connection_factory=getattr(
+            session_service, "connection_factory", SessionService().connection_factory
+        ),
+    )
+    garden = garden_service or ResearchGardenService(
         away=away,
         connection_factory=getattr(
             session_service, "connection_factory", SessionService().connection_factory
@@ -707,6 +735,70 @@ def create_app(
             return {"policy": asdict(rituals.snooze(ritual_type, snooze.until))}
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/api/control/research-garden")
+    async def get_research_garden(request: Request):
+        require_control_access(request)
+        return {
+            "policy": garden.policy_dict(),
+            "suggestions": garden.list_suggestions(),
+            "mutes": garden.list_mutes(),
+        }
+
+    @app.put("/api/control/research-garden")
+    async def update_research_garden(
+        update: GardenPolicyUpdate, request: Request
+    ):
+        require_control_access(request)
+        try:
+            return {"policy": asdict(garden.set_policy(**update.model_dump()))}
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/api/control/research-garden/preview")
+    async def preview_research_garden(request: Request):
+        require_control_access(request)
+        return {"suggestions": [asdict(item) for item in garden.discover()]}
+
+    @app.get("/api/control/research-garden/mutes")
+    async def list_research_garden_mutes(request: Request):
+        require_control_access(request)
+        return {"mutes": garden.list_mutes()}
+
+    @app.post("/api/control/research-garden/mutes")
+    async def mute_research_garden_topic(
+        mute: GardenTopicMute, request: Request
+    ):
+        require_control_access(request)
+        try:
+            return garden.mute_topic(mute.topic, expires_at=mute.expires_at)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.delete("/api/control/research-garden/mutes/{topic}")
+    async def unmute_research_garden_topic(topic: str, request: Request):
+        require_control_access(request)
+        return {"removed": garden.unmute_topic(topic)}
+
+    @app.post("/api/control/research-garden/{suggestion_id}/dismiss")
+    async def dismiss_research_garden_suggestion(
+        suggestion_id: str, request: Request
+    ):
+        require_control_access(request)
+        try:
+            return garden.dismiss(suggestion_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.get("/api/control/research-garden/{suggestion_id}/draft")
+    async def draft_research_garden_digest(
+        suggestion_id: str, request: Request
+    ):
+        require_control_access(request)
+        try:
+            return garden.draft_digest(suggestion_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @app.get("/api/control/memory-policy")
     async def get_memory_policy(request: Request):

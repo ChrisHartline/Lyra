@@ -197,6 +197,48 @@ CREATE TABLE IF NOT EXISTS ritual_runs (
   UNIQUE (ritual_type, local_date)
 );
 
+CREATE TABLE IF NOT EXISTS research_garden_policy (
+  singleton BOOLEAN PRIMARY KEY DEFAULT true CHECK (singleton),
+  enabled BOOLEAN NOT NULL DEFAULT false,
+  channel TEXT NOT NULL DEFAULT 'telegram' CHECK (channel IN ('telegram', 'web')),
+  interval_hours SMALLINT NOT NULL DEFAULT 168 CHECK (interval_hours BETWEEN 1 AND 720),
+  min_dormant_days SMALLINT NOT NULL DEFAULT 14 CHECK (min_dormant_days BETWEEN 1 AND 365),
+  max_suggestions SMALLINT NOT NULL DEFAULT 3 CHECK (max_suggestions BETWEEN 1 AND 10),
+  last_run_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO research_garden_policy (singleton) VALUES (true)
+ON CONFLICT (singleton) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS research_garden_topic_mutes (
+  topic_key TEXT PRIMARY KEY,
+  topic_label TEXT NOT NULL,
+  muted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS research_garden_suggestions (
+  id UUID PRIMARY KEY,
+  fingerprint TEXT NOT NULL UNIQUE,
+  topic_key TEXT NOT NULL,
+  topic_label TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  evidence JSONB NOT NULL,
+  status TEXT NOT NULL CHECK (
+    status IN ('planned', 'delivered', 'batched', 'suppressed', 'dismissed', 'failed')
+  ),
+  channel TEXT NOT NULL CHECK (channel IN ('telegram', 'web')),
+  session_id UUID REFERENCES chat_sessions(id) ON DELETE SET NULL,
+  content_sha256 TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  delivered_at TIMESTAMPTZ,
+  dismissed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_research_garden_suggestions_status
+  ON research_garden_suggestions (status, created_at DESC);
+
 CREATE INDEX IF NOT EXISTS idx_notification_events_created
   ON notification_events (created_at DESC);
 

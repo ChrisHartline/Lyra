@@ -17,6 +17,7 @@ import httpx
 import psycopg
 
 from lyra.db import connect
+from lyra.research_garden import ResearchGardenService
 from lyra.runtime_events import EventKind, RuntimeEvent
 from lyra.sessions import SessionService
 from lyra.rituals import RitualService
@@ -517,3 +518,72 @@ async def run_configured_rituals(
             completed_iterations += 1
             if iterations is None or completed_iterations < iterations:
                 await asyncio.sleep(max(10, min(interval_seconds, 300)))
+
+
+async def run_configured_research_garden(
+    sessions: SessionService,
+    garden: ResearchGardenService,
+    *,
+    interval_seconds: int = 300,
+    iterations: int | None = None,
+) -> None:
+    """Deliver due, evidence-backed suggestions through ordinary session history."""
+
+    config = TelegramConfig.from_environ()
+    async with httpx.AsyncClient(timeout=httpx.Timeout(45.0)) as client:
+        bot_api = BotAPI(config.token, client) if config else None
+        completed_iterations = 0
+        while iterations is None or completed_iterations < iterations:
+            result: dict[str, Any] | None = None
+            try:
+                result = garden.plan_due()
+                if result.get("disposition") == "send":
+                    suggestion_ids = [
+                        item["suggestion_id"] for item in result["suggestions"]
+                    ]
+                    session_id: str
+                    if result["channel"] == "telegram":
+                        if bot_api is None or config is None:
+                            raise TelegramError(
+                                "Research Garden Telegram delivery is not configured"
+                            )
+                        chat_id = sorted(config.allowed_chat_ids)[0]
+                        session_id = sessions.resolve_channel("telegram", chat_id)
+                        if not session_id:
+                            session_id = str(
+                                sessions.create_session("Research Garden")["session_id"]
+                            )
+                            sessions.bind_channel(
+                                session_id, "telegram", chat_id
+                            )
+                        await bot_api.send_text(chat_id, result["body"])
+                    else:
+                        existing = sessions.list_sessions()
+                        session_id = (
+                            str(existing[0]["session_id"])
+                            if existing
+                            else str(
+                                sessions.create_session("Research Garden")["session_id"]
+                            )
+                        )
+                    sessions.append_message(
+                        session_id,
+                        "assistant",
+                        result["body"],
+                        metadata={
+                            "channel": result["channel"],
+                            "proactive": True,
+                            "research_garden": True,
+                            "suggestion_ids": suggestion_ids,
+                        },
+                    )
+                    garden.mark_delivered(suggestion_ids, session_id=session_id)
+            except Exception:
+                logger.exception("Research Garden delivery failed safely")
+                if result and result.get("suggestions"):
+                    garden.mark_failed(
+                        item["suggestion_id"] for item in result["suggestions"]
+                    )
+            completed_iterations += 1
+            if iterations is None or completed_iterations < iterations:
+                await asyncio.sleep(max(30, min(interval_seconds, 3600)))
