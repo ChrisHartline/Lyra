@@ -266,6 +266,10 @@ class ResearchGardenService:
                 FROM session_messages m JOIN chat_sessions s ON s.id=m.session_id
                 WHERE m.role='user' AND m.visible=true AND m.created_at<=%s
                   AND s.updated_at<=%s AND position('?' in m.content)>0
+                  AND NOT EXISTS (
+                    SELECT 1 FROM shared_journal_private_sessions p
+                    WHERE p.session_id=s.id
+                  )
                 ORDER BY m.created_at DESC LIMIT 50""", (cutoff, cutoff))
             for item_id, session_id, content, occurred_at in cur.fetchall():
                 cleaned = safe_lines([str(content)])

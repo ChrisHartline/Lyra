@@ -6,12 +6,12 @@ and explicit privacy boundaries between biography, story, and campaign state.
 
 ## Current build status
 
-Waves 5, 6, and 7 are closed. The next gate is W8.1, the private shared
-journal.
+Waves 5, 6, and 7 are closed, and W8.1 private shared journal is implemented.
+The next gate is W8.2, relationship rhythms and milestones.
 
 The authoritative status and acceptance evidence live in the
 [build plan](docs/lyra_build_plan.md). Product behavior is defined by the
-[system requirements](docs/lyra_system_requirements.md), currently SRS v0.23.
+[system requirements](docs/lyra_system_requirements.md), currently SRS v0.24.
 
 ## Run and check Lyra
 
@@ -34,6 +34,7 @@ provided by Tailscale Serve, not by exposing the application port.
 | Morning/evening scheduling and controls | [Daily rituals](docs/daily_rituals.md) |
 | Time-bounded conversational recaps | [Catch Me Up](docs/catch_me_up.md) |
 | Evidence-backed research resurfacing | [Research Garden](docs/research_garden.md) |
+| Explicit private shared continuity | [Private shared journal](docs/shared_journal.md) |
 | Private Tailscale HTTPS | [Tailscale access](docs/tailscale_access.md) |
 | Telegram bot and allowlists | [Telegram setup](docs/telegram_setup.md) |
 | Device handoff and Away Mode | [Away Mode](docs/away_mode.md) |

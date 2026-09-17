@@ -18,6 +18,10 @@ and delivery state. Existing fingerprints prevent repeat suggestions. Superseded
 sources, non-active commitments, story/campaign questions, and text rejected by
 the never-persist filter do not participate.
 
+Questions from sessions authorized for private shared journal retrieval are also
+excluded. A private reflection cannot become a Research Garden suggestion merely
+because it shares words with a saved source or commitment.
+
 Delivery enters ordinary shared session history and labels every citation as
 `source`, `question`, or `commitment`. It explicitly says that the connections are
 not new commitments. Away Mode handles the delivery as non-urgent `research`:

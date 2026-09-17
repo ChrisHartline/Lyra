@@ -41,6 +41,7 @@ from lyra.rituals import RitualService
 from lyra.briefings import BriefingService
 from lyra.service import configure_rotating_logging
 from lyra.sessions import ContextBuilder, SessionService
+from lyra.shared_journal import SharedJournalService
 from lyra.stuck import StuckModeService
 from lyra.telegram import (
     run_configured_bot,
@@ -145,6 +146,30 @@ class GardenTopicMute(BaseModel):
     expires_at: datetime | None = None
 
 
+class JournalEntryCreate(BaseModel):
+    content: str = Field(min_length=1, max_length=20_000)
+    entry_type: str = Field(pattern="^(moment|reflection|milestone)$")
+    approved: bool
+    title: str | None = Field(default=None, max_length=240)
+    source_session_id: str | None = None
+    source_message_id: int | None = None
+
+
+class JournalEntryEdit(BaseModel):
+    content: str = Field(min_length=1, max_length=20_000)
+    title: str | None = Field(default=None, max_length=240)
+    reason: str | None = Field(default=None, max_length=500)
+
+
+class JournalEntryForget(BaseModel):
+    confirmed: bool
+    reason: str | None = Field(default=None, max_length=500)
+
+
+class JournalSessionAccess(BaseModel):
+    enabled: bool
+
+
 def validate_bind_host(host: str) -> str:
     if host.strip().lower() not in LOOPBACK_HOSTS:
         raise ValueError("Lyra web chat may bind only to a loopback address")
@@ -189,7 +214,14 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
     registry = build_conversation_registry(
         corpus_router=corpus_router, memory_router=memory_router
     )
-    context = ContextBuilder(sessions, memory_search=corpus.search_memories)
+    shared_journal = SharedJournalService(
+        getattr(sessions, "connection_factory", SessionService().connection_factory)
+    )
+    context = ContextBuilder(
+        sessions,
+        memory_search=corpus.search_memories,
+        journal_reader=shared_journal.context_entries,
+    )
     presentation = AwayModeService(
         getattr(sessions, "connection_factory", SessionService().connection_factory)
     )
@@ -294,6 +326,7 @@ def create_app(
     stuck_service: StuckModeService | None = None,
     ritual_service: RitualService | None = None,
     garden_service: ResearchGardenService | None = None,
+    journal_service: SharedJournalService | None = None,
 ) -> FastAPI:
     session_service = sessions or SessionService()
     factory = loop_factory or default_loop_factory(session_service)
@@ -378,6 +411,11 @@ def create_app(
         connection_factory=getattr(
             session_service, "connection_factory", SessionService().connection_factory
         ),
+    )
+    journal = journal_service or SharedJournalService(
+        getattr(
+            session_service, "connection_factory", SessionService().connection_factory
+        )
     )
 
     def require_local_control_client(request: Request) -> None:
@@ -495,7 +533,10 @@ def create_app(
                 status_code=409,
                 detail="Exactly one Telegram private chat must be configured",
             )
-        return session_service.bind_channel(session_id, "telegram", chat_ids[0])
+        try:
+            return session_service.bind_channel(session_id, "telegram", chat_ids[0])
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @app.get("/api/preferences/{channel}")
     async def get_channel_preference(channel: str):
@@ -799,6 +840,64 @@ def create_app(
             return garden.draft_digest(suggestion_id)
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.get("/api/control/shared-journal")
+    async def list_shared_journal(request: Request, limit: int = 100):
+        require_control_access(request)
+        return {"entries": journal.list_entries(limit=limit)}
+
+    @app.post("/api/control/shared-journal", status_code=201)
+    async def create_shared_journal_entry(
+        entry: JournalEntryCreate, request: Request
+    ):
+        require_control_access(request)
+        try:
+            return journal.create_entry(**entry.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/api/control/shared-journal/audit")
+    async def list_shared_journal_audit(request: Request, limit: int = 200):
+        require_control_access(request)
+        return {"audit": journal.list_audit(limit=limit)}
+
+    @app.get("/api/control/shared-journal/sessions/{session_id}")
+    async def get_shared_journal_session(session_id: str, request: Request):
+        require_control_access(request)
+        try:
+            return journal.session_access(session_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.put("/api/control/shared-journal/sessions/{session_id}")
+    async def update_shared_journal_session(
+        session_id: str, access: JournalSessionAccess, request: Request
+    ):
+        require_control_access(request)
+        try:
+            return journal.authorize_session(session_id, enabled=access.enabled)
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    @app.patch("/api/control/shared-journal/{entry_id}")
+    async def edit_shared_journal_entry(
+        entry_id: str, edit: JournalEntryEdit, request: Request
+    ):
+        require_control_access(request)
+        try:
+            return journal.edit_entry(entry_id, **edit.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/api/control/shared-journal/{entry_id}/forget")
+    async def forget_shared_journal_entry(
+        entry_id: str, forget: JournalEntryForget, request: Request
+    ):
+        require_control_access(request)
+        try:
+            return journal.forget_entry(entry_id, **forget.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @app.get("/api/control/memory-policy")
     async def get_memory_policy(request: Request):

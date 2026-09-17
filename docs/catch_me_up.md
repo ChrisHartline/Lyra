@@ -32,3 +32,7 @@ remain deterministic. It does not write to memory, the knowledge graph,
 commitments, corpus, or Notion. The user request and visible response remain in
 ordinary session history so the recap follows the same web/Telegram handoff as
 the rest of the conversation.
+
+Sessions explicitly authorized for private shared journal retrieval are excluded
+from Catch Me Up entirely. This prevents journal-influenced conversation from
+leaking into an ordinary or professional recap.

@@ -23,5 +23,9 @@ session history.
 Optional Notion publication deliberately uses the smaller Notion-safe briefing,
 not the richer local/Telegram ritual text.
 
+Private shared journal entries and journal-authorized session names are excluded
+from morning/evening source collection. Journal continuity is available only in
+the private session where it was explicitly enabled.
+
 Scoped text-to-speech is now planned at W9.5a. It may later be separately enabled
 for rituals, but W7.1 remains text-authoritative and does not activate voice.

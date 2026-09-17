@@ -167,8 +167,12 @@ class RitualService:
 
     def _recent_sessions(self) -> list[str]:
         with self.connection_factory() as conn, conn.cursor() as cur:
-            cur.execute("""SELECT name FROM chat_sessions
+            cur.execute("""SELECT name FROM chat_sessions s
                            WHERE updated_at >= now()-interval '2 days'
+                             AND NOT EXISTS (
+                               SELECT 1 FROM shared_journal_private_sessions p
+                               WHERE p.session_id=s.id
+                             )
                            ORDER BY updated_at DESC LIMIT 3""")
             return [str(row[0]) for row in cur.fetchall()]
 

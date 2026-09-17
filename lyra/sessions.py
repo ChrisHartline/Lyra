@@ -268,6 +268,22 @@ class SessionService:
         with self.connection_factory() as conn:
             with conn.cursor() as cur:
                 cur.execute(
+                    "SELECT id FROM chat_sessions WHERE id=%s FOR UPDATE",
+                    (session_id,),
+                )
+                if not cur.fetchone():
+                    raise ValueError(f"Session not found: {session_id}")
+                if channel == "telegram":
+                    cur.execute(
+                        """SELECT 1 FROM shared_journal_private_sessions
+                           WHERE session_id=%s""",
+                        (session_id,),
+                    )
+                    if cur.fetchone():
+                        raise ValueError(
+                            "Private shared journal sessions cannot bind to Telegram"
+                        )
+                cur.execute(
                     """
                     DELETE FROM session_channels
                     WHERE channel = %s AND external_id = %s AND session_id <> %s
@@ -419,12 +435,14 @@ def estimate_tokens(text: str) -> int:
 
 
 MemorySearch = Callable[..., Mapping[str, Any]]
+JournalReader = Callable[..., Sequence[Mapping[str, Any]]]
 
 
 @dataclass
 class ContextBuilder:
     sessions: SessionService
     memory_search: MemorySearch | None = None
+    journal_reader: JournalReader | None = None
 
     def build(
         self,
@@ -486,6 +504,32 @@ class ContextBuilder:
                     "content": "Approved memories:\n" + "\n".join(approved_memory_lines),
                 }
             )
+
+        if self.journal_reader is not None:
+            journal_entries = self.journal_reader(str(session_id), limit=5)
+            journal_lines = []
+            for item in journal_entries:
+                content = item.get("content")
+                entry_id = item.get("journal_entry_id")
+                entry_type = item.get("entry_type")
+                if not isinstance(content, str) or not content.strip() or not entry_id:
+                    continue
+                title = item.get("title")
+                label = f"{entry_type}: {title}" if title else str(entry_type)
+                suffix = "… [excerpt]" if item.get("content_truncated") else ""
+                journal_lines.append(
+                    f"[journal:{entry_id}] {label} — {content.strip()}{suffix}"
+                )
+            if journal_lines:
+                prefix.append(
+                    {
+                        "role": "system",
+                        "content": (
+                            "Approved private shared journal. Use only in this "
+                            "authorized private session:\n" + "\n".join(journal_lines)
+                        ),
+                    }
+                )
 
         used = sum(estimate_tokens(item["content"]) for item in prefix)
         if used > available:

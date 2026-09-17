@@ -224,8 +224,13 @@ class CatchUpService:
         items: list[CatchUpItem] = []
         buckets = tuple(dict.fromkeys(str(bucket) for bucket in memory_buckets)) or ("biography",)
         with self.connection_factory() as conn, conn.cursor() as cur:
-            cur.execute("""SELECT id,name,synopsis,updated_at FROM chat_sessions
-                WHERE updated_at >= %s AND updated_at <= %s ORDER BY updated_at DESC""",
+            cur.execute("""SELECT id,name,synopsis,updated_at FROM chat_sessions s
+                WHERE updated_at >= %s AND updated_at <= %s
+                  AND NOT EXISTS (
+                    SELECT 1 FROM shared_journal_private_sessions p
+                    WHERE p.session_id=s.id
+                  )
+                ORDER BY updated_at DESC""",
                         (since, until))
             for session_id, name, synopsis, changed in cur.fetchall():
                 detail = str(synopsis).strip() if synopsis else "activity recorded"

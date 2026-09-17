@@ -36,7 +36,10 @@ class FakeAway:
 def _service(disposition="send"):
     with _conn() as conn, conn.cursor() as cur:
         cur.execute(Path("db/schema.sql").read_text(encoding="utf-8"))
-        cur.execute("TRUNCATE ritual_runs, ritual_policy, chat_sessions RESTART IDENTITY CASCADE")
+        cur.execute(
+            """TRUNCATE ritual_runs,ritual_policy,commitments,
+                commitment_candidates,chat_sessions RESTART IDENTITY CASCADE"""
+        )
         cur.execute("INSERT INTO ritual_policy (singleton) VALUES (true)")
         conn.commit()
     sessions = SessionService(_conn)

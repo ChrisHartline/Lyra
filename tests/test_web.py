@@ -251,6 +251,41 @@ class FakeGarden:
     def draft_digest(self, suggestion_id):
         return {"suggestion_id": suggestion_id, "body": "Draft", "published": False}
 
+
+class FakeJournal:
+    def __init__(self):
+        self.entries = []
+        self.audit = []
+        self.private_sessions = set()
+
+    def list_entries(self, limit=100):
+        return self.entries[:limit]
+
+    def create_entry(self, **values):
+        item = {"journal_entry_id": "journal-1", **values}
+        self.entries.append(item)
+        return item
+
+    def edit_entry(self, entry_id, **values):
+        return {"journal_entry_id": entry_id, **values}
+
+    def forget_entry(self, entry_id, **_values):
+        return {"journal_entry_id": entry_id, "status": "forgotten"}
+
+    def list_audit(self, limit=200):
+        return self.audit[:limit]
+
+    def session_access(self, session_id):
+        return {"session_id": session_id,
+                "private_shared": session_id in self.private_sessions}
+
+    def authorize_session(self, session_id, enabled):
+        if enabled:
+            self.private_sessions.add(session_id)
+        else:
+            self.private_sessions.discard(session_id)
+        return {"session_id": session_id, "private_shared": enabled}
+
 class FakeCommitments:
     def __init__(self):
         self.calls = []
@@ -321,6 +356,7 @@ def _client():
         memory_policy=FakePolicy(),  # type: ignore[arg-type]
         ritual_service=FakeRituals(),  # type: ignore[arg-type]
         garden_service=FakeGarden(),  # type: ignore[arg-type]
+        journal_service=FakeJournal(),  # type: ignore[arg-type]
     )
     return TestClient(app, client=("127.0.0.1", 50000)), sessions, control
 
@@ -472,6 +508,24 @@ def test_memory_control_api_is_authenticated_and_routes_local_actions(monkeypatc
     dismissed = client.post(
         "/api/control/research-garden/garden-1/dismiss", headers=headers
     )
+    journal_created = client.post(
+        "/api/control/shared-journal", headers=headers,
+        json={"content": "A shared reflection", "entry_type": "reflection",
+              "approved": True},
+    )
+    journal_listed = client.get("/api/control/shared-journal", headers=headers)
+    journal_private = client.put(
+        "/api/control/shared-journal/sessions/session-1", headers=headers,
+        json={"enabled": True},
+    )
+    journal_edited = client.patch(
+        "/api/control/shared-journal/journal-1", headers=headers,
+        json={"content": "A corrected reflection", "reason": "Precision"},
+    )
+    journal_forgotten = client.post(
+        "/api/control/shared-journal/journal-1/forget", headers=headers,
+        json={"confirmed": True},
+    )
 
     assert pending.json()["proposals"][0]["proposal_id"] == 7
     assert approved.json()["status"] == "approved"
@@ -491,6 +545,11 @@ def test_memory_control_api_is_authenticated_and_routes_local_actions(monkeypatc
     assert muted.json()["topic_key"] == "quantum"
     assert draft.json()["published"] is False
     assert dismissed.json()["status"] == "dismissed"
+    assert journal_created.status_code == 201
+    assert journal_listed.json()["entries"][0]["entry_type"] == "reflection"
+    assert journal_private.json()["private_shared"] is True
+    assert journal_edited.json()["content"] == "A corrected reflection"
+    assert journal_forgotten.json()["status"] == "forgotten"
     assert [call[0] for call in control.calls] == [
         "approve",
         "correct",
@@ -527,6 +586,11 @@ def test_memory_control_rejects_tailnet_and_forwarded_clients(monkeypatch):
     assert remote.get("/").status_code == 200
     assert remote.get("/control").status_code == 403
     assert remote.get("/api/control/proposals", headers=token).status_code == 403
+    assert remote.post(
+        "/api/control/shared-journal",
+        headers=token,
+        json={"content": "Private", "entry_type": "moment", "approved": True},
+    ).status_code == 403
     assert local.get(
         "/api/control/proposals",
         headers={**token, "Tailscale-User-Login": "owner@example.invalid"},

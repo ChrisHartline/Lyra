@@ -239,6 +239,51 @@ CREATE TABLE IF NOT EXISTS research_garden_suggestions (
 CREATE INDEX IF NOT EXISTS idx_research_garden_suggestions_status
   ON research_garden_suggestions (status, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS shared_journal_entries (
+  id UUID PRIMARY KEY,
+  entry_type TEXT NOT NULL
+    CHECK (entry_type IN ('moment', 'reflection', 'milestone')),
+  title TEXT,
+  content TEXT NOT NULL,
+  source_session_id UUID,
+  source_message_id BIGINT,
+  source_channel TEXT,
+  created_by TEXT NOT NULL DEFAULT 'local_user'
+    CHECK (created_by = 'local_user'),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK (
+    (source_session_id IS NULL AND source_message_id IS NULL)
+    OR
+    (source_session_id IS NOT NULL AND source_message_id IS NOT NULL)
+  )
+);
+
+CREATE TABLE IF NOT EXISTS shared_journal_private_sessions (
+  session_id UUID PRIMARY KEY REFERENCES chat_sessions(id) ON DELETE CASCADE,
+  authorized_by TEXT NOT NULL DEFAULT 'local_user'
+    CHECK (authorized_by = 'local_user'),
+  authorized_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS shared_journal_audit (
+  id BIGSERIAL PRIMARY KEY,
+  journal_entry_id UUID NOT NULL,
+  action TEXT NOT NULL CHECK (action IN ('created', 'edited', 'forgotten')),
+  actor TEXT NOT NULL DEFAULT 'local_user' CHECK (actor = 'local_user'),
+  reason TEXT,
+  old_content_sha256 TEXT,
+  new_content_sha256 TEXT,
+  details JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_shared_journal_entries_created
+  ON shared_journal_entries (created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_shared_journal_audit_entry
+  ON shared_journal_audit (journal_entry_id, created_at DESC);
+
 CREATE INDEX IF NOT EXISTS idx_notification_events_created
   ON notification_events (created_at DESC);
 
