@@ -6,12 +6,13 @@ and explicit privacy boundaries between biography, story, and campaign state.
 
 ## Current build status
 
-Waves 5, 6, and 7 are closed, and W8.1 private shared journal is implemented.
-The next gate is W8.2, relationship rhythms and milestones.
+Waves 5, 6, 7, and 8 are closed. W9.1 visual references and canonical
+appearance are complete; W9.2 backstory/context import is the next not-started
+Wave 9 gate.
 
 The authoritative status and acceptance evidence live in the
 [build plan](docs/lyra_build_plan.md). Product behavior is defined by the
-[system requirements](docs/lyra_system_requirements.md), currently SRS v0.24.
+[system requirements](docs/lyra_system_requirements.md), currently SRS v0.28.
 
 ## Run and check Lyra
 
@@ -35,6 +36,8 @@ provided by Tailscale Serve, not by exposing the application port.
 | Time-bounded conversational recaps | [Catch Me Up](docs/catch_me_up.md) |
 | Evidence-backed research resurfacing | [Research Garden](docs/research_garden.md) |
 | Explicit private shared continuity | [Private shared journal](docs/shared_journal.md) |
+| Opt-in private callbacks and milestones | [Relationship rhythms](docs/relationship_rhythms.md) |
+| Visual reference catalog and canon review | [Visual asset catalog](docs/visual_asset_catalog.md) |
 | Private Tailscale HTTPS | [Tailscale access](docs/tailscale_access.md) |
 | Telegram bot and allowlists | [Telegram setup](docs/telegram_setup.md) |
 | Device handoff and Away Mode | [Away Mode](docs/away_mode.md) |
@@ -56,8 +59,10 @@ schema, scripts, MCP surfaces, or Markdown links:
 
 ## Source-of-truth boundaries
 
-- `personality/`, `ship/`, and `state/` hold Lyra's canonical persona, ship,
-  relationship, and story packs.
+- `personality/`, `locations/`, `ship/`, and `state/` hold Lyra's canonical
+  persona, place, ship, relationship, and story packs.
+- `assets/visual_references/` is the canonical visual library; location images
+  link back to the `locations/` pack through stable IDs.
 - `agents/lyra/` is the Agent Skills host and contains operational references,
   skills, and subagent definitions—not a second persona store.
 - PostgreSQL + pgvector holds corpus, session, operational, and gated episodic

@@ -12,6 +12,13 @@ Run Python helpers from the repository root with
 - `db_backup.py` creates a verified full dump covering every required runtime
   table and prints its size and SHA-256 hash. See
   [database restore](../docs/db_restore.md) before recovery.
+- `backfill_commitment_scopes.py` performs the one-time provenance backfill for
+  commitments created before session-purpose privacy hardening.
+- `configure_command_deck.py` idempotently creates/selects the safe general web
+  destination for daily rituals without enabling either ritual.
+- `verify_ship_continuity.py` runs the bounded W8.3 production brief smoke with
+  a temporary story session, then restores policy and verifies no event, memory,
+  or canon change.
 - `manage_service.py` previews or applies idempotent NSSM install/status/remove
   commands. NSSM is optional until explicitly configured.
 - `watchdog.py` performs one conservative health/recovery tick or runs the
@@ -46,6 +53,9 @@ Run Python helpers from the repository root with
 - `validate_build_plan.py` validates roadmap structure and dependency ordering.
 - `validate_docs.py` checks local Markdown links plus SRS, roadmap, schema,
   script, and MCP documentation alignment.
+- `validate_visual_assets.py` validates the W9.1 visual catalog, file hashes,
+  candidate/reference/canon approval gates, provenance safety, and complete
+  image coverage.
 
 ## Grok CLI helpers
 
