@@ -17,11 +17,12 @@ class FakeSessions:
         self.messages: dict[str, list[dict]] = {}
         self.channels: dict[tuple[str, str], str] = {}
 
-    def create_session(self, name):
+    def create_session(self, name, *, context_scope="general"):
         session_id = str(uuid.uuid4())
         session = {
             "session_id": session_id,
             "name": name.strip(),
+            "context_scope": context_scope,
             "synopsis": None,
             "synopsis_through_sequence": 0,
             "created_at": "now",
@@ -42,6 +43,11 @@ class FakeSessions:
     def rename_session(self, session_id, name):
         session = self.get_session(session_id)
         session["name"] = name.strip()
+        return session
+
+    def set_context_scope(self, session_id, context_scope):
+        session = self.get_session(session_id)
+        session["context_scope"] = context_scope
         return session
 
     def delete_session(self, session_id):
@@ -179,6 +185,7 @@ class FakeRituals:
             "morning_enabled": False, "evening_enabled": False,
             "morning_time": "08:00:00", "evening_time": "21:00:00",
             "timezone": "America/Chicago", "channel": "telegram",
+            "target_session_id": None,
             "notion_publish": False, "vacation_until": None,
             "morning_snoozed_until": None, "evening_snoozed_until": None,
         }
@@ -286,6 +293,76 @@ class FakeJournal:
             self.private_sessions.discard(session_id)
         return {"session_id": session_id, "private_shared": enabled}
 
+
+class FakeRelationship:
+    def __init__(self):
+        self.policy = {
+            "enabled": False, "callbacks_enabled": False,
+            "rituals_enabled": False, "milestones_enabled": False,
+            "cadence_days": 7, "local_time": "19:00:00",
+            "timezone": "America/Chicago", "target_session_id": None,
+        }
+        self.mutes = []
+        self.events = [{"event_id": "event-1", "status": "delivered"}]
+
+    def policy_dict(self):
+        return dict(self.policy)
+
+    def set_policy(self, **values):
+        self.policy.update(values)
+        return SimpleNamespace(**self.policy)
+
+    def list_events(self, limit=100):
+        return self.events[:limit]
+
+    def list_mutes(self):
+        return list(self.mutes)
+
+    def preview(self):
+        return {"event_type": "ritual", "body": "A quiet us check-in.", "source_refs": []}
+
+    def mute_source(self, source_key):
+        self.mutes.append({"source_key": source_key})
+        return {"source_key": source_key, "muted": True}
+
+    def unmute_source(self, source_key):
+        self.mutes = [item for item in self.mutes if item["source_key"] != source_key]
+        return True
+
+    def dismiss(self, event_id):
+        return {"event_id": event_id, "status": "dismissed"}
+
+
+class FakeShipContinuity:
+    def __init__(self):
+        self.policy = {
+            "enabled": False, "paused": True, "briefs_enabled": False,
+            "ambient_enabled": False, "intensity": "quiet", "cadence_days": 7,
+            "local_time": "18:00:00", "timezone": "America/Chicago",
+            "target_session_id": None,
+        }
+
+    def policy_dict(self):
+        return dict(self.policy)
+
+    def set_policy(self, **values):
+        self.policy.update(values)
+        return SimpleNamespace(**self.policy)
+
+    def list_events(self, limit=100):
+        return [{"event_id": "ship-event-1", "status": "delivered"}][:limit]
+
+    def preview_ambient(self):
+        return {"body": "The cargo-bay light steadies.",
+                "canon_status": "ephemeral_noncanonical", "source_refs": ["ship-status:2.0"]}
+
+    def propose_canon_update(self, **_values):
+        return {"proposal_id": 7, "status": "pending"}
+
+    def approve_canon_update(self, proposal_id):
+        return {"proposal_id": proposal_id, "status": "approved"}
+
+
 class FakeCommitments:
     def __init__(self):
         self.calls = []
@@ -313,6 +390,13 @@ class FakeCommitments:
     def transition(self, commitment_id, status, snoozed_until=None):
         self.calls.append(("transition", commitment_id, status, snoozed_until))
         return {"commitment_id": commitment_id, "status": status}
+
+    def set_visibility(self, commitment_id, visibility_scope):
+        self.calls.append(("visibility", commitment_id, visibility_scope))
+        return {
+            "commitment_id": commitment_id,
+            "visibility_scope": visibility_scope,
+        }
 
     def plan_due_reminders(self, *, away, channel, horizon):
         self.calls.append(("reminders", away, channel, horizon))
@@ -357,6 +441,8 @@ def _client():
         ritual_service=FakeRituals(),  # type: ignore[arg-type]
         garden_service=FakeGarden(),  # type: ignore[arg-type]
         journal_service=FakeJournal(),  # type: ignore[arg-type]
+        relationship_service=FakeRelationship(),  # type: ignore[arg-type]
+        ship_service=FakeShipContinuity(),  # type: ignore[arg-type]
     )
     return TestClient(app, client=("127.0.0.1", 50000)), sessions, control
 
@@ -569,6 +655,95 @@ def test_memory_control_fails_closed_when_token_is_unconfigured(monkeypatch):
     assert response.json()["detail"] == "Memory control token is not configured"
 
 
+def test_relationship_rhythm_controls_are_local_token_gated(monkeypatch):
+    monkeypatch.setenv("LYRA_CONTROL_TOKEN", "local-control-secret")
+    sessions = FakeSessions()
+    relationship = FakeRelationship()
+    app = create_app(
+        sessions=sessions,  # type: ignore[arg-type]
+        loop_factory=lambda _session_id: FakeLoop(sessions),
+        away_service=FakeAway(),  # type: ignore[arg-type]
+        memory_control=FakeControl(),  # type: ignore[arg-type]
+        journal_service=FakeJournal(),  # type: ignore[arg-type]
+        relationship_service=relationship,  # type: ignore[arg-type]
+    )
+    local = TestClient(app, client=("127.0.0.1", 50000))
+    remote = TestClient(app, client=("100.119.187.40", 50000))
+    token = {"X-Lyra-Control-Token": "local-control-secret"}
+
+    assert remote.get("/api/control/relationship-rhythms", headers=token).status_code == 403
+    assert local.get("/api/control/relationship-rhythms").status_code == 401
+    updated = local.put(
+        "/api/control/relationship-rhythms", headers=token,
+        json={
+            "enabled": True, "callbacks_enabled": True,
+            "rituals_enabled": False, "milestones_enabled": False,
+            "cadence_days": 7, "local_time": "19:00:00",
+            "timezone": "America/Chicago", "target_session_id": None,
+        },
+    )
+    preview = local.get("/api/control/relationship-rhythms/preview", headers=token)
+    muted = local.post(
+        "/api/control/relationship-rhythms/mutes", headers=token,
+        json={"source_key": "relationship-milestone:arcade"},
+    )
+    unmuted = local.delete(
+        "/api/control/relationship-rhythms/mutes/relationship-milestone:arcade",
+        headers=token,
+    )
+    dismissed = local.post(
+        "/api/control/relationship-rhythms/events/event-1/dismiss", headers=token
+    )
+
+    assert updated.json()["policy"]["callbacks_enabled"] is True
+    assert preview.json()["event_type"] == "ritual"
+    assert muted.json()["muted"] is True
+    assert unmuted.json()["removed"] is True
+    assert dismissed.json()["status"] == "dismissed"
+
+
+def test_ship_continuity_controls_and_canon_proposals_are_local_token_gated(monkeypatch):
+    monkeypatch.setenv("LYRA_CONTROL_TOKEN", "local-control-secret")
+    sessions = FakeSessions()
+    ship = FakeShipContinuity()
+    app = create_app(
+        sessions=sessions,  # type: ignore[arg-type]
+        loop_factory=lambda _session_id: FakeLoop(sessions),
+        away_service=FakeAway(),  # type: ignore[arg-type]
+        memory_control=FakeControl(),  # type: ignore[arg-type]
+        ship_service=ship,  # type: ignore[arg-type]
+    )
+    local = TestClient(app, client=("127.0.0.1", 50000))
+    remote = TestClient(app, client=("100.119.187.40", 50000))
+    token = {"X-Lyra-Control-Token": "local-control-secret"}
+
+    assert remote.get("/api/control/ship-continuity", headers=token).status_code == 403
+    assert local.get("/api/control/ship-continuity").status_code == 401
+    updated = local.put(
+        "/api/control/ship-continuity", headers=token,
+        json={
+            "enabled": True, "paused": False, "briefs_enabled": True,
+            "ambient_enabled": False, "intensity": "quiet", "cadence_days": 7,
+            "local_time": "18:00:00", "timezone": "America/Chicago",
+            "target_session_id": None,
+        },
+    )
+    preview = local.get("/api/control/ship-continuity/preview", headers=token)
+    proposed = local.post(
+        "/api/control/ship-continuity/proposals", headers=token,
+        json={"content": "The reading nook has a secured shelf.",
+              "session_id": "00000000-0000-0000-0000-000000000001"},
+    )
+    approved = local.post(
+        "/api/control/ship-continuity/proposals/7/approve", headers=token
+    )
+
+    assert updated.json()["policy"]["briefs_enabled"] is True
+    assert preview.json()["canon_status"] == "ephemeral_noncanonical"
+    assert proposed.json()["status"] == "pending"
+    assert approved.json()["status"] == "approved"
+
+
 def test_memory_control_rejects_tailnet_and_forwarded_clients(monkeypatch):
     monkeypatch.setenv("LYRA_CONTROL_TOKEN", "local-control-secret")
     sessions = FakeSessions()
@@ -671,6 +846,45 @@ def test_commitment_mutations_reject_tailnet_and_forwarded_clients():
         json={"channel": "telegram", "horizon_hours": 24},
     ).status_code == 403
     assert commitments.calls == [("list", None)]
+
+
+def test_session_scope_and_commitment_visibility_are_local_controls(monkeypatch):
+    monkeypatch.setenv("LYRA_CONTROL_TOKEN", "local-control-secret")
+    sessions = FakeSessions()
+    session = sessions.create_session("Command Deck")
+    commitments = FakeCommitments()
+    app = create_app(
+        sessions=sessions,  # type: ignore[arg-type]
+        loop_factory=lambda _session_id: FakeLoop(sessions),
+        away_service=FakeAway(),  # type: ignore[arg-type]
+        memory_control=FakeControl(),  # type: ignore[arg-type]
+        commitment_service=commitments,  # type: ignore[arg-type]
+    )
+    local = TestClient(app, client=("127.0.0.1", 50000))
+    remote = TestClient(app, client=("100.119.187.40", 50000))
+    token = {"X-Lyra-Control-Token": "local-control-secret"}
+
+    scoped = local.put(
+        f"/api/control/sessions/{session['session_id']}/context-scope",
+        headers=token,
+        json={"context_scope": "professional"},
+    )
+    visibility = local.put(
+        "/api/control/commitments/commitment-1/visibility",
+        headers=token,
+        json={"visibility_scope": "private_shared"},
+    )
+
+    assert scoped.json()["context_scope"] == "professional"
+    assert visibility.json()["visibility_scope"] == "private_shared"
+    assert remote.put(
+        f"/api/control/sessions/{session['session_id']}/context-scope",
+        headers=token,
+        json={"context_scope": "general"},
+    ).status_code == 403
+    assert commitments.calls == [
+        ("visibility", "commitment-1", "private_shared")
+    ]
 
 
 def test_stuck_mode_status_api_is_channel_neutral_and_read_only():

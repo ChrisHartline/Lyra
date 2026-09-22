@@ -377,6 +377,86 @@ def test_agent_loop_injects_stuck_guidance_with_ledger_and_provenance():
     assert "Preserve the scene" in provider.messages[0][1]["content"]
 
 
+def test_agent_loop_injects_private_relationship_callback_and_persists_sources():
+    class Observer:
+        def __init__(self):
+            self.calls = []
+
+        def observe_message(self, **kwargs):
+            self.calls.append(kwargs)
+            return type(
+                "Observation",
+                (),
+                {
+                    "instruction": "Use the approved arcade callback if natural.",
+                    "source_refs": ("relationship-milestone:arcade",),
+                },
+            )()
+
+    class Context(FakeContext):
+        def build(self, session_id, **kwargs):
+            return [{"role": "system", "content": kwargs["presentation_instruction"]}]
+
+    sessions = FakeSessions()
+    observer = Observer()
+    provider = FakeProvider(
+        [[RuntimeEvent.text_delta("I remember that arcade."), RuntimeEvent.completion("stop")]]
+    )
+    loop = AgentLoop(
+        sessions=sessions,  # type: ignore[arg-type]
+        context=Context(),  # type: ignore[arg-type]
+        runner=ModelToolRunner(provider, PROFILE, ToolRegistry()),
+        system_prompt="You are Lyra.",
+        relationship_rhythms=observer,  # type: ignore[arg-type]
+    )
+
+    asyncio.run(_collect(loop.stream_turn("private-1", "Remember the arcade?")))
+
+    assert observer.calls[0]["channel"] == "web"
+    assert "arcade callback" in provider.messages[0][0]["content"]
+    assert sessions.messages[-1][3]["metadata"]["relationship_sources"] == [
+        "relationship-milestone:arcade"
+    ]
+
+
+def test_agent_loop_injects_ship_brief_and_persists_grounding_sources():
+    class Observer:
+        def observe_message(self, **_kwargs):
+            return type(
+                "Observation",
+                (),
+                {
+                    "instruction": "Use the grounded ship brief without a lookup preamble.",
+                    "source_refs": ("ship-status:2.0",),
+                },
+            )()
+
+    class Context(FakeContext):
+        def build(self, session_id, **kwargs):
+            return [{"role": "system", "content": kwargs["presentation_instruction"]}]
+
+    sessions = FakeSessions()
+    provider = FakeProvider(
+        [[RuntimeEvent.text_delta("The core is stable at reduced output."), RuntimeEvent.completion("stop")]]
+    )
+    loop = AgentLoop(
+        sessions=sessions,  # type: ignore[arg-type]
+        context=Context(),  # type: ignore[arg-type]
+        runner=ModelToolRunner(provider, PROFILE, ToolRegistry()),
+        system_prompt="You are Lyra.",
+        ship_continuity=Observer(),  # type: ignore[arg-type]
+    )
+
+    asyncio.run(
+        _collect(loop.stream_turn("story-1", "What's the ship status?", memory_buckets=("story",)))
+    )
+
+    assert "grounded ship brief" in provider.messages[0][0]["content"]
+    assert sessions.messages[-1][3]["metadata"]["ship_continuity_sources"] == [
+        "ship-status:2.0"
+    ]
+
+
 def test_agent_loop_marks_closed_stream_disconnected_and_keeps_partial_reply():
     class HangingProvider(FakeProvider):
         async def stream(self, profile, messages, tools=(), *, environ=None):

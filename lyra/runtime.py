@@ -70,6 +70,20 @@ class NaturalMemoryObserver(Protocol):
     ) -> Any: ...
 
 
+class RelationshipObserver(Protocol):
+    def observe_message(
+        self, *, session_id: str, message_id: int, text: str,
+        ledger: str = "biography", channel: str = "web",
+    ) -> Any: ...
+
+
+class ShipContinuityObserver(Protocol):
+    def observe_message(
+        self, *, session_id: str, message_id: int, text: str,
+        ledger: str = "biography", channel: str = "web",
+    ) -> Any: ...
+
+
 class CatchUpResponder(Protocol):
     def respond(
         self, text: str, *, memory_buckets: Sequence[str] = ("biography",)
@@ -197,6 +211,8 @@ class AgentLoop:
     stuck_mode: StuckObserver | None = None
     natural_memory: NaturalMemoryObserver | None = None
     catch_up: CatchUpResponder | None = None
+    relationship_rhythms: RelationshipObserver | None = None
+    ship_continuity: ShipContinuityObserver | None = None
 
     async def stream_turn(
         self,
@@ -271,6 +287,30 @@ class AgentLoop:
                 ledger=ledger,
             )
             stuck_instruction = stuck_observation.instruction
+        relationship_instruction: str | None = None
+        relationship_sources: tuple[str, ...] = ()
+        if self.relationship_rhythms is not None:
+            relationship_observation = self.relationship_rhythms.observe_message(
+                session_id=session_id,
+                message_id=int(user_message["message_id"]),
+                text=user_text,
+                ledger=ledger,
+                channel=normalized_channel,
+            )
+            relationship_instruction = relationship_observation.instruction
+            relationship_sources = tuple(relationship_observation.source_refs)
+        ship_instruction: str | None = None
+        ship_sources: tuple[str, ...] = ()
+        if self.ship_continuity is not None:
+            ship_observation = self.ship_continuity.observe_message(
+                session_id=session_id,
+                message_id=int(user_message["message_id"]),
+                text=user_text,
+                ledger=ledger,
+                channel=normalized_channel,
+            )
+            ship_instruction = ship_observation.instruction
+            ship_sources = tuple(ship_observation.source_refs)
         turn = self.sessions.start_turn(session_id, "running")
         assistant_parts: list[str] = []
         persisted = False
@@ -287,6 +327,14 @@ class AgentLoop:
                         "partial": partial,
                         "turn_id": turn["turn_id"],
                         "channel": normalized_channel,
+                        **(
+                            {"relationship_sources": list(relationship_sources)}
+                            if relationship_sources else {}
+                        ),
+                        **(
+                            {"ship_continuity_sources": list(ship_sources)}
+                            if ship_sources else {}
+                        ),
                     },
                 )
                 persisted = True
@@ -301,6 +349,8 @@ class AgentLoop:
                     radar_instruction,
                     stuck_instruction,
                     memory_instruction,
+                    relationship_instruction,
+                    ship_instruction,
                 )
                 if instruction
             ]

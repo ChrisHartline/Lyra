@@ -34,6 +34,11 @@ from lyra.natural_memory import MemoryPolicyService, NaturalMemoryService
 from lyra.packs import compose_runtime_context
 from lyra.providers import ModelProfiles, ProviderConfigurationError, adapter_for
 from lyra.research_garden import ResearchGardenService
+from lyra.relationship_rhythms import (
+    RelationshipRhythmService,
+    run_relationship_rhythms,
+)
+from lyra.ship_continuity import ShipContinuityService, run_ship_continuity
 from lyra.runtime import AgentLoop, ModelToolRunner
 from lyra.runtime_events import EventKind, RuntimeEvent
 from lyra.runtime_tools import build_conversation_registry
@@ -65,10 +70,17 @@ LoopFactory = Callable[[str], TurnLoop]
 
 class SessionCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
+    context_scope: str = Field(
+        default="general", pattern="^(general|professional|story|campaign)$"
+    )
 
 
 class SessionUpdate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
+
+
+class SessionScopeUpdate(BaseModel):
+    context_scope: str = Field(pattern="^(general|professional|story|campaign)$")
 
 
 class TurnCreate(BaseModel):
@@ -113,6 +125,10 @@ class CommitmentTransition(BaseModel):
     snoozed_until: datetime | None = None
 
 
+class CommitmentVisibilityUpdate(BaseModel):
+    visibility_scope: str = Field(pattern="^(general|professional|private_shared)$")
+
+
 class ReminderPlan(BaseModel):
     channel: str = Field(default="telegram", pattern="^(web|telegram)$")
     horizon_hours: int = Field(default=24, ge=1, le=720)
@@ -125,6 +141,7 @@ class RitualPolicyUpdate(BaseModel):
     evening_time: time
     timezone: str = Field(min_length=1, max_length=100)
     channel: str = Field(pattern="^(web|telegram)$")
+    target_session_id: str | None = None
     notion_publish: bool = False
     vacation_until: date | None = None
 
@@ -168,6 +185,39 @@ class JournalEntryForget(BaseModel):
 
 class JournalSessionAccess(BaseModel):
     enabled: bool
+
+
+class RelationshipRhythmUpdate(BaseModel):
+    enabled: bool
+    callbacks_enabled: bool
+    rituals_enabled: bool
+    milestones_enabled: bool
+    cadence_days: int = Field(ge=1, le=90)
+    local_time: time
+    timezone: str = Field(min_length=1, max_length=100)
+    target_session_id: str | None = None
+
+
+class RelationshipSourceMute(BaseModel):
+    source_key: str = Field(min_length=1, max_length=300)
+
+
+class ShipContinuityUpdate(BaseModel):
+    enabled: bool
+    paused: bool
+    briefs_enabled: bool
+    ambient_enabled: bool
+    intensity: str = Field(pattern="^(quiet|balanced|vivid)$")
+    cadence_days: int = Field(ge=1, le=30)
+    local_time: time
+    timezone: str = Field(min_length=1, max_length=100)
+    target_session_id: str | None = None
+
+
+class ShipCanonProposalCreate(BaseModel):
+    content: str = Field(min_length=1, max_length=4000)
+    session_id: str
+    source_message_id: int | None = None
 
 
 def validate_bind_host(host: str) -> str:
@@ -225,6 +275,13 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
     presentation = AwayModeService(
         getattr(sessions, "connection_factory", SessionService().connection_factory)
     )
+    relationship_rhythms = RelationshipRhythmService(
+        away=presentation,
+        journal=shared_journal,
+        connection_factory=getattr(
+            sessions, "connection_factory", SessionService().connection_factory
+        ),
+    )
     commitment_radar = CommitmentService(
         getattr(sessions, "connection_factory", SessionService().connection_factory)
     )
@@ -234,13 +291,20 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
     connection_factory = getattr(
         sessions, "connection_factory", SessionService().connection_factory
     )
+    memory_control = MemoryControlService(
+        embedding_service=embedding,
+        graph_writer=MCPKnowledgeGraphWriter(settings.kg_memory_file_path),
+        connection_factory=connection_factory,
+    )
     natural_memory = NaturalMemoryService(
         corpus=corpus,
-        control=MemoryControlService(
-            embedding_service=embedding,
-            graph_writer=MCPKnowledgeGraphWriter(settings.kg_memory_file_path),
-            connection_factory=connection_factory,
-        ),
+        control=memory_control,
+        connection_factory=connection_factory,
+    )
+    ship_continuity = ShipContinuityService(
+        away=presentation,
+        embedding_service=embedding,
+        memory_control=memory_control,
         connection_factory=connection_factory,
     )
     notion = NotionClient(token=settings.notion_token) if settings.notion_token else None
@@ -308,6 +372,8 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
             stuck_mode=stuck_mode,
             natural_memory=natural_memory,
             catch_up=catch_up,
+            relationship_rhythms=relationship_rhythms,
+            ship_continuity=ship_continuity,
         )
 
     return factory
@@ -319,6 +385,8 @@ def create_app(
     telegram_runner: Callable[[SessionService, LoopFactory], Any] | None = run_configured_bot,
     ritual_runner: Callable[[SessionService, RitualService], Any] | None = run_configured_rituals,
     garden_runner: Callable[[SessionService, ResearchGardenService], Any] | None = run_configured_research_garden,
+    relationship_runner: Callable[[SessionService, RelationshipRhythmService], Any] | None = run_relationship_rhythms,
+    ship_runner: Callable[[SessionService, ShipContinuityService], Any] | None = run_ship_continuity,
     away_service: AwayModeService | None = None,
     memory_control: MemoryControlService | None = None,
     memory_policy: MemoryPolicyService | None = None,
@@ -327,6 +395,8 @@ def create_app(
     ritual_service: RitualService | None = None,
     garden_service: ResearchGardenService | None = None,
     journal_service: SharedJournalService | None = None,
+    relationship_service: RelationshipRhythmService | None = None,
+    ship_service: ShipContinuityService | None = None,
 ) -> FastAPI:
     session_service = sessions or SessionService()
     factory = loop_factory or default_loop_factory(session_service)
@@ -340,6 +410,14 @@ def create_app(
             tasks.append(asyncio.create_task(ritual_runner(session_service, rituals)))
         if garden_runner is not None:
             tasks.append(asyncio.create_task(garden_runner(session_service, garden)))
+        if relationship_runner is not None:
+            tasks.append(asyncio.create_task(
+                relationship_runner(session_service, relationship)
+            ))
+        if ship_runner is not None:
+            tasks.append(asyncio.create_task(
+                ship_runner(session_service, ship_continuity)
+            ))
         try:
             yield
         finally:
@@ -417,6 +495,21 @@ def create_app(
             session_service, "connection_factory", SessionService().connection_factory
         )
     )
+    relationship = relationship_service or RelationshipRhythmService(
+        away=away,
+        journal=journal,
+        connection_factory=getattr(
+            session_service, "connection_factory", SessionService().connection_factory
+        ),
+    )
+    ship_continuity = ship_service or ShipContinuityService(
+        away=away,
+        embedding_service=EmbeddingService(),
+        memory_control=control,
+        connection_factory=getattr(
+            session_service, "connection_factory", SessionService().connection_factory
+        ),
+    )
 
     def require_local_control_client(request: Request) -> None:
         # Tailscale Serve and other reverse proxies must not extend mutation
@@ -474,7 +567,11 @@ def create_app(
     @app.post("/api/sessions", status_code=201)
     async def create_session(request: SessionCreate):
         try:
-            return session_service.create_session(request.name)
+            if request.context_scope == "general":
+                return session_service.create_session(request.name)
+            return session_service.create_session(
+                request.name, context_scope=request.context_scope
+            )
         except Exception as exc:
             raise HTTPException(status_code=409, detail="Session name is unavailable") from exc
 
@@ -491,6 +588,18 @@ def create_app(
             return session_service.rename_session(session_id, request.name)
         except ValueError as exc:
             raise HTTPException(status_code=404, detail="Session not found") from exc
+
+    @app.put("/api/control/sessions/{session_id}/context-scope")
+    async def set_session_context_scope(
+        session_id: str, update: SessionScopeUpdate, request: Request
+    ):
+        require_control_access(request)
+        try:
+            return session_service.set_context_scope(
+                session_id, update.context_scope
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @app.delete("/api/sessions/{session_id}", status_code=204)
     async def delete_session(session_id: str):
@@ -613,6 +722,20 @@ def create_app(
                 commitment_id,
                 transition.status,
                 snoozed_until=transition.snoozed_until,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.put("/api/control/commitments/{commitment_id}/visibility")
+    async def set_commitment_visibility(
+        commitment_id: str,
+        update: CommitmentVisibilityUpdate,
+        request: Request,
+    ):
+        require_control_access(request)
+        try:
+            return commitments.set_visibility(
+                commitment_id, update.visibility_scope
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -898,6 +1021,95 @@ def create_app(
             return journal.forget_entry(entry_id, **forget.model_dump())
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/api/control/relationship-rhythms")
+    async def get_relationship_rhythms(request: Request, limit: int = 100):
+        require_control_access(request)
+        return {
+            "policy": relationship.policy_dict(),
+            "events": relationship.list_events(limit=limit),
+            "mutes": relationship.list_mutes(),
+        }
+
+    @app.put("/api/control/relationship-rhythms")
+    async def update_relationship_rhythms(
+        update: RelationshipRhythmUpdate, request: Request
+    ):
+        require_control_access(request)
+        try:
+            relationship.set_policy(**update.model_dump())
+            return {"policy": relationship.policy_dict()}
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/api/control/relationship-rhythms/preview")
+    async def preview_relationship_rhythms(request: Request):
+        require_control_access(request)
+        return relationship.preview()
+
+    @app.post("/api/control/relationship-rhythms/mutes")
+    async def mute_relationship_source(
+        mute: RelationshipSourceMute, request: Request
+    ):
+        require_control_access(request)
+        try:
+            return relationship.mute_source(mute.source_key)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.delete("/api/control/relationship-rhythms/mutes/{source_key:path}")
+    async def unmute_relationship_source(source_key: str, request: Request):
+        require_control_access(request)
+        return {"removed": relationship.unmute_source(source_key)}
+
+    @app.post("/api/control/relationship-rhythms/events/{event_id}/dismiss")
+    async def dismiss_relationship_event(event_id: str, request: Request):
+        require_control_access(request)
+        try:
+            return relationship.dismiss(event_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.get("/api/control/ship-continuity")
+    async def get_ship_continuity(request: Request, limit: int = 100):
+        require_control_access(request)
+        return {
+            "policy": ship_continuity.policy_dict(),
+            "events": ship_continuity.list_events(limit=limit),
+        }
+
+    @app.put("/api/control/ship-continuity")
+    async def update_ship_continuity(
+        update: ShipContinuityUpdate, request: Request
+    ):
+        require_control_access(request)
+        try:
+            return {"policy": ship_continuity.set_policy(**update.model_dump())}
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/api/control/ship-continuity/preview")
+    async def preview_ship_continuity(request: Request):
+        require_control_access(request)
+        return ship_continuity.preview_ambient()
+
+    @app.post("/api/control/ship-continuity/proposals", status_code=201)
+    async def create_ship_canon_proposal(
+        proposal: ShipCanonProposalCreate, request: Request
+    ):
+        require_control_access(request)
+        try:
+            return ship_continuity.propose_canon_update(**proposal.model_dump())
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/api/control/ship-continuity/proposals/{proposal_id}/approve")
+    async def approve_ship_canon_proposal(proposal_id: int, request: Request):
+        require_control_access(request)
+        try:
+            return ship_continuity.approve_canon_update(proposal_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @app.get("/api/control/memory-policy")
     async def get_memory_policy(request: Request):
