@@ -176,6 +176,60 @@ def test_dashboard_sources_must_be_approved_and_retain_url(ensure_db):
         "message_id": None,
         "url": "https://notion.example/item",
     }
+    assert commitment["visibility_scope"] == "professional"
+
+
+def test_visibility_inherits_session_and_private_items_do_not_escape(ensure_db):
+    radar, sessions, away = _reset()
+    private = sessions.create_session("Us")
+    with _conn() as conn, conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO shared_journal_private_sessions(session_id) VALUES (%s)",
+            (private["session_id"],),
+        )
+        conn.commit()
+    message = sessions.append_message(
+        private["session_id"], "user", "I will plan our private evening by 2026-09-21."
+    )
+    offered = radar.offer_session_message(
+        session_id=private["session_id"],
+        message_id=message["message_id"],
+        text=message["content"],
+    )
+    commitment = radar.confirm_offer(offered["offer_id"])
+
+    assert commitment["visibility_scope"] == "private_shared"
+    assert radar.list_offers(status="confirmed") == []
+    assert radar.list_commitments() == []
+    assert radar.plan_due_reminders(
+        away=away,
+        channel="telegram",
+        now=datetime(2026, 9, 20, 12, tzinfo=UTC),
+        horizon=timedelta(days=2),
+    ) == []
+
+    professional = sessions.create_session(
+        "Client work", context_scope="professional"
+    )
+    professional_message = sessions.append_message(
+        professional["session_id"], "user", "I need to send the design tomorrow."
+    )
+    professional_offer = radar.offer_session_message(
+        session_id=professional["session_id"],
+        message_id=professional_message["message_id"],
+        text=professional_message["content"],
+    )
+    assert professional_offer["visibility_scope"] == "professional"
+
+    story = sessions.create_session("SilentDrift", context_scope="story")
+    story_message = sessions.append_message(
+        story["session_id"], "user", "I will recalibrate the console tomorrow."
+    )
+    assert radar.offer_session_message(
+        session_id=story["session_id"],
+        message_id=story_message["message_id"],
+        text=story_message["content"],
+    ) is None
 
 
 def test_stale_offer_expires_instead_of_accepting_late_confirmation(ensure_db):

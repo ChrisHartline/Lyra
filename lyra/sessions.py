@@ -24,6 +24,7 @@ TURN_STATUSES = {
 }
 FINAL_TURN_STATUSES = {"completed", "failed", "cancelled"}
 MESSAGE_ROLES = {"system", "user", "assistant", "tool"}
+SESSION_SCOPES = {"general", "professional", "story", "campaign"}
 
 
 def _required_text(value: str, label: str) -> str:
@@ -37,10 +38,11 @@ def _session(row: Sequence[Any]) -> dict[str, Any]:
     return {
         "session_id": str(row[0]),
         "name": row[1],
-        "synopsis": row[2],
-        "synopsis_through_sequence": int(row[3]),
-        "created_at": row[4],
-        "updated_at": row[5],
+        "context_scope": row[2],
+        "synopsis": row[3],
+        "synopsis_through_sequence": int(row[4]),
+        "created_at": row[5],
+        "updated_at": row[6],
     }
 
 
@@ -61,18 +63,21 @@ def _message(row: Sequence[Any]) -> dict[str, Any]:
 class SessionService:
     connection_factory: Callable[[], psycopg.Connection] = connect
 
-    def create_session(self, name: str) -> dict[str, Any]:
+    def create_session(
+        self, name: str, *, context_scope: str = "general"
+    ) -> dict[str, Any]:
+        scope = self._scope(context_scope)
         session_id = uuid.uuid4()
         with self.connection_factory() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    INSERT INTO chat_sessions (id, name)
-                    VALUES (%s, %s)
-                    RETURNING id, name, synopsis, synopsis_through_sequence,
+                    INSERT INTO chat_sessions (id, name, context_scope)
+                    VALUES (%s, %s, %s)
+                    RETURNING id, name, context_scope, synopsis, synopsis_through_sequence,
                               created_at, updated_at
                     """,
-                    (session_id, _required_text(name, "Session name")),
+                    (session_id, _required_text(name, "Session name"), scope),
                 )
                 row = cur.fetchone()
             conn.commit()
@@ -83,7 +88,7 @@ class SessionService:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT id, name, synopsis, synopsis_through_sequence,
+                    SELECT id, name, context_scope, synopsis, synopsis_through_sequence,
                            created_at, updated_at
                     FROM chat_sessions
                     WHERE id = %s
@@ -100,7 +105,7 @@ class SessionService:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT id, name, synopsis, synopsis_through_sequence,
+                    SELECT id, name, context_scope, synopsis, synopsis_through_sequence,
                            created_at, updated_at
                     FROM chat_sessions
                     ORDER BY updated_at DESC, created_at DESC
@@ -119,7 +124,7 @@ class SessionService:
                     UPDATE chat_sessions
                     SET name = %s, updated_at = now()
                     WHERE id = %s
-                    RETURNING id, name, synopsis, synopsis_through_sequence,
+                    RETURNING id, name, context_scope, synopsis, synopsis_through_sequence,
                               created_at, updated_at
                     """,
                     (_required_text(name, "Session name"), session_id),
@@ -129,6 +134,35 @@ class SessionService:
         if not row:
             raise ValueError(f"Session not found: {session_id}")
         return _session(row)
+
+    def set_context_scope(
+        self, session_id: str | uuid.UUID, context_scope: str
+    ) -> dict[str, Any]:
+        scope = self._scope(context_scope)
+        with self.connection_factory() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE chat_sessions
+                    SET context_scope = %s, updated_at = now()
+                    WHERE id = %s
+                    RETURNING id, name, context_scope, synopsis,
+                              synopsis_through_sequence, created_at, updated_at
+                    """,
+                    (scope, session_id),
+                )
+                row = cur.fetchone()
+            conn.commit()
+        if not row:
+            raise ValueError(f"Session not found: {session_id}")
+        return _session(row)
+
+    @staticmethod
+    def _scope(value: str) -> str:
+        scope = value.strip().lower()
+        if scope not in SESSION_SCOPES:
+            raise ValueError("Session scope must be general, professional, story, or campaign")
+        return scope
 
     def delete_session(self, session_id: str | uuid.UUID) -> bool:
         with self.connection_factory() as conn:
@@ -246,7 +280,7 @@ class SessionService:
                         synopsis_through_sequence = %s,
                         updated_at = now()
                     WHERE id = %s
-                    RETURNING id, name, synopsis, synopsis_through_sequence,
+                    RETURNING id, name, context_scope, synopsis, synopsis_through_sequence,
                               created_at, updated_at
                     """,
                     (normalized, through_sequence, session_id),

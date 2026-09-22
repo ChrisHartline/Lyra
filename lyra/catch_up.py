@@ -226,6 +226,7 @@ class CatchUpService:
         with self.connection_factory() as conn, conn.cursor() as cur:
             cur.execute("""SELECT id,name,synopsis,updated_at FROM chat_sessions s
                 WHERE updated_at >= %s AND updated_at <= %s
+                  AND s.context_scope IN ('general', 'professional')
                   AND NOT EXISTS (
                     SELECT 1 FROM shared_journal_private_sessions p
                     WHERE p.session_id=s.id
@@ -239,7 +240,9 @@ class CatchUpService:
                     (f"session:{session_id}@{changed.isoformat()}",),
                 ))
             cur.execute("""SELECT id,summary,status,due_at,updated_at FROM commitments
-                WHERE updated_at >= %s AND updated_at <= %s ORDER BY updated_at DESC""",
+                WHERE updated_at >= %s AND updated_at <= %s
+                  AND visibility_scope <> 'private_shared'
+                ORDER BY updated_at DESC""",
                         (since, until))
             for item_id, summary, status, due_at, changed in cur.fetchall():
                 due = f"; due {due_at.isoformat()}" if due_at else ""

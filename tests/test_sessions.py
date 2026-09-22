@@ -35,6 +35,25 @@ def test_named_session_resumes_after_service_restart_and_channel_binding(ensure_
     assert restarted.resolve_channel("telegram", "chat-42") == session["session_id"]
 
 
+def test_session_context_scope_defaults_and_requires_explicit_supported_value(ensure_db):
+    _reset()
+    service = SessionService(connection_factory=_conn)
+    general = service.create_session("Command Deck")
+    professional = service.create_session(
+        "Professional project", context_scope="professional"
+    )
+
+    assert general["context_scope"] == "general"
+    assert professional["context_scope"] == "professional"
+    assert service.set_context_scope(
+        professional["session_id"], "story"
+    )["context_scope"] == "story"
+
+    import pytest
+    with pytest.raises(ValueError, match="Session scope"):
+        service.set_context_scope(general["session_id"], "private")
+
+
 def test_channel_rebind_moves_handoff_without_copying_history(ensure_db):
     _reset()
     service = SessionService(connection_factory=_conn)

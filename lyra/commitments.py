@@ -19,6 +19,7 @@ from lyra.memory import validate_persistable_text
 KINDS = frozenset({"promise", "deadline", "follow_up", "unresolved_decision", "task"})
 STATES = frozenset({"active", "done", "snoozed", "dropped"})
 OFFER_STATES = frozenset({"offered", "confirmed", "dismissed", "expired"})
+VISIBILITY_SCOPES = frozenset({"general", "professional", "private_shared"})
 
 _INTENT = re.compile(
     r"\b(?:i['’]?ll|i\s+will|i\s+need\s+to|i\s+have\s+to|i\s+should|"
@@ -110,17 +111,18 @@ def _offer(row: tuple[Any, ...]) -> dict[str, Any]:
         "summary": row[1],
         "kind": row[2],
         "due_at": row[3],
+        "visibility_scope": row[4],
         "source": {
-            "type": row[4],
-            "session_id": str(row[5]) if row[5] else None,
-            "message_id": int(row[6]) if row[6] is not None else None,
-            "url": row[7],
-            "approved": bool(row[8]),
+            "type": row[5],
+            "session_id": str(row[6]) if row[6] else None,
+            "message_id": int(row[7]) if row[7] is not None else None,
+            "url": row[8],
+            "approved": bool(row[9]),
         },
-        "detection_reason": row[9],
-        "status": row[10],
-        "created_at": row[11],
-        "resolved_at": row[12],
+        "detection_reason": row[10],
+        "status": row[11],
+        "created_at": row[12],
+        "resolved_at": row[13],
     }
 
 
@@ -136,11 +138,12 @@ def _commitment(row: tuple[Any, ...]) -> dict[str, Any]:
         "last_reminded_at": row[7],
         "confirmed_at": row[8],
         "updated_at": row[9],
+        "visibility_scope": row[10],
         "source": {
-            "type": row[10],
-            "session_id": str(row[11]) if row[11] else None,
-            "message_id": int(row[12]) if row[12] is not None else None,
-            "url": row[13],
+            "type": row[11],
+            "session_id": str(row[12]) if row[12] else None,
+            "message_id": int(row[13]) if row[13] is not None else None,
+            "url": row[14],
         },
     }
 
@@ -187,13 +190,17 @@ class CommitmentService:
     ) -> list[dict[str, Any]]:
         if status not in OFFER_STATES:
             raise ValueError("Unknown commitment offer status")
-        session_filter = "AND source_session_id = %s" if session_id else ""
+        session_filter = (
+            "AND source_session_id = %s"
+            if session_id
+            else "AND visibility_scope <> 'private_shared'"
+        )
         params: tuple[Any, ...] = (status, session_id) if session_id else (status,)
         with self.connection_factory() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     f"""
-                    SELECT id, summary, kind, due_at, source_type,
+                    SELECT id, summary, kind, due_at, visibility_scope, source_type,
                            source_session_id, source_message_id, source_url,
                            source_approved, detection_reason, status, created_at,
                            resolved_at
@@ -221,12 +228,15 @@ class CommitmentService:
         candidate = self._candidate_summary(text, ledger=ledger, now=instant)
         if candidate is None:
             return None
+        visibility = self._session_visibility(session_id)
+        if visibility is None:
+            return None
         summary, kind, due, reason = candidate
         with self.connection_factory() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT id, summary, kind, due_at, source_type,
+                    SELECT id, summary, kind, due_at, visibility_scope, source_type,
                            source_session_id, source_message_id, source_url,
                            source_approved, detection_reason, status, created_at,
                            resolved_at
@@ -243,12 +253,12 @@ class CommitmentService:
                 cur.execute(
                     """
                     INSERT INTO commitment_candidates (
-                        id, summary, kind, due_at, source_type,
+                        id, summary, kind, due_at, visibility_scope, source_type,
                         source_session_id, source_message_id, source_approved,
                         detection_reason, status, created_at
-                    ) VALUES (%s, %s, %s, %s, 'session', %s, %s, false,
+                    ) VALUES (%s, %s, %s, %s, %s, 'session', %s, %s, false,
                               %s, 'offered', %s)
-                    RETURNING id, summary, kind, due_at, source_type,
+                    RETURNING id, summary, kind, due_at, visibility_scope, source_type,
                               source_session_id, source_message_id, source_url,
                               source_approved, detection_reason, status,
                               created_at, resolved_at
@@ -258,6 +268,7 @@ class CommitmentService:
                         summary,
                         kind,
                         due,
+                        visibility,
                         session_id,
                         message_id,
                         reason,
@@ -291,11 +302,11 @@ class CommitmentService:
                 cur.execute(
                     """
                     INSERT INTO commitment_candidates (
-                        id, summary, kind, due_at, source_type, source_url,
+                        id, summary, kind, due_at, visibility_scope, source_type, source_url,
                         source_approved, detection_reason, status, created_at
-                    ) VALUES (%s, %s, %s, %s, 'dashboard', %s, true, %s,
+                    ) VALUES (%s, %s, %s, %s, 'professional', 'dashboard', %s, true, %s,
                               'offered', %s)
-                    RETURNING id, summary, kind, due_at, source_type,
+                    RETURNING id, summary, kind, due_at, visibility_scope, source_type,
                               source_session_id, source_message_id, source_url,
                               source_approved, detection_reason, status,
                               created_at, resolved_at
@@ -314,7 +325,7 @@ class CommitmentService:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT id, summary, kind, due_at, status
+                    SELECT id, summary, kind, due_at, status, visibility_scope
                     FROM commitment_candidates WHERE id = %s FOR UPDATE
                     """,
                     (offer_id,),
@@ -328,9 +339,9 @@ class CommitmentService:
                 cur.execute(
                     """
                     INSERT INTO commitments (
-                        id, candidate_id, summary, kind, status, due_at,
+                        id, candidate_id, summary, kind, status, due_at, visibility_scope,
                         confirmed_at, updated_at
-                    ) VALUES (%s, %s, %s, %s, 'active', %s, %s, %s)
+                    ) VALUES (%s, %s, %s, %s, 'active', %s, %s, %s, %s)
                     """,
                     (
                         commitment_id,
@@ -338,6 +349,7 @@ class CommitmentService:
                         candidate[1],
                         candidate[2],
                         candidate[3],
+                        candidate[5],
                         instant,
                         instant,
                     ),
@@ -350,7 +362,7 @@ class CommitmentService:
                     (instant, candidate[0]),
                 )
             conn.commit()
-        return self.get_commitment(str(commitment_id))
+        return self.get_commitment(str(commitment_id), include_private=True)
 
     def dismiss_offer(self, offer_id: str, *, now: datetime | None = None) -> dict[str, Any]:
         instant = now or datetime.now(UTC)
@@ -361,7 +373,7 @@ class CommitmentService:
                     UPDATE commitment_candidates
                     SET status = 'dismissed', resolved_at = %s
                     WHERE id = %s AND status = 'offered'
-                    RETURNING id, summary, kind, due_at, source_type,
+                    RETURNING id, summary, kind, due_at, visibility_scope, source_type,
                               source_session_id, source_message_id, source_url,
                               source_approved, detection_reason, status,
                               created_at, resolved_at
@@ -391,8 +403,11 @@ class CommitmentService:
             conn.commit()
         return changed
 
-    def get_commitment(self, commitment_id: str) -> dict[str, Any]:
-        rows = self._commitment_rows("WHERE c.id = %s", (commitment_id,))
+    def get_commitment(
+        self, commitment_id: str, *, include_private: bool = False
+    ) -> dict[str, Any]:
+        privacy = "" if include_private else " AND c.visibility_scope <> 'private_shared'"
+        rows = self._commitment_rows(f"WHERE c.id = %s{privacy}", (commitment_id,))
         if not rows:
             raise ValueError("Commitment not found")
         return _commitment(rows[0])
@@ -400,7 +415,11 @@ class CommitmentService:
     def list_commitments(self, *, status: str | None = None) -> list[dict[str, Any]]:
         if status is not None and status not in STATES:
             raise ValueError("Unknown commitment status")
-        where = "WHERE c.status = %s" if status else ""
+        where = (
+            "WHERE c.status = %s AND c.visibility_scope <> 'private_shared'"
+            if status
+            else "WHERE c.visibility_scope <> 'private_shared'"
+        )
         params: tuple[Any, ...] = (status,) if status else ()
         return [_commitment(row) for row in self._commitment_rows(where, params)]
 
@@ -413,7 +432,7 @@ class CommitmentService:
                     f"""
                     SELECT c.id, c.candidate_id, c.summary, c.kind, c.status,
                            c.due_at, c.snoozed_until, c.last_reminded_at,
-                           c.confirmed_at, c.updated_at, o.source_type,
+                           c.confirmed_at, c.updated_at, c.visibility_scope, o.source_type,
                            o.source_session_id, o.source_message_id, o.source_url
                     FROM commitments c
                     JOIN commitment_candidates o ON o.id = c.candidate_id
@@ -459,7 +478,7 @@ class CommitmentService:
             conn.commit()
         if not row:
             raise ValueError("Commitment not found")
-        return self.get_commitment(commitment_id)
+        return self.get_commitment(commitment_id, include_private=True)
 
     def observe_message(
         self,
@@ -528,6 +547,7 @@ class CommitmentService:
                     """
                     SELECT id, summary FROM commitments
                     WHERE status = 'active' AND due_at IS NOT NULL
+                      AND visibility_scope <> 'private_shared'
                       AND due_at <= %s AND last_reminded_at IS NULL
                     ORDER BY due_at, id
                     """,
@@ -559,3 +579,42 @@ class CommitmentService:
                 }
             )
         return planned
+
+    def set_visibility(self, commitment_id: str, visibility_scope: str) -> dict[str, Any]:
+        scope = visibility_scope.strip().lower()
+        if scope not in VISIBILITY_SCOPES:
+            raise ValueError("Unknown commitment visibility scope")
+        with self.connection_factory() as conn, conn.cursor() as cur:
+            cur.execute(
+                """UPDATE commitments SET visibility_scope=%s,updated_at=now()
+                   WHERE id=%s RETURNING id,candidate_id""",
+                (scope, commitment_id),
+            )
+            row = cur.fetchone()
+            if row:
+                cur.execute(
+                    "UPDATE commitment_candidates SET visibility_scope=%s WHERE id=%s",
+                    (scope, row[1]),
+                )
+            conn.commit()
+        if not row:
+            raise ValueError("Commitment not found")
+        return self.get_commitment(commitment_id, include_private=True)
+
+    def _session_visibility(self, session_id: str) -> str | None:
+        with self.connection_factory() as conn, conn.cursor() as cur:
+            cur.execute(
+                """SELECT s.context_scope,
+                          EXISTS (SELECT 1 FROM shared_journal_private_sessions p
+                                  WHERE p.session_id=s.id)
+                   FROM chat_sessions s WHERE s.id=%s""",
+                (session_id,),
+            )
+            row = cur.fetchone()
+        if not row:
+            raise ValueError("Commitment source session was not found")
+        if row[1]:
+            return "private_shared"
+        if row[0] in {"story", "campaign"}:
+            return None
+        return "professional" if row[0] == "professional" else "general"

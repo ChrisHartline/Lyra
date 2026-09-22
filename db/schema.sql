@@ -86,11 +86,30 @@ ON CONFLICT (singleton) DO NOTHING;
 CREATE TABLE IF NOT EXISTS chat_sessions (
   id UUID PRIMARY KEY,
   name TEXT NOT NULL,
+  context_scope TEXT NOT NULL DEFAULT 'general'
+    CHECK (context_scope IN ('general', 'professional', 'story', 'campaign')),
   synopsis TEXT,
   synopsis_through_sequence BIGINT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE chat_sessions
+  ADD COLUMN IF NOT EXISTS context_scope TEXT NOT NULL DEFAULT 'general';
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'chat_sessions_context_scope_check'
+      AND conrelid = 'chat_sessions'::regclass
+  ) THEN
+    ALTER TABLE chat_sessions
+      ADD CONSTRAINT chat_sessions_context_scope_check
+      CHECK (context_scope IN ('general', 'professional', 'story', 'campaign'));
+  END IF;
+END
+$$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_sessions_name_ci
   ON chat_sessions (lower(name));
@@ -173,12 +192,17 @@ CREATE TABLE IF NOT EXISTS ritual_policy (
   evening_time TIME NOT NULL DEFAULT '21:00',
   timezone TEXT NOT NULL DEFAULT 'America/Chicago',
   channel TEXT NOT NULL DEFAULT 'telegram' CHECK (channel IN ('telegram', 'web')),
+  target_session_id UUID REFERENCES chat_sessions(id) ON DELETE SET NULL,
   notion_publish BOOLEAN NOT NULL DEFAULT false,
   vacation_until DATE,
   morning_snoozed_until TIMESTAMPTZ,
   evening_snoozed_until TIMESTAMPTZ,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE ritual_policy
+  ADD COLUMN IF NOT EXISTS target_session_id UUID
+  REFERENCES chat_sessions(id) ON DELETE SET NULL;
 
 INSERT INTO ritual_policy (singleton) VALUES (true)
 ON CONFLICT (singleton) DO NOTHING;
@@ -324,6 +348,44 @@ CREATE TABLE IF NOT EXISTS relationship_rhythm_events (
 CREATE INDEX IF NOT EXISTS idx_relationship_rhythm_events_status
   ON relationship_rhythm_events (status, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS ship_continuity_policy (
+  singleton BOOLEAN PRIMARY KEY DEFAULT true CHECK (singleton),
+  enabled BOOLEAN NOT NULL DEFAULT false,
+  paused BOOLEAN NOT NULL DEFAULT true,
+  briefs_enabled BOOLEAN NOT NULL DEFAULT false,
+  ambient_enabled BOOLEAN NOT NULL DEFAULT false,
+  intensity TEXT NOT NULL DEFAULT 'quiet'
+    CHECK (intensity IN ('quiet', 'balanced', 'vivid')),
+  cadence_days SMALLINT NOT NULL DEFAULT 7 CHECK (cadence_days BETWEEN 1 AND 30),
+  local_time TIME NOT NULL DEFAULT '18:00',
+  timezone TEXT NOT NULL DEFAULT 'America/Chicago',
+  target_session_id UUID REFERENCES chat_sessions(id) ON DELETE SET NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO ship_continuity_policy (singleton) VALUES (true)
+ON CONFLICT (singleton) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS ship_continuity_events (
+  id UUID PRIMARY KEY,
+  event_type TEXT NOT NULL CHECK (event_type IN ('ambient')),
+  dedupe_key TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL CHECK (
+    status IN ('planned', 'delivered', 'batched', 'suppressed', 'failed')
+  ),
+  target_session_id UUID REFERENCES chat_sessions(id) ON DELETE SET NULL,
+  source_refs JSONB NOT NULL DEFAULT '[]'::jsonb,
+  content_sha256 TEXT NOT NULL,
+  canon_status TEXT NOT NULL CHECK (
+    canon_status IN ('ephemeral_noncanonical')
+  ),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  delivered_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_ship_continuity_events_status
+  ON ship_continuity_events (status, created_at DESC);
+
 CREATE INDEX IF NOT EXISTS idx_notification_events_created
   ON notification_events (created_at DESC);
 
@@ -334,6 +396,8 @@ CREATE TABLE IF NOT EXISTS commitment_candidates (
     kind IN ('promise', 'deadline', 'follow_up', 'unresolved_decision', 'task')
   ),
   due_at TIMESTAMPTZ,
+  visibility_scope TEXT NOT NULL DEFAULT 'general'
+    CHECK (visibility_scope IN ('general', 'professional', 'private_shared')),
   source_type TEXT NOT NULL CHECK (source_type IN ('session', 'dashboard')),
   source_session_id UUID,
   source_message_id BIGINT,
@@ -353,6 +417,46 @@ CREATE TABLE IF NOT EXISTS commitment_candidates (
   )
 );
 
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema()
+      AND table_name = 'commitment_candidates'
+      AND column_name = 'visibility_scope'
+  ) THEN
+    ALTER TABLE commitment_candidates
+      ADD COLUMN visibility_scope TEXT NOT NULL DEFAULT 'general';
+    UPDATE commitment_candidates
+      SET visibility_scope = 'professional'
+      WHERE source_type = 'dashboard';
+    UPDATE commitment_candidates c
+      SET visibility_scope = 'professional'
+      FROM chat_sessions s
+      WHERE c.source_session_id = s.id
+        AND s.context_scope = 'professional';
+    UPDATE commitment_candidates c
+      SET visibility_scope = 'private_shared'
+      FROM shared_journal_private_sessions p
+      WHERE c.source_session_id = p.session_id;
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'commitment_candidates_visibility_scope_check'
+      AND conrelid = 'commitment_candidates'::regclass
+  ) THEN
+    ALTER TABLE commitment_candidates
+      ADD CONSTRAINT commitment_candidates_visibility_scope_check
+      CHECK (visibility_scope IN ('general', 'professional', 'private_shared'));
+  END IF;
+END
+$$;
+
 CREATE INDEX IF NOT EXISTS idx_commitment_candidates_session_status
   ON commitment_candidates (source_session_id, status, created_at DESC);
 
@@ -367,12 +471,46 @@ CREATE TABLE IF NOT EXISTS commitments (
   status TEXT NOT NULL DEFAULT 'active'
     CHECK (status IN ('active', 'done', 'snoozed', 'dropped')),
   due_at TIMESTAMPTZ,
+  visibility_scope TEXT NOT NULL DEFAULT 'general'
+    CHECK (visibility_scope IN ('general', 'professional', 'private_shared')),
   snoozed_until TIMESTAMPTZ,
   last_reminded_at TIMESTAMPTZ,
   confirmed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CHECK (status = 'snoozed' OR snoozed_until IS NULL)
 );
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema()
+      AND table_name = 'commitments'
+      AND column_name = 'visibility_scope'
+  ) THEN
+    ALTER TABLE commitments
+      ADD COLUMN visibility_scope TEXT NOT NULL DEFAULT 'general';
+    UPDATE commitments c
+      SET visibility_scope = o.visibility_scope
+      FROM commitment_candidates o
+      WHERE c.candidate_id = o.id;
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'commitments_visibility_scope_check'
+      AND conrelid = 'commitments'::regclass
+  ) THEN
+    ALTER TABLE commitments
+      ADD CONSTRAINT commitments_visibility_scope_check
+      CHECK (visibility_scope IN ('general', 'professional', 'private_shared'));
+  END IF;
+END
+$$;
 
 CREATE INDEX IF NOT EXISTS idx_commitments_status_due
   ON commitments (status, due_at);

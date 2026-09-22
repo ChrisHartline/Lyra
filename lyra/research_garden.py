@@ -266,6 +266,7 @@ class ResearchGardenService:
                 FROM session_messages m JOIN chat_sessions s ON s.id=m.session_id
                 WHERE m.role='user' AND m.visible=true AND m.created_at<=%s
                   AND s.updated_at<=%s AND position('?' in m.content)>0
+                  AND s.context_scope IN ('general', 'professional')
                   AND NOT EXISTS (
                     SELECT 1 FROM shared_journal_private_sessions p
                     WHERE p.session_id=s.id
@@ -279,7 +280,8 @@ class ResearchGardenService:
                 questions.append(_evidence_item("question", item_id, label, occurred_at,
                                                 cleaned[0], session_id=str(session_id)))
             cur.execute("""SELECT id,summary,updated_at FROM commitments
-                WHERE status='active' ORDER BY updated_at DESC LIMIT 50""")
+                WHERE status='active' AND visibility_scope <> 'private_shared'
+                ORDER BY updated_at DESC LIMIT 50""")
             for item_id, summary, occurred_at in cur.fetchall():
                 cleaned = safe_lines([str(summary)])
                 if not cleaned:

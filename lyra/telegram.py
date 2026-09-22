@@ -485,12 +485,11 @@ async def run_configured_rituals(
                             sessions.bind_channel(session_id, "telegram", chat_id)
                         await bot_api.send_text(chat_id, draft["body"])
                     else:
-                        existing = sessions.list_sessions()
-                        session_id = (
-                            str(existing[0]["session_id"])
-                            if existing
-                            else str(sessions.create_session("Daily rituals")["session_id"])
-                        )
+                        session_id = policy.target_session_id
+                        if not session_id:
+                            raise TelegramError(
+                                "Web ritual delivery has no explicit target session"
+                            )
                     sessions.append_message(
                         session_id,
                         "assistant",

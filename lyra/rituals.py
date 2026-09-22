@@ -28,6 +28,7 @@ class RitualPolicy:
     evening_time: time
     timezone: str
     channel: str
+    target_session_id: str | None
     notion_publish: bool
     vacation_until: date | None
     morning_snoozed_until: datetime | None
@@ -43,13 +44,15 @@ class RitualService:
     def get_policy(self) -> RitualPolicy:
         with self.connection_factory() as conn, conn.cursor() as cur:
             cur.execute("""SELECT morning_enabled,evening_enabled,morning_time,
-                evening_time,timezone,channel,notion_publish,vacation_until,
+                evening_time,timezone,channel,target_session_id,notion_publish,vacation_until,
                 morning_snoozed_until,evening_snoozed_until
                 FROM ritual_policy WHERE singleton=true""")
             row = cur.fetchone()
         if not row:
             raise ValueError("Ritual policy is not initialized")
-        return RitualPolicy(*row)
+        values = list(row)
+        values[6] = str(values[6]) if values[6] else None
+        return RitualPolicy(*values)
 
     def policy_dict(self) -> dict[str, Any]:
         return asdict(self.get_policy())
@@ -66,10 +69,14 @@ class RitualService:
             raise ValueError("Unknown ritual timezone") from exc
         if current["channel"] not in {"web", "telegram"}:
             raise ValueError("Ritual channel must be web or telegram")
+        if current["channel"] == "telegram":
+            current["target_session_id"] = None
+        elif current["morning_enabled"] or current["evening_enabled"]:
+            self._validate_web_target(current["target_session_id"])
         with self.connection_factory() as conn, conn.cursor() as cur:
             cur.execute("""UPDATE ritual_policy SET morning_enabled=%s,
                 evening_enabled=%s,morning_time=%s,evening_time=%s,timezone=%s,
-                channel=%s,notion_publish=%s,vacation_until=%s,
+                channel=%s,target_session_id=%s,notion_publish=%s,vacation_until=%s,
                 morning_snoozed_until=%s,evening_snoozed_until=%s,updated_at=now()
                 WHERE singleton=true""", tuple(current[key] for key in current))
             conn.commit()
@@ -119,6 +126,11 @@ class RitualService:
         enabled = getattr(policy, f"{kind}_enabled")
         if not force and not enabled:
             return {"disposition": "disabled"}
+        if policy.channel == "web":
+            try:
+                self._validate_web_target(policy.target_session_id)
+            except ValueError:
+                return {"disposition": "no_target"}
         if policy.vacation_until and local.date() <= policy.vacation_until:
             return {"disposition": "vacation"}
         snoozed = getattr(policy, f"{kind}_snoozed_until")
@@ -162,6 +174,7 @@ class RitualService:
     def _commitments(self) -> list[str]:
         with self.connection_factory() as conn, conn.cursor() as cur:
             cur.execute("""SELECT summary FROM commitments WHERE status='active'
+                             AND visibility_scope <> 'private_shared'
                            ORDER BY due_at NULLS LAST,updated_at DESC LIMIT 5""")
             return [str(row[0]) for row in cur.fetchall()]
 
@@ -169,12 +182,36 @@ class RitualService:
         with self.connection_factory() as conn, conn.cursor() as cur:
             cur.execute("""SELECT name FROM chat_sessions s
                            WHERE updated_at >= now()-interval '2 days'
+                             AND context_scope IN ('general', 'professional')
                              AND NOT EXISTS (
                                SELECT 1 FROM shared_journal_private_sessions p
                                WHERE p.session_id=s.id
                              )
                            ORDER BY updated_at DESC LIMIT 3""")
             return [str(row[0]) for row in cur.fetchall()]
+
+    def _validate_web_target(self, session_id: str | None) -> None:
+        if not session_id:
+            raise ValueError("Web rituals require an explicit target session")
+        with self.connection_factory() as conn, conn.cursor() as cur:
+            cur.execute(
+                """SELECT s.context_scope,
+                          EXISTS (SELECT 1 FROM shared_journal_private_sessions p
+                                  WHERE p.session_id=s.id),
+                          EXISTS (SELECT 1 FROM session_channels c
+                                  WHERE c.session_id=s.id AND c.channel='telegram')
+                   FROM chat_sessions s WHERE s.id=%s""",
+                (session_id,),
+            )
+            row = cur.fetchone()
+        if not row:
+            raise ValueError("Ritual target session was not found")
+        if row[0] not in {"general", "professional"}:
+            raise ValueError("Ritual target must be a general or professional session")
+        if row[1]:
+            raise ValueError("Private shared sessions cannot receive daily rituals")
+        if row[2]:
+            raise ValueError("Telegram-bound sessions cannot be web ritual targets")
 
     def _existing(self, kind: str, local_date: date) -> dict[str, Any] | None:
         with self.connection_factory() as conn, conn.cursor() as cur:

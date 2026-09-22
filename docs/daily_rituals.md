@@ -14,6 +14,12 @@ Local token-authenticated controls expose policy, preview, skip, and snooze at
 web or Telegram channel, optional Notion publication, and vacation-through date.
 Disable both rituals to stop them without changing conversation or memory.
 
+Web delivery also requires an explicit target session. The recommended target is
+an ordinary `general` session named **Command Deck**. Lyra never guesses from the
+most recently used session, and private/shared, story/campaign, and
+Telegram-bound sessions are rejected as web ritual targets. If a configured
+target disappears or becomes ineligible, delivery fails closed as `no_target`.
+
 Delivery uses Away Mode category `digest`. Quiet hours batch it; an exhausted
 daily budget suppresses it. A unique ritual/date record prevents duplicates and
 records planned, delivered, skipped, batched, suppressed, or failed status while
@@ -26,6 +32,12 @@ not the richer local/Telegram ritual text.
 Private shared journal entries and journal-authorized session names are excluded
 from morning/evening source collection. Journal continuity is available only in
 the private session where it was explicitly enabled.
+
+Confirmed commitments carry inherited visibility. `general` and `professional`
+commitments can appear in a ritual; `private_shared` commitments cannot. This is
+automatic, so normal use does not require item-by-item database administration.
+The local control API can correct a session purpose or an exceptional
+commitment's visibility.
 
 Scoped text-to-speech is now planned at W9.5a. It may later be separately enabled
 for rituals, but W7.1 remains text-authoritative and does not activate voice.

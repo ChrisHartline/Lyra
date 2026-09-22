@@ -4,6 +4,7 @@ from datetime import UTC, date, datetime, time, timedelta
 import asyncio
 from pathlib import Path
 from types import SimpleNamespace
+import uuid
 
 from lyra.rituals import RitualService
 from lyra.sessions import SessionService
@@ -118,7 +119,7 @@ def test_scheduler_delivers_web_ritual_into_normal_session_history():
             }
 
         def get_policy(self):
-            return SimpleNamespace(channel="web")
+            return SimpleNamespace(channel="web", target_session_id="command-deck")
 
         def mark_delivered(self, run_id, session_id=None):
             self.delivered.append((run_id, session_id))
@@ -130,9 +131,6 @@ def test_scheduler_delivers_web_ritual_into_normal_session_history():
         def __init__(self):
             self.messages = []
 
-        def list_sessions(self):
-            return [{"session_id": "session-1"}]
-
         def append_message(self, session_id, role, content, metadata=None):
             self.messages.append((session_id, role, content, metadata))
 
@@ -142,7 +140,66 @@ def test_scheduler_delivers_web_ritual_into_normal_session_history():
     asyncio.run(run_configured_rituals(sessions, rituals, iterations=1))
 
     assert sessions.messages[0][0:3] == (
-        "session-1", "assistant", "Good morning from the ritual."
+        "command-deck", "assistant", "Good morning from the ritual."
     )
     assert sessions.messages[0][3]["proactive"] is True
-    assert rituals.delivered == [("run-1", "session-1")]
+    assert rituals.delivered == [("run-1", "command-deck")]
+
+
+def test_web_rituals_require_a_safe_explicit_target(ensure_db):
+    service, _away = _service()
+    sessions = SessionService(_conn)
+    command_deck = sessions.create_session("Command Deck")
+    private = sessions.create_session("Us")
+    with _conn() as conn, conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO shared_journal_private_sessions(session_id) VALUES (%s)",
+            (private["session_id"],),
+        )
+        conn.commit()
+
+    import pytest
+    with pytest.raises(ValueError, match="explicit target"):
+        service.set_policy(channel="web", morning_enabled=True)
+    with pytest.raises(ValueError, match="Private shared"):
+        service.set_policy(
+            channel="web",
+            target_session_id=private["session_id"],
+            morning_enabled=True,
+        )
+
+    policy = service.set_policy(
+        channel="web",
+        target_session_id=command_deck["session_id"],
+        morning_enabled=True,
+    )
+    assert policy.target_session_id == command_deck["session_id"]
+
+
+def test_ritual_preview_excludes_private_commitments(ensure_db):
+    service, _away = _service()
+    with _conn() as conn, conn.cursor() as cur:
+        for summary, scope in (
+            ("Prepare tomorrow's class", "professional"),
+            ("Plan a private evening", "private_shared"),
+        ):
+            candidate_id = uuid.uuid4()
+            cur.execute(
+                """INSERT INTO commitment_candidates
+                   (id,summary,kind,visibility_scope,source_type,source_url,
+                    source_approved,detection_reason,status,resolved_at)
+                   VALUES (%s,%s,'task',%s,'dashboard','https://local',true,
+                           'test','confirmed',now())""",
+                (candidate_id, summary, scope),
+            )
+            cur.execute(
+                """INSERT INTO commitments
+                   (id,candidate_id,summary,kind,status,visibility_scope)
+                   VALUES (%s,%s,%s,'task','active',%s)""",
+                (uuid.uuid4(), candidate_id, summary, scope),
+            )
+        conn.commit()
+
+    preview = service.build("morning")
+    assert "Prepare tomorrow's class" in preview["body"]
+    assert "Plan a private evening" not in preview["body"]
