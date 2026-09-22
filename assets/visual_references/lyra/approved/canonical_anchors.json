@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "status": "approved_by_christopher_2026-09-22",
+  "generated_with": "OpenAI built-in image generation",
+  "identity_pairing_rule": "Portrait and full-body anchors in both modes depict the same adult woman. Holographic disguise changes visible phenotype only.",
+  "anchors": [
+    {
+      "asset_id": "lyra.true.portrait.v1",
+      "file": "lyra_canonical_true_portrait_v1.png",
+      "mode": "true_form",
+      "shot": "portrait",
+      "sha256": "cbbf71b474b6b1cd4b8388dd89135f8c616e3390f478ae7cc2afe4761388a504",
+      "primary_sources": ["../references/true_form/lyra_base.jpg"],
+      "supporting_sources": ["../references/true_form/lyra_couch.jpg", "../references/details/lyra_hands_feet.jpg"]
+    },
+    {
+      "asset_id": "lyra.true.full_body.v1",
+      "file": "lyra_canonical_true_full_body_v1.png",
+      "mode": "true_form",
+      "shot": "full_body",
+      "sha256": "bba9afbf72ce7e05f26420d18d7e352742108cf7cb446406cd497065e52d1759",
+      "primary_sources": ["lyra_canonical_true_portrait_v1.png"],
+      "supporting_sources": ["../references/true_form/lyra_base.jpg", "../references/details/lyra_hands_feet.jpg", "../references/true_form/lyra_archer.jpg", "../references/true_form/lyra_70s.jpg"]
+    },
+    {
+      "asset_id": "lyra.disguise.portrait.v1",
+      "file": "lyra_canonical_disguise_portrait_v1.png",
+      "mode": "holographic_disguise",
+      "shot": "portrait",
+      "sha256": "08bfd95d4eec87f8de781bb9330a6bbcc2d9d9f09c6f18a052ecda5cb278d3f0",
+      "primary_sources": ["lyra_canonical_true_portrait_v1.png"],
+      "supporting_sources": ["../references/disguise/lyra_disguise_arcade.jpg", "../references/disguise/lyra_couch_disguise.jpg", "../references/disguise/lyra_disguise_hotel.webp"]
+    },
+    {
+      "asset_id": "lyra.disguise.full_body.v1",
+      "file": "lyra_canonical_disguise_full_body_v1.png",
+      "mode": "holographic_disguise",
+      "shot": "full_body",
+      "sha256": "5da6b746a398a15e2d477e3b64a9e4f37b488b396a501fdfc66eeef2bd4c7e8b",
+      "primary_sources": ["lyra_canonical_true_full_body_v1.png", "lyra_canonical_disguise_portrait_v1.png"],
+      "supporting_sources": ["../references/disguise/lyra_disguise_arcade.jpg", "../references/disguise/lyra_couch_disguise.jpg"]
+    },
+    {
+      "asset_id": "lyra.true.portrait.hair_down.v1",
+      "file": "lyra_canonical_true_portrait_hair_down_v1.png",
+      "mode": "true_form",
+      "shot": "portrait",
+      "variant_of": "lyra.true.portrait.v1",
+      "sha256": "7933230f2172a2ba0410f8bf64e3604aa4f855e0cfee7e0498ee5da487b7e7c6",
+      "primary_sources": ["lyra_canonical_true_portrait_v1.png"],
+      "supporting_sources": []
+    },
+    {
+      "asset_id": "lyra.disguise.portrait.hair_down.v1",
+      "file": "lyra_canonical_disguise_portrait_hair_down_v1.png",
+      "mode": "holographic_disguise",
+      "shot": "portrait",
+      "variant_of": "lyra.disguise.portrait.v1",
+      "sha256": "26bbc8a606fdc393f6610a03553c697d99617f0acb5883c8ef7aa55c456d6f02",
+      "primary_sources": ["lyra_canonical_disguise_portrait_v1.png"],
+      "supporting_sources": []
+    }
+  ]
+}

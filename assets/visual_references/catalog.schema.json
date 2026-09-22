@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lyra.visual-reference-catalog.v1",
+  "title": "Lyra visual reference catalog",
+  "type": "object",
+  "required": ["schema_version", "library_root", "review_items", "assets"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "library_root": {"const": "assets/visual_references"},
+    "review_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["review_id", "kind", "status", "asset_ids", "finding", "decision"],
+        "properties": {
+          "review_id": {"type": "string", "pattern": "^[a-z0-9]+([._-][a-z0-9]+)+$"},
+          "kind": {"enum": ["approval", "canon_conflict", "duplicate", "provenance"]},
+          "status": {"enum": ["pending_human", "resolved"]},
+          "asset_ids": {"type": "array", "items": {"type": "string"}},
+          "finding": {"type": "string"},
+          "decision": {"type": ["string", "null"]}
+        },
+        "additionalProperties": true
+      }
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "asset_id", "path", "sha256", "lifecycle_status", "subject",
+          "subject_id", "canon_status", "approval", "provenance",
+          "usage_rights", "allowed_transformations", "visual_traits",
+          "supersession", "approved_for_external_renderer", "review_item_ids"
+        ],
+        "properties": {
+          "asset_id": {"type": "string", "pattern": "^[a-z0-9]+([._-][a-z0-9]+)+$"},
+          "path": {"type": "string"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "lifecycle_status": {"enum": ["active", "superseded"]},
+          "subject": {"enum": ["location", "lyra", "prop", "ship", "wardrobe"]},
+          "subject_id": {"type": "string"},
+          "canon_status": {"enum": ["approved", "candidate", "reference"]},
+          "approval": {"type": "object"},
+          "provenance": {"type": "object"},
+          "usage_rights": {"type": "object"},
+          "allowed_transformations": {"type": "array", "items": {"type": "string"}},
+          "visual_traits": {"type": "object"},
+          "supersession": {"type": "object"},
+          "approved_for_external_renderer": {"type": "boolean"},
+          "review_item_ids": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

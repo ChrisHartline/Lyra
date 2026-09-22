@@ -14,6 +14,8 @@ Stable identity, ship lore, and living state are not duplicated under
 - `personality/appearance.md` - visual / physiological reference
 - `personality/emotional_color_map.md` - bioluminescence vocabulary
 - `personality/speech_and_idioms.md` - voice, idioms, quirks
+- `locations/locations.md` - stable place canon, atmosphere, constraints, and
+  narrative use; ship rooms link to the `ship/` pack rather than duplicating it
 - `ship/ship_reference.md` - class, interior, repair context
 - `ship/systems.md` - system-by-system notes
 - `ship/cargo_and_layout.md` - rooms and living conversion
@@ -44,20 +46,30 @@ Stable identity, ship lore, and living state are not duplicated under
 
 ## Tier 2 (Assets and Generated Artifacts)
 
-- `agents/lyra/assets/visual_references/lyra/` - character visual refs (images, concept sheets)
-- `agents/lyra/assets/visual_references/spaceship/` - ship visual refs, diagrams, paint/color studies
-- `agents/lyra/assets/` (other subfolders) - templates or static artifacts shared by skills
+- `assets/visual_references/lyra/` - canonical/candidate character visual refs
+- `assets/visual_references/wardrobe/` - clothing and appearance references
+- `assets/visual_references/locations/` - place images and visual presets linked
+  to `locations/` by stable `location_id`
+- `assets/visual_references/ship/` - ship exterior/interior images linked to
+  canonical `ship/` definitions
+- `assets/visual_references/props/` - object and continuity references
+- `agents/lyra/assets/` - only implementation assets intrinsically owned by a
+  skill; never a mirrored canonical visual library
+
+The former `agents/lyra/assets/visual_references/` staging tree was migrated and
+removed on 2026-09-20. Do not recreate it or maintain synchronized copies.
 
 ## Search Order
 
 When looking for information, search in this order:
 
 1. `personality/` (Tier 0 prompt + bible, then appearance / color / speech)
-2. `ship/`
-3. `state/`
-4. `agents/lyra/skills/*/SKILL.md`
-5. `agents/lyra/references/` (etiquette, unpacked backstory)
-6. `agents/lyra/assets/`
+2. `locations/`
+3. `ship/`
+4. `state/`
+5. `agents/lyra/skills/*/SKILL.md`
+6. `agents/lyra/references/` (etiquette, unpacked backstory)
+7. `assets/visual_references/`
 
 ## Naming Conventions
 

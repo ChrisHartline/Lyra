@@ -1,0 +1,344 @@
+{
+  "$schema": "catalog.schema.json",
+  "schema_version": 1,
+  "catalog_updated": "2026-09-21",
+  "library_root": "assets/visual_references",
+  "canon_authority": "personality/appearance.md",
+  "policy": {
+    "promotion_rule": "Only Christopher may promote a candidate to approved canon.",
+    "reference_rule": "Reference assets may guide composition, wardrobe, pose, or mood but never override approved identity or persona canon.",
+    "external_renderer_rule": "An asset may leave the workstation only when approved_for_external_renderer is true, canon is approved, and usage rights are cleared."
+  },
+  "review_items": [
+    {
+      "review_id": "duplicate.exact.sha256.2026-09-21",
+      "kind": "duplicate",
+      "status": "resolved",
+      "asset_ids": [],
+      "finding": "SHA-256 comparison found no byte-identical images among the 27 active assets.",
+      "decision": "No exact duplicate removal is required. Validation fails if duplicate content is added later."
+    },
+    {
+      "review_id": "duplicate.intentional.red-couch-mode-pair",
+      "kind": "duplicate",
+      "status": "resolved",
+      "asset_ids": [
+        "lyra.true.scene.red_couch.v1",
+        "lyra.true.scene.red_couch_heels.v1",
+        "lyra.disguise.scene.red_couch.v1",
+        "lyra.disguise.scene.hotel.v1"
+      ],
+      "finding": "Four distinct files reuse the same red-dress, hotel-lobby visual setup across true-form/disguise modes and pose or footwear variants.",
+      "decision": "Retain as an intentional continuity group. They are supporting references, not independent identity authorities."
+    },
+    {
+      "review_id": "duplicate.intentional.anchor-hair-variants",
+      "kind": "duplicate",
+      "status": "resolved",
+      "asset_ids": [
+        "lyra.true.portrait.v1",
+        "lyra.true.portrait.hair_down.v1",
+        "lyra.disguise.portrait.v1",
+        "lyra.disguise.portrait.hair_down.v1"
+      ],
+      "finding": "Each hair-down portrait intentionally preserves the face and framing of its braided base anchor.",
+      "decision": "Retain as explicit variants. Variant approval remains dependent on approval of its base anchor."
+    },
+    {
+      "review_id": "conflict.reference.identity-variation",
+      "kind": "canon_conflict",
+      "status": "resolved",
+      "asset_ids": [
+        "lyra.true.scene.seventies.v1",
+        "lyra.true.scene.arcade.v1",
+        "lyra.true.scene.archer.v1",
+        "lyra.true.scene.base_portrait.v1",
+        "lyra.true.scene.blanket.v1",
+        "lyra.true.scene.couch.v1",
+        "lyra.true.scene.magician.v1",
+        "lyra.true.scene.park.v1",
+        "lyra.true.scene.red_couch.v1",
+        "lyra.true.scene.red_couch_heels.v1",
+        "lyra.disguise.scene.couch.v1",
+        "lyra.disguise.scene.arcade.v1",
+        "lyra.disguise.scene.red_couch.v1",
+        "lyra.disguise.scene.hotel.v1"
+      ],
+      "finding": "Legacy scene references depict multiple facial identities and cannot jointly define a stable canonical face.",
+      "decision": "Keep them as non-canonical pose, wardrobe, lighting, and scene references. Identity must come from a separately approved anchor set."
+    },
+    {
+      "review_id": "provenance.legacy-rights-unverified",
+      "kind": "provenance",
+      "status": "resolved",
+      "asset_ids": [],
+      "finding": "Original source locators and license records are absent for the migrated legacy references and wardrobe images. Christopher confirmed that the identity anchors were AI-generated for his sole use, but no license or provider-output-rights record is attached.",
+      "decision": "Record rights as unknown_pending_review, allow no transformations, commit no remote URLs, and prohibit every current asset from external-renderer use until rights are separately cleared."
+    },
+    {
+      "review_id": "approval.lyra.canonical-appearance-set",
+      "kind": "approval",
+      "status": "resolved",
+      "asset_ids": [
+        "lyra.true.portrait.v1",
+        "lyra.true.full_body.v1",
+        "lyra.true.portrait.hair_down.v1",
+        "lyra.disguise.portrait.v1",
+        "lyra.disguise.full_body.v1",
+        "lyra.disguise.portrait.hair_down.v1"
+      ],
+      "finding": "All six generated anchors are coherent as a paired true-form/disguise identity set. Their amber-hazel eyes and fine luminous gold freckles differed from the former violet-eye and star-shaped-freckle wording in personality/appearance.md.",
+      "decision": "Christopher approved all six anchors on 2026-09-22, explicitly including both hair-down variants, and directed the textual appearance canon to match the images. personality/appearance.md and the emotional-color note were deliberately updated under that authorization. This approval does not clear usage rights or permit external-renderer use."
+    }
+  ],
+  "assets": [
+    {
+      "asset_id": "lyra.true.portrait.v1",
+      "path": "lyra/approved/lyra_canonical_true_portrait_v1.png",
+      "sha256": "cbbf71b474b6b1cd4b8388dd89135f8c616e3390f478ae7cc2afe4761388a504",
+      "lifecycle_status": "active",
+      "subject": "lyra",
+      "subject_id": "lyra.voss.true_form",
+      "canon_status": "approved",
+      "approval": {"status": "approved", "decided_by": "Christopher", "decided_at": "2026-09-22"},
+      "provenance": {"source_type": "generated_output", "generator": "OpenAI built-in image generation", "collection_method": "generated identity anchor for Christopher as sole user"},
+      "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated for Christopher's sole use; provider-output rights record not preserved"},
+      "allowed_transformations": [],
+      "visual_traits": {"mode": "true_form", "shot": "portrait", "angle": "front_three_quarter", "crop": "head_and_shoulders", "lighting": "soft_neutral_studio", "hair": "silver_white_braided", "identity_notes": ["lavender skin", "pointed ears", "gold luminous facial freckles", "amber-hazel irises"]},
+      "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null},
+      "approved_for_external_renderer": false,
+      "review_item_ids": ["duplicate.intentional.anchor-hair-variants", "approval.lyra.canonical-appearance-set"]
+    },
+    {
+      "asset_id": "lyra.true.full_body.v1",
+      "path": "lyra/approved/lyra_canonical_true_full_body_v1.png",
+      "sha256": "bba9afbf72ce7e05f26420d18d7e352742108cf7cb446406cd497065e52d1759",
+      "lifecycle_status": "active",
+      "subject": "lyra",
+      "subject_id": "lyra.voss.true_form",
+      "canon_status": "approved",
+      "approval": {"status": "approved", "decided_by": "Christopher", "decided_at": "2026-09-22"},
+      "provenance": {"source_type": "generated_output", "generator": "OpenAI built-in image generation", "collection_method": "generated identity anchor for Christopher as sole user"},
+      "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated for Christopher's sole use; provider-output rights record not preserved"},
+      "allowed_transformations": [],
+      "visual_traits": {"mode": "true_form", "shot": "full_body", "angle": "front", "crop": "full_length", "lighting": "soft_neutral_studio", "hair": "silver_white_braided", "wardrobe": "charcoal sleeveless unitard", "identity_notes": ["lavender skin", "pointed ears", "petite athletic build", "bare feet"]},
+      "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null},
+      "approved_for_external_renderer": false,
+      "review_item_ids": ["approval.lyra.canonical-appearance-set"]
+    },
+    {
+      "asset_id": "lyra.true.portrait.hair_down.v1",
+      "path": "lyra/approved/lyra_canonical_true_portrait_hair_down_v1.png",
+      "sha256": "7933230f2172a2ba0410f8bf64e3604aa4f855e0cfee7e0498ee5da487b7e7c6",
+      "lifecycle_status": "active",
+      "subject": "lyra",
+      "subject_id": "lyra.voss.true_form",
+      "canon_status": "approved",
+      "approval": {"status": "approved", "decided_by": "Christopher", "decided_at": "2026-09-22"},
+      "provenance": {"source_type": "generated_output", "generator": "OpenAI built-in image generation", "collection_method": "generated identity-anchor variant for Christopher as sole user"},
+      "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated for Christopher's sole use; provider-output rights record not preserved"},
+      "allowed_transformations": [],
+      "visual_traits": {"mode": "true_form", "shot": "portrait", "angle": "front_three_quarter", "crop": "head_and_shoulders", "lighting": "soft_neutral_studio", "hair": "silver_white_loose", "identity_notes": ["lavender skin", "pointed ears", "gold luminous facial freckles", "amber-hazel irises"]},
+      "supersession": {"supersedes": [], "superseded_by": null, "variant_of": "lyra.true.portrait.v1"},
+      "approved_for_external_renderer": false,
+      "review_item_ids": ["duplicate.intentional.anchor-hair-variants", "approval.lyra.canonical-appearance-set"]
+    },
+    {
+      "asset_id": "lyra.disguise.portrait.v1",
+      "path": "lyra/approved/lyra_canonical_disguise_portrait_v1.png",
+      "sha256": "08bfd95d4eec87f8de781bb9330a6bbcc2d9d9f09c6f18a052ecda5cb278d3f0",
+      "lifecycle_status": "active",
+      "subject": "lyra",
+      "subject_id": "lyra.voss.holographic_disguise",
+      "canon_status": "approved",
+      "approval": {"status": "approved", "decided_by": "Christopher", "decided_at": "2026-09-22"},
+      "provenance": {"source_type": "generated_output", "generator": "OpenAI built-in image generation", "collection_method": "generated identity anchor for Christopher as sole user"},
+      "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated for Christopher's sole use; provider-output rights record not preserved"},
+      "allowed_transformations": [],
+      "visual_traits": {"mode": "holographic_disguise", "shot": "portrait", "angle": "front_three_quarter", "crop": "head_and_shoulders", "lighting": "soft_neutral_studio", "hair": "blonde_braided", "identity_notes": ["human phenotype", "amber-hazel irises", "face paired to true-form anchor"]},
+      "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null},
+      "approved_for_external_renderer": false,
+      "review_item_ids": ["duplicate.intentional.anchor-hair-variants", "approval.lyra.canonical-appearance-set"]
+    },
+    {
+      "asset_id": "lyra.disguise.full_body.v1",
+      "path": "lyra/approved/lyra_canonical_disguise_full_body_v1.png",
+      "sha256": "5da6b746a398a15e2d477e3b64a9e4f37b488b396a501fdfc66eeef2bd4c7e8b",
+      "lifecycle_status": "active",
+      "subject": "lyra",
+      "subject_id": "lyra.voss.holographic_disguise",
+      "canon_status": "approved",
+      "approval": {"status": "approved", "decided_by": "Christopher", "decided_at": "2026-09-22"},
+      "provenance": {"source_type": "generated_output", "generator": "OpenAI built-in image generation", "collection_method": "generated identity anchor for Christopher as sole user"},
+      "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated for Christopher's sole use; provider-output rights record not preserved"},
+      "allowed_transformations": [],
+      "visual_traits": {"mode": "holographic_disguise", "shot": "full_body", "angle": "front", "crop": "full_length", "lighting": "soft_neutral_studio", "hair": "blonde_braided", "wardrobe": "charcoal sleeveless unitard", "identity_notes": ["human phenotype", "petite athletic build", "bare feet", "body paired to true-form anchor"]},
+      "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null},
+      "approved_for_external_renderer": false,
+      "review_item_ids": ["approval.lyra.canonical-appearance-set"]
+    },
+    {
+      "asset_id": "lyra.disguise.portrait.hair_down.v1",
+      "path": "lyra/approved/lyra_canonical_disguise_portrait_hair_down_v1.png",
+      "sha256": "26bbc8a606fdc393f6610a03553c697d99617f0acb5883c8ef7aa55c456d6f02",
+      "lifecycle_status": "active",
+      "subject": "lyra",
+      "subject_id": "lyra.voss.holographic_disguise",
+      "canon_status": "approved",
+      "approval": {"status": "approved", "decided_by": "Christopher", "decided_at": "2026-09-22"},
+      "provenance": {"source_type": "generated_output", "generator": "OpenAI built-in image generation", "collection_method": "generated identity-anchor variant for Christopher as sole user"},
+      "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated for Christopher's sole use; provider-output rights record not preserved"},
+      "allowed_transformations": [],
+      "visual_traits": {"mode": "holographic_disguise", "shot": "portrait", "angle": "front_three_quarter", "crop": "head_and_shoulders", "lighting": "soft_neutral_studio", "hair": "blonde_loose", "identity_notes": ["human phenotype", "amber-hazel irises", "face paired to true-form anchor"]},
+      "supersession": {"supersedes": [], "superseded_by": null, "variant_of": "lyra.disguise.portrait.v1"},
+      "approved_for_external_renderer": false,
+      "review_item_ids": ["duplicate.intentional.anchor-hair-variants", "approval.lyra.canonical-appearance-set"]
+    },
+    {
+      "asset_id": "lyra.detail.hands_feet.v1",
+      "path": "lyra/references/details/lyra_hands_feet.jpg",
+      "sha256": "2046c804294f5ef6a38ef84a0141085c515851d1ee9c817d4f3d30f0468ef1bc",
+      "lifecycle_status": "active", "subject": "lyra", "subject_id": "lyra.voss.true_form", "canon_status": "reference",
+      "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "legacy_local_reference", "collection_method": "migrated from retired Agent Skills staging tree", "origin_documentation": "not_available"},
+      "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"mode": "true_form", "shot": "anatomy_detail", "angle": "top_oblique", "crop": "hands_and_feet", "lighting": "warm_soft_interior", "identity_notes": ["lavender skin", "pale pink manicure and pedicure"]},
+      "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false,
+      "review_item_ids": ["provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "lyra.true.scene.seventies.v1", "path": "lyra/references/true_form/lyra_70s.jpg", "sha256": "46ca3fa731ba2d54f8077b6a21f410e89ac848b4d3690f9ca96bc602464dd5bc",
+      "lifecycle_status": "active", "subject": "lyra", "subject_id": "lyra.voss.true_form", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "legacy_local_reference", "collection_method": "migrated from retired Agent Skills staging tree", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"mode": "true_form", "shot": "full_body_scene", "angle": "front_three_quarter", "crop": "full_length", "lighting": "warm_daylight_interior", "wardrobe": "seventies patterned halter and maxi skirt"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false,
+      "review_item_ids": ["conflict.reference.identity-variation", "provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "lyra.true.scene.arcade.v1", "path": "lyra/references/true_form/lyra_arcade.jpg", "sha256": "351c7bb3dedafe1b9a520b7be11f134a81355a4315e43a471e9a7b804a8ddede",
+      "lifecycle_status": "active", "subject": "lyra", "subject_id": "lyra.voss.true_form", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "legacy_local_reference", "collection_method": "migrated from retired Agent Skills staging tree", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"mode": "true_form", "shot": "full_body_scene", "angle": "front", "crop": "full_length", "lighting": "neon_arcade", "wardrobe": "purple cropped sweater and patterned mini skirt"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false,
+      "review_item_ids": ["conflict.reference.identity-variation", "provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "lyra.true.scene.archer.v1", "path": "lyra/references/true_form/lyra_archer.jpg", "sha256": "1ae0332261340de315615c378a95c61ce05ba7509fe5f8096e8d9b2725f93c69",
+      "lifecycle_status": "active", "subject": "lyra", "subject_id": "lyra.voss.true_form", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "legacy_local_reference", "collection_method": "migrated from retired Agent Skills staging tree", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"mode": "true_form", "shot": "full_body_scene", "angle": "front_three_quarter", "crop": "full_length", "lighting": "warm_outdoor_daylight", "wardrobe": "green fantasy archer outfit", "prop": "bow"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false,
+      "review_item_ids": ["conflict.reference.identity-variation", "provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "lyra.true.scene.base_portrait.v1", "path": "lyra/references/true_form/lyra_base.jpg", "sha256": "933890cfc04c4f7ddc6b5f9737c41ca162f8cc304740bf8ce3ac0b08f3b8b57e",
+      "lifecycle_status": "active", "subject": "lyra", "subject_id": "lyra.voss.true_form", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "legacy_local_reference", "collection_method": "migrated from retired Agent Skills staging tree", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"mode": "true_form", "shot": "portrait", "angle": "front_three_quarter", "crop": "head_and_shoulders", "lighting": "warm_interior_bokeh", "identity_notes": ["purple skin", "pointed ears", "silver-blue braids", "gold facial freckles"]}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false,
+      "review_item_ids": ["conflict.reference.identity-variation", "provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "lyra.true.scene.blanket.v1", "path": "lyra/references/true_form/lyra_blanket.jpg", "sha256": "b62aa36db018a7e43de37df4e3b0095c9c26f30beb970d67ae2f6c634a8f9735",
+      "lifecycle_status": "active", "subject": "lyra", "subject_id": "lyra.voss.true_form", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "legacy_local_reference", "collection_method": "migrated from retired Agent Skills staging tree", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"mode": "true_form", "shot": "resting_scene", "angle": "front_three_quarter", "crop": "seated_close", "lighting": "dim_warm_interior", "wardrobe": "dark blanket"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false,
+      "review_item_ids": ["conflict.reference.identity-variation", "provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "lyra.true.scene.couch.v1", "path": "lyra/references/true_form/lyra_couch.jpg", "sha256": "bbc1b054006c5aa0057ed17c624f1f6cfc3bce325c0c75290555b9038a4f1a8f",
+      "lifecycle_status": "active", "subject": "lyra", "subject_id": "lyra.voss.true_form", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "legacy_local_reference", "collection_method": "migrated from retired Agent Skills staging tree", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"mode": "true_form", "shot": "seated_scene", "angle": "front", "crop": "full_seated", "lighting": "warm_firelit_interior", "wardrobe": "purple sweater and patterned shorts", "pose": "laughing cross-legged on velvet couch"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false,
+      "review_item_ids": ["conflict.reference.identity-variation", "provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "lyra.true.scene.magician.v1", "path": "lyra/references/true_form/lyra_magician.jpg", "sha256": "a1287291142080f5e46466eba29905b1579114db7a7fcb534159a0a29c349319",
+      "lifecycle_status": "active", "subject": "lyra", "subject_id": "lyra.voss.true_form", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "legacy_local_reference", "collection_method": "migrated from retired Agent Skills staging tree", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"mode": "true_form", "shot": "full_body_scene", "angle": "front_three_quarter", "crop": "full_length", "lighting": "warm_festival_lanterns", "wardrobe": "green and brown fantasy outfit", "effect": "glowing hand light"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false,
+      "review_item_ids": ["conflict.reference.identity-variation", "provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "lyra.true.scene.park.v1", "path": "lyra/references/true_form/lyra_park.webp", "sha256": "af8d8296615cfc9085b9feaf9627e0860bcc25ef9b48a492606c779352763571",
+      "lifecycle_status": "active", "subject": "lyra", "subject_id": "lyra.voss.true_form", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "legacy_local_reference", "collection_method": "migrated from retired Agent Skills staging tree", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"mode": "true_form", "shot": "walking_scene", "angle": "front", "crop": "head_cropped_three_quarter", "lighting": "bright_garden_daylight", "wardrobe": "light blue blouse and cream maxi skirt"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false,
+      "review_item_ids": ["conflict.reference.identity-variation", "provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "lyra.true.scene.red_couch.v1", "path": "lyra/references/true_form/lyra_red_couch.webp", "sha256": "6503c5ecc195be7969349de98f273d57a6ac6222e8debab813ff7f26494ebd98",
+      "lifecycle_status": "active", "subject": "lyra", "subject_id": "lyra.voss.true_form", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "legacy_local_reference", "collection_method": "migrated from retired Agent Skills staging tree", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"mode": "true_form", "shot": "seated_scene", "angle": "front", "crop": "full_seated", "lighting": "warm_hotel_lobby", "wardrobe": "red evening gown", "pose": "legs crossed on brown couch"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false,
+      "review_item_ids": ["duplicate.intentional.red-couch-mode-pair", "conflict.reference.identity-variation", "provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "lyra.true.scene.red_couch_heels.v1", "path": "lyra/references/true_form/lyra_red_couch_heels.webp", "sha256": "8bfa62c659a9b9116330abbbf389ac3a634b6e570d27520dbdc3d630e2eaeb23",
+      "lifecycle_status": "active", "subject": "lyra", "subject_id": "lyra.voss.true_form", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "legacy_local_reference", "collection_method": "migrated from retired Agent Skills staging tree", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"mode": "true_form", "shot": "seated_scene", "angle": "front", "crop": "full_seated", "lighting": "warm_hotel_lobby", "wardrobe": "red evening gown and black platform heels", "pose": "legs crossed with hand near face"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": "lyra.true.scene.red_couch.v1"}, "approved_for_external_renderer": false,
+      "review_item_ids": ["duplicate.intentional.red-couch-mode-pair", "conflict.reference.identity-variation", "provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "lyra.disguise.scene.couch.v1", "path": "lyra/references/disguise/lyra_couch_disguise.jpg", "sha256": "fbba0cbe56c0d2e8fdddbf21e6e82df2675a71ddea6417604a8402ba41a4ee2d",
+      "lifecycle_status": "active", "subject": "lyra", "subject_id": "lyra.voss.holographic_disguise", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "legacy_local_reference", "collection_method": "migrated from retired Agent Skills staging tree", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"mode": "holographic_disguise", "shot": "reclining_scene", "angle": "front_three_quarter", "crop": "full_reclining", "lighting": "soft_daylight_interior", "wardrobe": "charcoal t-shirt and denim shorts", "pose": "reclining barefoot on green couch"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false,
+      "review_item_ids": ["conflict.reference.identity-variation", "provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "lyra.disguise.scene.arcade.v1", "path": "lyra/references/disguise/lyra_disguise_arcade.jpg", "sha256": "99258d87dd88a3ffe9813c48ef2ce4832fce811a601a904b2e4c23094b8cde32",
+      "lifecycle_status": "active", "subject": "lyra", "subject_id": "lyra.voss.holographic_disguise", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "legacy_local_reference", "collection_method": "migrated from retired Agent Skills staging tree", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"mode": "holographic_disguise", "shot": "full_body_scene", "angle": "front", "crop": "full_length", "lighting": "neon_arcade", "wardrobe": "white crop top, open shirt, denim shorts and sandals", "embedded_text": "ARCADE NIGHTS / RETRO"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false,
+      "review_item_ids": ["conflict.reference.identity-variation", "provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "lyra.disguise.scene.red_couch.v1", "path": "lyra/references/disguise/lyra_disguise_couch2.webp", "sha256": "e6389b8831815f562a94af2b8f66559512d4039a336f9b2fbf781371af65e4ff",
+      "lifecycle_status": "active", "subject": "lyra", "subject_id": "lyra.voss.holographic_disguise", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "legacy_local_reference", "collection_method": "migrated from retired Agent Skills staging tree", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"mode": "holographic_disguise", "shot": "seated_scene", "angle": "front", "crop": "full_seated", "lighting": "warm_hotel_lobby", "wardrobe": "red evening gown and black platform heels", "pose": "legs crossed with hand near face"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false,
+      "review_item_ids": ["duplicate.intentional.red-couch-mode-pair", "conflict.reference.identity-variation", "provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "lyra.disguise.scene.hotel.v1", "path": "lyra/references/disguise/lyra_disguise_hotel.webp", "sha256": "d8e57fcf474f7ae784a119c501d52b27b3e9feef8a3ae00d5d090ffc2f81dead",
+      "lifecycle_status": "active", "subject": "lyra", "subject_id": "lyra.voss.holographic_disguise", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "legacy_local_reference", "collection_method": "migrated from retired Agent Skills staging tree", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"mode": "holographic_disguise", "shot": "walking_scene", "angle": "front_three_quarter", "crop": "full_length", "lighting": "warm_hotel_lobby", "wardrobe": "red evening gown", "pose": "walking"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false,
+      "review_item_ids": ["duplicate.intentional.red-couch-mode-pair", "conflict.reference.identity-variation", "provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "wardrobe.footwear.black_open_toe_platform_sandals.v1", "path": "wardrobe/black_opentoe_sandals.webp", "sha256": "75e1048ccf8b13be86aa5877065620c339719bad09a764e1a91bb7ce2b4047e2",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.footwear", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_local_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "angle": "front_three_quarter", "crop": "object_isolated", "lighting": "white_catalog", "item": "black open-toe ankle-strap platform block-heel sandal"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "wardrobe.underwear.burgundy_string_brazilian.v1", "path": "wardrobe/burgundy_stringbrazilian.webp", "sha256": "260da21784280fd6187cdc32b4ee4408969bfe3d478fea50ac1bc97c448ce5a1",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.underwear", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_local_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "angle": "front", "crop": "object_isolated", "lighting": "white_catalog", "item": "burgundy string Brazilian bottom"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "wardrobe.top.olive_chunky_sweater.v1", "path": "wardrobe/olive_chunky_sweater.webp", "sha256": "7855eced27725b67ad48d3bdf1c5988165f6b85d0f8ca3604cf8316c1b44851a",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.top", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_local_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "angle": "top_down", "crop": "object_full", "lighting": "soft_daylight", "item": "olive chunky cable-knit V-neck sweater"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "wardrobe.swimwear.palma_thong_azure_ivory.v1", "path": "wardrobe/Palma-Thong---Azure-Ivory.webp", "sha256": "838dffed86a4b24a482c9b93bc75a659fbacd85595e743947e59eb7d717b4cca",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.swimwear", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_local_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "filename identifies Palma Thong / Azure-Ivory; original locator unavailable"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "angle": "front", "crop": "object_isolated", "lighting": "white_catalog", "item": "azure blue and ivory tie-side thong bottom with gold tips"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "wardrobe.footwear.pink_two_strap_sandals.v1", "path": "wardrobe/pink_birks.webp", "sha256": "ef3f0dd3c09d9b8f34346515bc83af54d6b4b112b8b56c7f9d1034fc2bd13735",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.footwear", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_local_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "angle": "front_three_quarter", "crop": "object_isolated_pair", "lighting": "white_catalog", "item": "pale pink two-strap cork-footbed sandals"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "wardrobe.footwear.white_kitten_heel_mule.v1", "path": "wardrobe/white_kitten.webp", "sha256": "f3343d3968a0fd5c198ef04478cc61cd811e8d29d85d5eada3be039ef86a0489",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.footwear", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_local_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "angle": "front_three_quarter", "crop": "object_isolated", "lighting": "white_catalog", "item": "white open-toe kitten-heel mule"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.legacy-rights-unverified"]
+    }
+  ]
+}

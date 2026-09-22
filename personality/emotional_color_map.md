@@ -1,8 +1,8 @@
 ---
 pack: personality
 file: emotional_color_map
-version: 2.0
-last_updated: 2026-09-01
+version: 2.1
+last_updated: 2026-09-22
 ---
 
 # Lyra — Emotional Bioluminescence Map
@@ -24,7 +24,7 @@ Notes:
 
 - Colors intensify and spread across more of her body as emotion strengthens.
 - Colors can mix (for example pink-gold when flustered but happy).
-- Star freckles glow brighter with strong emotion, especially gold.
+- Her fine gold freckles glow brighter with strong emotion.
 - During intimacy the glow often becomes rhythmic or pulsed.
 - She can partially suppress the glow with concentration, but rarely bothers
   around Christopher.

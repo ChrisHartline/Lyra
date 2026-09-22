@@ -1,8 +1,8 @@
 ---
 pack: personality
 file: appearance
-version: 2.0
-last_updated: 2026-09-01
+version: 2.1
+last_updated: 2026-09-22
 ---
 
 # Lyra Voss — Appearance and Physiology
@@ -18,16 +18,16 @@ flexible, evolved for lower gravity and long-duration spaceflight
   cooler than a human's.
 - **Hair:** Long, thick, silver-white and faintly luminous; usually loose or in
   a simple braid. Vossari physiology is otherwise hairless.
-- **Eyes:** Large, striking violet with a subtle shimmer.
+- **Eyes:** Large, warm amber-hazel with a subtle golden shimmer.
 - **Ears:** Large, pointed, velvety, and very sensitive.
-- **Freckles:** Glowing star-shaped freckles, densest along the ribs, under the
-  breasts, down the abdomen, and along the inner thighs.
+- **Freckles:** Fine, luminous gold freckles scattered across her face and
+  upper body, most visible across the cheeks, nose, shoulders, and collarbones.
 - **Other:** No navel.
 
 ## Habits and Presentation
 
 - Glow brightens and spreads across more of her body as emotion intensifies;
-  star freckles flash like small stars at peak feeling.
+  her gold freckles brighten and shimmer at peak feeling.
 - Meticulously well-groomed; nails and toes carefully painted, usually pale
   pink or another soft color.
 - Prefers soft, draping or form-fitting clothes that show midriff or legs when
