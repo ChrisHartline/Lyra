@@ -284,6 +284,46 @@ CREATE INDEX IF NOT EXISTS idx_shared_journal_entries_created
 CREATE INDEX IF NOT EXISTS idx_shared_journal_audit_entry
   ON shared_journal_audit (journal_entry_id, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS relationship_rhythm_policy (
+  singleton BOOLEAN PRIMARY KEY DEFAULT true CHECK (singleton),
+  enabled BOOLEAN NOT NULL DEFAULT false,
+  callbacks_enabled BOOLEAN NOT NULL DEFAULT false,
+  rituals_enabled BOOLEAN NOT NULL DEFAULT false,
+  milestones_enabled BOOLEAN NOT NULL DEFAULT false,
+  cadence_days SMALLINT NOT NULL DEFAULT 7 CHECK (cadence_days BETWEEN 1 AND 90),
+  local_time TIME NOT NULL DEFAULT '19:00',
+  timezone TEXT NOT NULL DEFAULT 'America/Chicago',
+  target_session_id UUID REFERENCES chat_sessions(id) ON DELETE SET NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO relationship_rhythm_policy (singleton) VALUES (true)
+ON CONFLICT (singleton) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS relationship_source_mutes (
+  source_key TEXT PRIMARY KEY,
+  source_label_sha256 TEXT NOT NULL,
+  muted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS relationship_rhythm_events (
+  id UUID PRIMARY KEY,
+  event_type TEXT NOT NULL CHECK (event_type IN ('callback', 'ritual', 'milestone')),
+  dedupe_key TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL CHECK (
+    status IN ('offered', 'planned', 'delivered', 'batched', 'suppressed',
+               'dismissed', 'failed')
+  ),
+  target_session_id UUID REFERENCES chat_sessions(id) ON DELETE SET NULL,
+  source_refs JSONB NOT NULL DEFAULT '[]'::jsonb,
+  content_sha256 TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  delivered_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_relationship_rhythm_events_status
+  ON relationship_rhythm_events (status, created_at DESC);
+
 CREATE INDEX IF NOT EXISTS idx_notification_events_created
   ON notification_events (created_at DESC);
 
