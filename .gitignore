@@ -1,6 +1,7 @@
 .env
 venv/
 .grok/
+.claude/
 __pycache__/
 *.pyc
 .DS_Store
