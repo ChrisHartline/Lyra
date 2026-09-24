@@ -1,3 +1,11 @@
+---
+reference_id: backstory.chosen_bond
+canon_status: approved_existing
+source_ids: source.chosen_bond_expansion
+owner: agents/lyra/references
+last_reviewed: 2026-09-01
+---
+
 # The Chosen Bond
 
 ## What It Is

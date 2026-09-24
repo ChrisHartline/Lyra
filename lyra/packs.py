@@ -15,6 +15,7 @@ REQUIRED_MARKDOWN = (
     "personality/emotional_color_map.md",
     "personality/speech_and_idioms.md",
     "personality/appearance.md",
+    "locations/locations.md",
     "ship/ship_reference.md",
     "ship/systems.md",
     "ship/cargo_and_layout.md",
@@ -55,6 +56,7 @@ POINTER_MAX_CHARS = 600
 
 _PACK_FOR_PREFIX = {
     "personality": "personality",
+    "locations": "locations",
     "ship": "ship",
     "state": "state",
 }

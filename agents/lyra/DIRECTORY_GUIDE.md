@@ -14,8 +14,9 @@ Stable identity, ship lore, and living state are not duplicated under
 - `personality/appearance.md` - visual / physiological reference
 - `personality/emotional_color_map.md` - bioluminescence vocabulary
 - `personality/speech_and_idioms.md` - voice, idioms, quirks
-- `locations/locations.md` - stable place canon, atmosphere, constraints, and
-  narrative use; ship rooms link to the `ship/` pack rather than duplicating it
+- `locations/locations.md` - approved stable place canon, atmosphere,
+  constraints, and narrative use. Ship rooms link to `ship/` rather than
+  duplicating it.
 - `ship/ship_reference.md` - class, interior, repair context
 - `ship/systems.md` - system-by-system notes
 - `ship/cargo_and_layout.md` - rooms and living conversion

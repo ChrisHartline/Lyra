@@ -1,0 +1,202 @@
+{
+  "version": "1.0",
+  "gate": "W9.2",
+  "status": "approved",
+  "sources": [
+    {
+      "source_id": "source.initial_backstory",
+      "path": "agents/lyra/references/source_material/backstory_initial_2026-07-04.md",
+      "source_type": "christopher_authored_repo_source",
+      "origin_commit": "bcd41e0",
+      "source_date": "2026-07-04",
+      "sha256": "8f944a42c5da728ff414d6099d1185078e7bf661902e57c7705a10095ddb461b",
+      "disposition": "imported",
+      "notes": "Preserved source snapshot; line endings normalized during W9.2 import."
+    },
+    {
+      "source_id": "source.chosen_bond_expansion",
+      "path": "agents/lyra/references/backstory_chosen_bond.md",
+      "source_type": "christopher_approved_repo_source",
+      "origin_commit": "fce9195",
+      "source_date": "2026-09-01",
+      "sha256": "b832b6d4efeaca47b9e1bed16a5e1a007cb6fe03a9d1bd997959c1c138e8246b",
+      "disposition": "imported",
+      "notes": "Approved Chosen-bond expansion with W9.2 provenance frontmatter."
+    },
+    {
+      "source_id": "source.locations_candidate",
+      "path": "locations/locations.md",
+      "source_type": "christopher_approved_repo_source",
+      "origin_commit": "1dc5b6c",
+      "source_date": "2026-09-22",
+      "sha256": "ab369339ad7acbc031bfa51357b92f9af107a8edeb306fb262a0df3c09c4d688",
+      "disposition": "imported",
+      "notes": "Christopher approved the W9.2 recommendations on 2026-09-24. The file now retains stable place canon only; culture moved to its backstory owner and rejected mixed-owner/private details remain recoverable in origin commit 1dc5b6c."
+    },
+    {
+      "source_id": "context.tier0_character_bible",
+      "path": "personality/character_bible.md",
+      "source_type": "canonical_comparison",
+      "origin_commit": "fce9195",
+      "source_date": "2026-09-01",
+      "sha256": "6587713ae7136221b811f4c3a0f4269bbe6d72e785895878390635508fa4bf7c",
+      "disposition": "context_only",
+      "notes": "Tier 0 remains a stable index and was not rewritten by W9.2."
+    },
+    {
+      "source_id": "context.relationship_state",
+      "path": "state/relationship.md",
+      "source_type": "canonical_comparison",
+      "origin_commit": "74b1170",
+      "source_date": "2026-09-01",
+      "sha256": "5f10490ccb200ceddb5f69c067d56b5230463c352e2bbc766d3550107aca33ee",
+      "disposition": "context_only",
+      "notes": "Used to keep evolving relationship state out of backstory topics."
+    },
+    {
+      "source_id": "context.active_arcs",
+      "path": "state/active_arcs.md",
+      "source_type": "canonical_comparison",
+      "origin_commit": "74b1170",
+      "source_date": "2026-09-01",
+      "sha256": "e9ae00f4f080afda15cde10dffe39e8d3256da28ad21719a250e649f17b040af",
+      "disposition": "context_only",
+      "notes": "Used to surface the newer dual-life plan without treating it as a silent rewrite."
+    },
+    {
+      "source_id": "context.ship_reference",
+      "path": "ship/ship_reference.md",
+      "source_type": "canonical_comparison",
+      "origin_commit": "7fc87bc",
+      "source_date": "2026-09-01",
+      "sha256": "92ffb35f9c0dfe936fac5bdc646cfdc649a509fc3567879b2ef45f306a29a880",
+      "disposition": "context_only",
+      "notes": "Ship facts remain owned by ship/."
+    }
+  ],
+  "topics": [
+    {
+      "reference_id": "backstory.origin",
+      "path": "agents/lyra/references/backstory_homeworld.md",
+      "canon_status": "approved_existing",
+      "source_ids": ["source.initial_backstory"],
+      "owner": "agents/lyra/references"
+    },
+    {
+      "reference_id": "backstory.escape",
+      "path": "agents/lyra/references/backstory_escape.md",
+      "canon_status": "approved_existing",
+      "source_ids": ["source.initial_backstory"],
+      "owner": "agents/lyra/references"
+    },
+    {
+      "reference_id": "backstory.earth_arrival",
+      "path": "agents/lyra/references/backstory_current_situation.md",
+      "canon_status": "approved_existing",
+      "source_ids": ["source.initial_backstory"],
+      "owner": "agents/lyra/references"
+    },
+    {
+      "reference_id": "backstory.personality_impact",
+      "path": "agents/lyra/references/backstory_personality_impact.md",
+      "canon_status": "approved_existing",
+      "source_ids": ["source.initial_backstory"],
+      "owner": "agents/lyra/references"
+    },
+    {
+      "reference_id": "backstory.long_term_hopes",
+      "path": "agents/lyra/references/backstory_long_term_hopes.md",
+      "canon_status": "approved_existing",
+      "source_ids": ["source.initial_backstory"],
+      "owner": "agents/lyra/references"
+    },
+    {
+      "reference_id": "backstory.chosen_bond",
+      "path": "agents/lyra/references/backstory_chosen_bond.md",
+      "canon_status": "approved_existing",
+      "source_ids": ["source.chosen_bond_expansion"],
+      "owner": "agents/lyra/references"
+    },
+    {
+      "reference_id": "backstory.vossari_culture",
+      "path": "agents/lyra/references/backstory_vossari_culture.md",
+      "canon_status": "approved_existing",
+      "source_ids": ["source.locations_candidate"],
+      "owner": "agents/lyra/references"
+    }
+  ],
+  "review_items": [
+    {
+      "review_id": "review.arrival_duration",
+      "kind": "continuity_conflict",
+      "status": "approved",
+      "source_ids": ["source.initial_backstory"],
+      "claim": "Lyra has been on Earth for approximately three weeks.",
+      "conflict": "The statement is written as live current state but is a frozen duration from the initial scaffold.",
+      "recommendation": "Retain it as an arrival-era historical fact and remove it from live current-state wording.",
+      "decision": "Approved as an arrival-era historical fact, not a live duration.",
+      "decided_by": "Christopher",
+      "decided_at": "2026-09-24"
+    },
+    {
+      "review_id": "review.future_plan",
+      "kind": "continuity_conflict",
+      "status": "approved",
+      "source_ids": ["source.initial_backstory", "context.active_arcs"],
+      "claim": "The initial source frames the future as either leaving Earth together or staying permanently.",
+      "conflict": "Approved active arcs now describe a dual life between an Earth safe house and space.",
+      "recommendation": "Treat the either/or statement as an early hope superseded by the dual-life plan.",
+      "decision": "Approved; the dual-life plan supersedes the early either/or framing.",
+      "decided_by": "Christopher",
+      "decided_at": "2026-09-24"
+    },
+    {
+      "review_id": "review.location_ownership",
+      "kind": "placement_conflict",
+      "status": "approved",
+      "source_ids": ["source.locations_candidate", "context.ship_reference"],
+      "claim": "The location candidate combines stable place descriptions with current base status, travel rules, proposed bolt-holes, and ship-room descriptions.",
+      "conflict": "Stable places belong in locations/, evolving events in state/story/, and ship rooms in ship/.",
+      "recommendation": "Approve only stable place descriptions for locations/; route evolving status and ship details to their existing owners without duplicating them.",
+      "decision": "Approved; locations/ retains stable places only, with ship and evolving story details routed to their existing owners.",
+      "decided_by": "Christopher",
+      "decided_at": "2026-09-24"
+    },
+    {
+      "review_id": "review.vossari_culture",
+      "kind": "new_lore_approval",
+      "status": "approved",
+      "source_ids": ["source.locations_candidate"],
+      "claim": "Vossari life centers on orbital habitats or float-spheres, family platforms, long lives, watches, meals, and children taught the sky first.",
+      "conflict": "These are new culture/origin claims placed in a location candidate and are not present in approved backstory.",
+      "recommendation": "If approved, move them into a dedicated backstory_vossari_culture.md topic and leave locations/ with place-specific links.",
+      "decision": "Approved and moved to backstory_vossari_culture.md.",
+      "decided_by": "Christopher",
+      "decided_at": "2026-09-24"
+    },
+    {
+      "review_id": "review.hollow_ribbon",
+      "kind": "new_lore_approval",
+      "status": "approved",
+      "source_ids": ["source.locations_candidate"],
+      "claim": "Hollow Ribbon is canon-but-thin, working-read as an annular trade station with docks, warehouses, rumor, and political reach.",
+      "conflict": "Only the name is attributed to user recall; the station form and function are proposed interpretation.",
+      "recommendation": "Approve the name alone unless Christopher explicitly approves the working description.",
+      "decision": "Approved the Hollow Ribbon name only; the proposed station description remains undefined.",
+      "decided_by": "Christopher",
+      "decided_at": "2026-09-24"
+    },
+    {
+      "review_id": "review.location_private_detail",
+      "kind": "bucket_conflict",
+      "status": "approved",
+      "source_ids": ["source.locations_candidate"],
+      "claim": "The Kansas City entry includes PTSD rest, Instacart, and gym-night details.",
+      "conflict": "Real private biography and routines should not become place canon merely because scenes occurred there.",
+      "recommendation": "Remove those details from the location pack; retain any approved personal context only in its existing private state or memory owner.",
+      "decision": "Approved; private and routine details were removed from place canon.",
+      "decided_by": "Christopher",
+      "decided_at": "2026-09-24"
+    }
+  ]
+}

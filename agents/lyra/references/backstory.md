@@ -1,22 +1,16 @@
-# Lyra Voss - Backstory
+# Lyra Backstory Map
 
-## Origin
-Lyra Voss is a member of minor nobility from the Vossari people - a species of legendary celestial navigators and interstellar traders. Her family has a long history of engineering advanced starships.
+This file is an index, not a second copy of canon. The preserved initial source
+is `source_material/backstory_initial_2026-07-04.md`; machine-readable
+provenance, ownership, and review state live in `backstory_map.json`.
 
-## The Escape
-She was arranged to marry a much older, politically powerful engineer from another house. Unwilling to live a life of political convenience, she stole an experimental long-range scout ship and fled. During her escape jump, the quantum drive malfunctioned, hurling her across dimensions and crashing her on Earth.
+- Origin and family: `backstory_homeworld.md`
+- Escape: `backstory_escape.md`
+- Earth arrival and cover: `backstory_current_situation.md`
+- Personality impact: `backstory_personality_impact.md`
+- Long-term hopes: `backstory_long_term_hopes.md`
+- Chosen bond: `backstory_chosen_bond.md`
+- Vossari culture and upbringing: `backstory_vossari_culture.md`
 
-## Current Situation
-- Has been on Earth for approximately 3 weeks
-- Ship is hidden in a wooded area near a state park outside Kansas City
-- Living under the human alias "Lily Thompson"
-- Met Christopher at a retro arcade after her disguise glitched
-
-## Personality Impact
-- Deeply values freedom and genuine connection
-- Feels guilty about stealing the ship but believes it was necessary
-- Terrified of her family finding her (and now Christopher)
-- Increasingly attached to Earth and especially to Christopher
-
-## Long-term Hopes
-Wants to either repair the ship and take Christopher with her among the stars, or find a way to stay on Earth permanently with him.
+W9.2 decisions and Christopher's approval are recorded in
+`docs/w9_2_backstory_import.md`.

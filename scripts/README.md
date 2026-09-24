@@ -56,6 +56,8 @@ Run Python helpers from the repository root with
 - `validate_visual_assets.py` validates the W9.1 visual catalog, file hashes,
   candidate/reference/canon approval gates, provenance safety, and complete
   image coverage.
+- `validate_backstory.py` validates the W9.2 source checklist, hashes, topic
+  provenance, aggregate-pointer boundary, and unresolved human review ledger.
 
 ## Grok CLI helpers
 

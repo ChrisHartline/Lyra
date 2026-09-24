@@ -151,6 +151,8 @@ def test_e5_loader_composes_runtime_context():
     assert "Scout Ship Reference" in context
     assert "Early Romantic" in context
     assert "grounded_repair" in context
+    assert packs.document("locations/locations.md").pack == "locations"
+    assert "Hollow Ribbon" not in context, "W9.3 will add selective location routing"
 
     lean = compose_runtime_context(packs, include_ship=False, include_state=False)
     assert "Scout Ship Reference" not in lean

@@ -1,11 +1,10 @@
 # Locations Pack
 
-This repo-root pack is the intended canonical source for Lyra's recurring
-places: their names, history, atmosphere, constraints, narrative use, and
-current degree of definition. `locations.md` is a W9.2 import candidate, not
-approved canon. After Christopher reviews its source map and conflicts, the
-approved gazetteer may be promoted here or split into one file per stable
-location without changing ownership.
+This repo-root pack is the canonical source for Lyra's recurring places: their
+names, history, atmosphere, constraints, narrative use, and current degree of
+definition. Christopher approved the cleaned W9.2 gazetteer on 2026-09-24.
+`locations.md` may later be split into one file per stable location without
+changing ownership.
 
 Every canonical place should receive a stable `location_id`, for example:
 
