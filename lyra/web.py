@@ -27,6 +27,7 @@ from lyra.corpus_mcp import CorpusService, MCPToolRouter
 from lyra.embeddings import EmbeddingService
 from lyra.ingest import IngestPipeline
 from lyra.kg_gatekeeper import build_gatekeeper_router
+from lyra.knowledge_routing import routing_prompt
 from lyra.knowledge_graph import MCPKnowledgeGraphWriter
 from lyra.notion_sync import NotionClient
 from lyra.memory_control import MemoryControlService
@@ -53,6 +54,7 @@ from lyra.telegram import (
     run_configured_research_garden,
     run_configured_rituals,
 )
+from lyra.wiki import WikiService, WikiToolRouter
 
 
 STATIC_DIR = Path(__file__).resolve().parent / "web_static"
@@ -261,8 +263,11 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
     )
     corpus_router = MCPToolRouter(corpus)
     memory_router = build_gatekeeper_router()
+    wiki_router = WikiToolRouter(WikiService())
     registry = build_conversation_registry(
-        corpus_router=corpus_router, memory_router=memory_router
+        corpus_router=corpus_router,
+        memory_router=memory_router,
+        wiki_router=wiki_router,
     )
     shared_journal = SharedJournalService(
         getattr(sessions, "connection_factory", SessionService().connection_factory)
@@ -321,7 +326,7 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
             if notion else None
         ),
     )
-    system_prompt = compose_runtime_context()
+    system_prompt = compose_runtime_context() + "\n\n---\n\n" + routing_prompt() + "\n"
 
     class UnavailableLoop:
         def __init__(self, message: str) -> None:

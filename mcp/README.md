@@ -13,6 +13,8 @@ This repository uses a local-first MCP server and contract structure.
 - `mcp/server/main.py` exposes the corpus/search server.
 - `mcp/server/kg_gatekeeper.py` exposes knowledge-graph search/read/propose
   operations while withholding raw mutation tools.
+- `mcp/server/wiki.py` exposes agent-isolated, read-only wiki search/read and
+  knowledge-plane routing.
 - `mcp/tools/` documents the current contracts: source ingestion, corpus and
   memory search, gated memory proposals, and knowledge-graph access.
 
@@ -23,6 +25,9 @@ Current contracts:
 - [Search memories](tools/search_memories.md)
 - [Propose memory](tools/propose_memory.md)
 - [Knowledge graph](tools/knowledge_graph.md)
+- [Wiki search](tools/wiki-search.md)
+- [Wiki read](tools/wiki-read.md)
+- [Knowledge routing](tools/knowledge-route.md)
 
 Reusable prompts or static MCP resources may be added when a concrete runtime
 consumer exists; empty placeholder directories are not maintained.

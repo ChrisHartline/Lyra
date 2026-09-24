@@ -58,6 +58,8 @@ Run Python helpers from the repository root with
   image coverage.
 - `validate_backstory.py` validates the W9.2 source checklist, hashes, topic
   provenance, aggregate-pointer boundary, and unresolved human review ledger.
+- `validate_wiki.py` validates the W9.3 agent-isolated Markdown allowlist,
+  provenance, hashes, safe paths, and read-only lexical loader.
 
 ## Grok CLI helpers
 

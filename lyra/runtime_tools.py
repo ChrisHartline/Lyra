@@ -77,6 +77,7 @@ def build_conversation_registry(
     *,
     corpus_router: Any,
     memory_router: Any,
+    wiki_router: Any | None = None,
 ) -> ToolRegistry:
     """Build the fixed MCP facade; routers remain independently testable."""
 
@@ -107,8 +108,7 @@ def build_conversation_registry(
         return lambda arguments: memory_router.call_tool(name, arguments)
 
     object_schema = {"type": "object", "additionalProperties": False}
-    return ToolRegistry(
-        (
+    specs = [
             ToolSpec(
                 "search_corpus",
                 "Search the local source corpus and return cited passages.",
@@ -194,5 +194,60 @@ def build_conversation_registry(
                 kg("propose_observation"),
                 access=ToolAccess.PROPOSE,
             ),
+        ]
+    if wiki_router is not None:
+        from lyra.knowledge_routing import ROUTES, route_knowledge
+
+        def wiki(name: str) -> Callable[[dict[str, Any]], Any]:
+            return lambda arguments: wiki_router.call_tool(name, arguments)
+
+        specs.extend(
+            (
+                ToolSpec(
+                    "wiki_search",
+                    "Search standing reference pages. Results are not lived memory.",
+                    {
+                        **object_schema,
+                        "properties": {
+                            "query": {"type": "string", "minLength": 1, "maxLength": 500},
+                            "limit": {"type": "integer", "minimum": 1, "maximum": 10},
+                            "bucket": {
+                                "type": "string",
+                                "enum": [
+                                    "lore", "place", "expertise",
+                                    "creative_constraint", "terminology", "person",
+                                ],
+                            },
+                        },
+                        "required": ["query"],
+                    },
+                    wiki("wiki_search"),
+                ),
+                ToolSpec(
+                    "wiki_read",
+                    "Read one allowlisted standing-reference page by ID; never treat it as recollection.",
+                    {
+                        **object_schema,
+                        "properties": {"page_id": {"type": "string"}},
+                        "required": ["page_id"],
+                    },
+                    wiki("wiki_read"),
+                ),
+                ToolSpec(
+                    "knowledge_route",
+                    "Identify the authoritative knowledge plane before retrieval or persistence.",
+                    {
+                        **object_schema,
+                        "properties": {
+                            "information_type": {
+                                "type": "string",
+                                "enum": sorted(ROUTES),
+                            }
+                        },
+                        "required": ["information_type"],
+                    },
+                    lambda arguments: route_knowledge(str(arguments["information_type"])),
+                ),
+            )
         )
-    )
+    return ToolRegistry(tuple(specs))

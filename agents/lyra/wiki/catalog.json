@@ -1,0 +1,89 @@
+{
+  "version": "1.0",
+  "agent_id": "lyra",
+  "retrieval": "lexical",
+  "automatic_chat_ingest": false,
+  "pages": [
+    {
+      "page_id": "backstory.origin",
+      "title": "Vossari Origin and Family",
+      "path": "agents/lyra/references/backstory_homeworld.md",
+      "bucket": "lore",
+      "tags": ["Vossari", "origin", "family", "engineering"],
+      "provenance": ["source.initial_backstory"],
+      "sha256": "4800a15184fc76810d0be9f6d05fd725c392006ba46c603b26e086f915a9095e"
+    },
+    {
+      "page_id": "backstory.escape",
+      "title": "Escape from the Arranged Match",
+      "path": "agents/lyra/references/backstory_escape.md",
+      "bucket": "lore",
+      "tags": ["escape", "arranged match", "scout ship", "Earth"],
+      "provenance": ["source.initial_backstory"],
+      "sha256": "9011d3e6fb72873200115e8fb10e76b9471bb135616451605419b87dc5a1fdf7"
+    },
+    {
+      "page_id": "backstory.earth_arrival",
+      "title": "Earth Arrival",
+      "path": "agents/lyra/references/backstory_current_situation.md",
+      "bucket": "lore",
+      "tags": ["Earth", "arrival", "Kansas City", "cover identity"],
+      "provenance": ["source.initial_backstory", "review.arrival_duration"],
+      "sha256": "cee867c7981e698687af00e42fbb0067145b1564e6f5ade0757c0a5d6c018c1c"
+    },
+    {
+      "page_id": "backstory.personality_impact",
+      "title": "Escape's Personality Impact",
+      "path": "agents/lyra/references/backstory_personality_impact.md",
+      "bucket": "lore",
+      "tags": ["independence", "loyalty", "trust", "engineering"],
+      "provenance": ["source.initial_backstory"],
+      "sha256": "0c97698cfd5d4c410449c6cfe86fea483770305570fa967b91f5d61c3908ac16"
+    },
+    {
+      "page_id": "backstory.long_term_hopes",
+      "title": "Long-Term Hopes",
+      "path": "agents/lyra/references/backstory_long_term_hopes.md",
+      "bucket": "lore",
+      "tags": ["future", "dual life", "Earth", "space"],
+      "provenance": ["source.initial_backstory", "review.future_plan"],
+      "sha256": "25ad3a6ebb6c222b54785e7c8ce33101fb8a0a7d7306f442f3dd08adb8989add"
+    },
+    {
+      "page_id": "backstory.chosen_bond",
+      "title": "Chosen-Bond Tradition",
+      "path": "agents/lyra/references/backstory_chosen_bond.md",
+      "bucket": "lore",
+      "tags": ["Chosen-bond", "Vossari", "relationship", "tradition"],
+      "provenance": ["source.chosen_bond_expansion"],
+      "sha256": "b832b6d4efeaca47b9e1bed16a5e1a007cb6fe03a9d1bd997959c1c138e8246b"
+    },
+    {
+      "page_id": "backstory.vossari_culture",
+      "title": "Vossari Culture and Upbringing",
+      "path": "agents/lyra/references/backstory_vossari_culture.md",
+      "bucket": "lore",
+      "tags": ["Vossari", "culture", "orbital habitats", "navigation"],
+      "provenance": ["source.locations_candidate", "review.vossari_culture"],
+      "sha256": "dec53a6c3653cb4b010a2dc0eef03170c01be37bdb9bc35af9ee9863ef8eb340"
+    },
+    {
+      "page_id": "expertise.domains",
+      "title": "Lyra Expertise Domains",
+      "path": "agents/lyra/references/expertise_domains.md",
+      "bucket": "expertise",
+      "tags": ["GCP", "Vertex AI", "quantum ML", "scholarly authoring", "LaTeX"],
+      "provenance": ["agent.skill_registry"],
+      "sha256": "79d1238dae44398741ae7bd04fbc3d5ef1157b5bc2297cd9d4dd5d9e0a7c6adf"
+    },
+    {
+      "page_id": "locations.stable_places",
+      "title": "Stable Places Gazetteer",
+      "path": "locations/locations.md",
+      "bucket": "place",
+      "tags": ["Kansas City", "Silent Drift", "Elyria's Veil", "Hollow Ribbon"],
+      "provenance": ["source.locations_candidate", "review.location_ownership", "review.hollow_ribbon"],
+      "sha256": "ab369339ad7acbc031bfa51357b92f9af107a8edeb306fb262a0df3c09c4d688"
+    }
+  ]
+}

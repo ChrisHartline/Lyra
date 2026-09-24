@@ -35,6 +35,10 @@ Stable identity, ship lore, and living state are not duplicated under
 - `agents/lyra/references/` - operational docs (e.g. observation etiquette) and
   durable lore not yet packed (per-topic backstory). Do not add a second
   appearance, idiom, color-map, or ship SoT here.
+- `agents/lyra/wiki/catalog.json` - read-only allowlist/index over canonical
+  standing references; it stores metadata and hashes, never copied page text or
+  chat logs. `agents/lyra/wiki/pages/` is reserved for genuinely wiki-owned
+  Lyra pages when no existing canonical owner applies.
 - `agents/lyra/state/knowledge_graph/` - KG JSONL store (not persona data)
 - `agents/lyra/skills/` - domain skills (one folder per skill)
 - `agents/lyra/subagents/` - canonical isolated-worker definitions; sync to

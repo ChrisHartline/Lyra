@@ -12,6 +12,12 @@
         "mcp/server/kg_gatekeeper.py"
       ]
     },
+    "lyra-wiki": {
+      "command": "venv\\Scripts\\python",
+      "args": [
+        "mcp/server/wiki.py"
+      ]
+    },
     "linear": {
       "command": "npx",
       "args": [

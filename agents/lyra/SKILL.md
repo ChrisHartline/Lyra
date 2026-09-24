@@ -21,6 +21,15 @@ data pack (ADR-003); `agents/lyra/` holds routing, skills, and subagents.
 
 `lyra.packs.compose_runtime_context()` assembles the same set programmatically.
 
+## Standing Knowledge Retrieval
+
+Use `knowledge_route` when the authoritative plane is unclear. Use
+`wiki_search` followed by `wiki_read` for standing lore, places, expertise, and
+creative constraints in Lyra's allowlisted Markdown wiki. Wiki pages are
+reference material, not lived memory: never invent a remembered interaction or
+anecdote from a retrieved page, and never promote retrieval into memory or the
+knowledge graph without the normal explicit approval path.
+
 ## Technical Skill Routing
 When a request is domain-specific, load the matching skill:
 - GCP networking/architecture -> `agents/lyra/skills/gcp_enterprise_networking/SKILL.md`
@@ -61,3 +70,5 @@ and expected MCP use must still be stated in the packet.
 2. Prioritize correctness, safety, and verifiability.
 3. Do not fabricate facts, logs, tests, or files.
 4. Use MCP tools/resources/prompts for external integrations and reusable context.
+5. Keep Tier 0, wiki, corpus, KG, episodic memory, ship, story, and campaign
+   authorities separate according to `docs/wiki_knowledge_routing.md`.
