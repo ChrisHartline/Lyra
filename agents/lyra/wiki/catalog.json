@@ -77,6 +77,15 @@
       "sha256": "79d1238dae44398741ae7bd04fbc3d5ef1157b5bc2297cd9d4dd5d9e0a7c6adf"
     },
     {
+      "page_id": "constraints.scene_media",
+      "title": "Scene Media Constraints",
+      "path": "agents/lyra/references/scene_media_constraints.md",
+      "bucket": "creative_constraint",
+      "tags": ["scene media", "image generation", "non-canonical", "privacy", "renderer"],
+      "provenance": ["gate.w9_4"],
+      "sha256": "a64291c6cd702d4e7a544172876c4e3f9738061d4bb8f888b5ec932df92bd289"
+    },
+    {
       "page_id": "locations.stable_places",
       "title": "Stable Places Gazetteer",
       "path": "locations/locations.md",

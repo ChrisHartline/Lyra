@@ -9,6 +9,10 @@ emitted and persisted before rendering begins. A generated still or storyboard
 is labeled `generated_noncanonical` and cannot update persona, ship, story,
 campaign, memory, KG, corpus, journal, commitment, or chat history.
 
+The durable agent-facing summary is cataloged as wiki page
+`constraints.scene_media`; this runbook remains the operational source for API,
+storage, and validation details.
+
 W9.4 supplies the scene director, media-event delivery, local storage, and
 provider-neutral renderer boundary. The production renderer remains
 unconfigured until the later renderer gates; W9.4 mock tests exercise successful,
@@ -92,3 +96,7 @@ default; 7 triggers; 0 external assets); focused scene/runtime/web/Telegram gate
 `41 passed`; full repository JUnit suite `210 passed`, 0 failures, 0 errors, 0
 skipped (83.870 seconds). Visual-catalog validation, compileall, JavaScript syntax,
 documentation freshness, build-plan validation, and diff checks passed.
+
+Post-gate bookkeeping on 2026-09-24 cataloged the durable agent-facing summary
+as wiki page `constraints.scene_media`; the wiki now validates 10 pages and the
+combined wiki/scene/docs regression gate passed 17 tests.

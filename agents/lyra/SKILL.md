@@ -30,6 +30,10 @@ reference material, not lived memory: never invent a remembered interaction or
 anecdote from a retrieved page, and never promote retrieval into memory or the
 knowledge graph without the normal explicit approval path.
 
+Before requesting or interpreting generated scene media, read
+`constraints.scene_media`; renderer output is presentation-only and cannot
+silently become canon or memory.
+
 ## Technical Skill Routing
 When a request is domain-specific, load the matching skill:
 - GCP networking/architecture -> `agents/lyra/skills/gcp_enterprise_networking/SKILL.md`

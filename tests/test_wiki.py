@@ -26,9 +26,10 @@ def test_catalog_validates_and_exposes_only_lyra_allowlist():
     assert validate_wiki_catalog(ROOT) == []
     wiki = WikiService(ROOT)
 
-    assert len(wiki.page_ids) == 9
+    assert len(wiki.page_ids) == 10
     assert "backstory.vossari_culture" in wiki.page_ids
     assert "locations.stable_places" in wiki.page_ids
+    assert "constraints.scene_media" in wiki.page_ids
     assert all(not page.startswith("personality.") for page in wiki.page_ids)
 
 
@@ -46,6 +47,9 @@ def test_lexical_search_is_bucketed_deterministic_and_provenance_aware():
     assert first["results"][0]["epistemic_status"] == "reference_not_lived_memory"
     assert "remembered interaction" in first["results"][0]["usage_warning"]
     assert wiki.search("Hollow Ribbon", bucket="expertise")["results"] == []
+
+    constraints = wiki.search("generated scene non-canonical", bucket="creative_constraint")
+    assert constraints["results"][0]["page_id"] == "constraints.scene_media"
 
 
 def test_read_uses_page_ids_and_missing_or_cross_bucket_paths_fail_closed():

@@ -4,15 +4,16 @@
 
 ## Outcome
 
-Lyra now has a local, read-only Markdown wiki adapter over nine explicitly
+Lyra now has a local, read-only Markdown wiki adapter over ten explicitly
 allowlisted canonical pages. The adapter does not copy those pages into a new
 store. It verifies their SHA-256 hashes, builds an in-memory lexical index, and
 returns bounded content with page, bucket, provenance, authority, and
 epistemic-status metadata.
 
 The active catalog is `agents/lyra/wiki/catalog.json`. It exposes approved
-backstory topics, the stable location gazetteer, and a concise expertise-domain
-index. Tier 0 prompts, source-material snapshots, ship/live state, relationship
+backstory topics, the stable location gazetteer, a concise expertise-domain
+index, and the W9.4 scene-media creative constraints. Tier 0 prompts,
+source-material snapshots, ship/live state, relationship
 or story state, chat logs, memory/KG records, corpus chunks, secrets, and other
 agents' files are outside the allowlist.
 
@@ -61,7 +62,7 @@ update, delete, import, approve, or filesystem operation.
 
 ## Retrieval decision
 
-The catalog currently contains nine short pages, so deterministic lexical
+The catalog currently contains ten short pages, so deterministic lexical
 retrieval is transparent, fast, and sufficient. W9.3 does not add embeddings
 or a second pgvector index. An optional semantic path should be considered only
 after page-count growth and a fixed retrieval evaluation demonstrate misses;
@@ -88,3 +89,10 @@ wiki/runtime/web/docs/backstory integration gate `43 passed`; full repository
 JUnit suite `200 passed`, 0 failures, 0 errors, 0 skipped (72.492 seconds).
 Compileall, documentation freshness, build-plan validation, backstory
 validation, and diff checks passed.
+
+Post-gate catalog update on 2026-09-24: W9.4 added
+`constraints.scene_media` as the tenth allowlisted page. It summarizes durable
+generation, privacy, canon, failure, and deletion constraints while linking to
+the operational runbook rather than copying implementation detail. Wiki
+validator -> `VALID` (10 pages; lexical; read-only); combined wiki/scene/docs
+gate -> `17 passed`.
