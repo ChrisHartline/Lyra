@@ -12,6 +12,7 @@ class EventKind(str, Enum):
     TOOL = "tool"
     SUBAGENT = "subagent"
     EMOTION = "emotion"
+    MEDIA = "media"
     COMPLETION = "completion"
     ERROR = "error"
 
@@ -51,6 +52,10 @@ class RuntimeEvent:
     @classmethod
     def emotion(cls, name: str, **data: Any) -> "RuntimeEvent":
         return cls(EventKind.EMOTION, name=name, data=data)
+
+    @classmethod
+    def media(cls, name: str, **data: Any) -> "RuntimeEvent":
+        return cls(EventKind.MEDIA, name=name, data=data)
 
     @classmethod
     def completion(cls, reason: str | None, **data: Any) -> "RuntimeEvent":

@@ -47,12 +47,19 @@ class FakeClient:
     def __init__(self):
         self.sent = []
         self.downloads = []
+        self.photos = []
+        self.events = []
 
     async def get_updates(self, offset, timeout):
         return []
 
     async def send_text(self, chat_id, text):
         self.sent.append((chat_id, text))
+        self.events.append(("text", text))
+
+    async def send_photo(self, chat_id, path, caption):
+        self.photos.append((chat_id, path, caption))
+        self.events.append(("photo", path.name))
 
     async def download(self, file_id):
         self.downloads.append(file_id)
@@ -168,6 +175,35 @@ def test_remote_approval_and_execution_commands_never_reach_the_model_loop():
 
     assert calls == []
     assert all("deliberately unavailable" in text for _chat, text in client.sent)
+
+
+def test_text_is_sent_before_generated_media_on_telegram():
+    client = FakeClient()
+    sessions = FakeSessions()
+    store = FakeStore()
+    frame = _config("outbound_media").artifact_root / "frame.png"
+    frame.parent.mkdir(parents=True, exist_ok=True)
+    frame.write_bytes(b"png")
+
+    class MediaLoop:
+        async def stream_turn(self, session_id, user_text, *, channel="web"):
+            yield RuntimeEvent.text_delta("Text first.")
+            yield RuntimeEvent.completion("stop")
+            yield RuntimeEvent.media(
+                "still",
+                request_id="request-1",
+                frames=[{"local_path": str(frame), "filename": frame.name}],
+                caption="Generated scene — non-canonical",
+            )
+
+    bot = TelegramBot(
+        _config("outbound_media"), client, sessions, lambda _session_id: MediaLoop(),
+        store=store,
+    )
+
+    assert asyncio.run(bot.handle_update(_message(update_id=8, text="Show me"))) == "completed"
+    assert client.events == [("text", "Text first."), ("photo", "frame.png")]
+    assert "non-canonical" in client.photos[0][2]
 
 
 def test_url_document_photo_and_voice_route_without_memory_writes():

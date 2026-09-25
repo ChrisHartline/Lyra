@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import json
+from pathlib import Path
 import uuid
 from dataclasses import dataclass
 from types import SimpleNamespace
@@ -8,7 +10,8 @@ from types import SimpleNamespace
 from fastapi.testclient import TestClient
 
 from lyra.runtime_events import RuntimeEvent
-from lyra.web import create_app, is_loopback_client, validate_bind_host
+from lyra.scene_media import SceneDirector
+from lyra.web import _event_payload, create_app, is_loopback_client, validate_bind_host
 
 
 class FakeSessions:
@@ -429,7 +432,7 @@ class FakeLoop:
         yield RuntimeEvent.completion("stop")
 
 
-def _client():
+def _client(scene_service=None):
     sessions = FakeSessions()
     control = FakeControl()
     app = create_app(
@@ -443,6 +446,7 @@ def _client():
         journal_service=FakeJournal(),  # type: ignore[arg-type]
         relationship_service=FakeRelationship(),  # type: ignore[arg-type]
         ship_service=FakeShipContinuity(),  # type: ignore[arg-type]
+        scene_service=scene_service,
     )
     return TestClient(app, client=("127.0.0.1", 50000)), sessions, control
 
@@ -466,6 +470,59 @@ def test_ui_assets_and_loopback_health_contract():
     assert "Memory &amp; Observation Control" in control_page.text
     assert "X-Lyra-Control-Token" in control_js.text
     assert health.json() == {"status": "ready", "network": "loopback-only"}
+
+
+def test_scene_media_controls_are_local_token_gated_and_delete_only_artifacts(monkeypatch):
+    monkeypatch.setenv("LYRA_CONTROL_TOKEN", "scene-token")
+    root = Path("data/test_tmp") / f"scene_web_{uuid.uuid4().hex[:8]}"
+    scene = SceneDirector(root=root)
+    client, sessions, _control = _client(scene)
+    session_id = client.post("/api/sessions", json={"name": "Scene"}).json()["session_id"]
+    sessions.append(session_id, "assistant", "Conversation remains.")
+    headers = {"X-Lyra-Control-Token": "scene-token"}
+
+    assert client.get("/api/control/scene-media").status_code == 401
+    updated = client.put(
+        "/api/control/scene-media",
+        headers=headers,
+        json={
+            "enabled": True,
+            "automatic_enabled": False,
+            "allowed_channels": ["web", "telegram"],
+            "max_per_day": 2,
+            "cooldown_minutes": 120,
+            "max_storyboard_frames": 3,
+        },
+    )
+    assert updated.status_code == 200 and updated.json()["policy"]["enabled"] is True
+
+    request_id = str(uuid.uuid4())
+    directory = scene.root / request_id
+    directory.mkdir()
+    (directory / "frame.png").write_bytes(b"png")
+    artifact = client.get(f"/api/scene-media/{request_id}/frame.png")
+    assert artifact.status_code == 200 and artifact.content == b"png"
+    deleted = client.delete(f"/api/control/scene-media/{request_id}", headers=headers)
+    assert deleted.json() == {"deleted": True, "conversation_changed": False}
+    assert client.get(f"/api/sessions/{session_id}/messages").json()["messages"][0]["content"] == "Conversation remains."
+
+
+def test_web_media_event_never_exposes_local_artifact_path():
+    payload = _event_payload(
+        RuntimeEvent.media(
+            "still",
+            frames=[{
+                "filename": "frame.png",
+                "local_path": r"V:\private\scene\frame.png",
+                "url": "/api/scene-media/id/frame.png",
+            }],
+            canon_status="generated_noncanonical",
+        )
+    )
+    assert payload["data"]["frames"] == [
+        {"filename": "frame.png", "url": "/api/scene-media/id/frame.png"}
+    ]
+    assert "private" not in json.dumps(payload)
 
 
 def test_session_crud_and_message_resume_contract():

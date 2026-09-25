@@ -60,6 +60,8 @@ Run Python helpers from the repository root with
   provenance, aggregate-pointer boundary, and unresolved human review ledger.
 - `validate_wiki.py` validates the W9.3 agent-isolated Markdown allowlist,
   provenance, hashes, safe paths, and read-only lexical loader.
+- `validate_scene_media.py` validates W9.4 disabled defaults, trigger coverage,
+  external-asset boundary, and labeled web media-event handling.
 
 ## Grok CLI helpers
 

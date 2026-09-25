@@ -6,10 +6,9 @@ and explicit privacy boundaries between biography, story, and campaign state.
 
 ## Current build status
 
-Waves 5, 6, 7, and 8 are closed. W9.1 visual references and canonical
-appearance, W9.2 backstory/context import, and W9.3 agent wiki/knowledge
-routing are complete. W9.4 scene direction and still insertion is the next
-not-started Wave 9 gate.
+Waves 5, 6, 7, and 8 are closed. W9.1 visual references, W9.2 backstory import,
+W9.3 agent wiki/knowledge routing, and W9.4 scene direction/still insertion are
+complete. W9.5 voice and avatar evaluation is the next not-started Wave 9 gate.
 
 The authoritative status and acceptance evidence live in the
 [build plan](docs/lyra_build_plan.md). Product behavior is defined by the

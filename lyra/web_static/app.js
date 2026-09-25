@@ -48,6 +48,17 @@ function appendMessage(role, content) {
   return article.querySelector('.body');
 }
 
+function appendMedia(data) {
+  const article = document.createElement('article');
+  article.className = 'message assistant media-event';
+  const frames = (data.frames || []).map(frame =>
+    `<img src="${escapeHtml(frame.url)}" alt="Generated non-canonical scene">`
+  ).join('');
+  article.innerHTML = `<div class="role">Lyra · generated media</div><div class="body">${frames}<p>${escapeHtml(data.caption || 'Generated scene — non-canonical')}</p></div>`;
+  el('messages').appendChild(article);
+  el('messages').scrollTop = el('messages').scrollHeight;
+}
+
 function setStatus(text) {
   let status = el('messages').querySelector('.status-line');
   if (!status) {
@@ -120,6 +131,8 @@ async function sendTurn(content) {
           if (!(hadError && item.data.status === 'failed')) {
             setStatus(item.data.status === 'completed' ? 'Complete' : item.data.status);
           }
+        } else if (item.event === 'media') {
+          appendMedia(item.data.data || {});
         }
       }
       if (done) break;

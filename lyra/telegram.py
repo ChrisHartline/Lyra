@@ -44,6 +44,7 @@ class TurnLoop(Protocol):
 class TelegramClient(Protocol):
     async def get_updates(self, offset: int | None, timeout: int) -> list[dict[str, Any]]: ...
     async def send_text(self, chat_id: str, text: str) -> None: ...
+    async def send_photo(self, chat_id: str, path: Path, caption: str) -> None: ...
     async def download(self, file_id: str) -> bytes: ...
 
 
@@ -119,6 +120,21 @@ class BotAPI:
                 "sendMessage",
                 {"chat_id": chat_id, "text": content[start : start + 4000]},
             )
+
+    async def send_photo(self, chat_id: str, path: Path, caption: str) -> None:
+        try:
+            with path.open("rb") as stream:
+                response = await self._client.post(
+                    f"{self._base}/sendPhoto",
+                    data={"chat_id": chat_id, "caption": caption[:1024]},
+                    files={"photo": (path.name, stream, "application/octet-stream")},
+                )
+            response.raise_for_status()
+            body = response.json()
+        except (OSError, httpx.HTTPError, ValueError):
+            raise TelegramError("Telegram sendPhoto request failed") from None
+        if not isinstance(body, dict) or body.get("ok") is not True:
+            raise TelegramError("Telegram sendPhoto request was rejected")
 
     async def download(self, file_id: str) -> bytes:
         result = await self._call("getFile", {"file_id": file_id})
@@ -364,15 +380,33 @@ class TelegramBot:
             return "Saved locally for review. I won't infer or remember its contents automatically."
         return "Saved locally, but that file type needs manual review before routing."
 
-    async def _chat(self, session_id: str, text: str) -> str:
+    async def _chat(self, session_id: str, chat_id: str, text: str) -> str | None:
         parts: list[str] = []
+        text_sent = False
         async for event in self.loop_factory(session_id).stream_turn(
             session_id, text, channel="telegram"
         ):
             if event.kind is EventKind.TEXT and event.text:
                 parts.append(event.text)
+            elif event.kind is EventKind.COMPLETION and not text_sent:
+                await self.client.send_text(
+                    chat_id,
+                    "".join(parts).strip() or "I couldn't produce a visible reply.",
+                )
+                text_sent = True
+            elif event.kind is EventKind.MEDIA:
+                for frame in event.data.get("frames", []):
+                    local_path = frame.get("local_path")
+                    if local_path:
+                        await self.client.send_photo(
+                            chat_id,
+                            Path(str(local_path)),
+                            str(event.data.get("caption") or "Generated scene — non-canonical"),
+                        )
             elif event.kind is EventKind.ERROR:
                 raise TelegramError("Lyra could not complete the Telegram turn")
+        if text_sent:
+            return None
         return "".join(parts).strip() or "I couldn't produce a visible reply."
 
     async def handle_update(self, update: Mapping[str, Any]) -> str:
@@ -404,8 +438,9 @@ class TelegramBot:
                 elif not text:
                     reply = "That message type isn't supported yet."
                 else:
-                    reply = await self._chat(self._session(chat_id), text)
-            await self.client.send_text(chat_id, reply)
+                    reply = await self._chat(self._session(chat_id), chat_id, text)
+            if reply is not None:
+                await self.client.send_text(chat_id, reply)
             self.store.finish_update(update_id, "completed")
             return "completed"
         except TelegramError:

@@ -40,6 +40,7 @@ header h2 { margin: 2px 0 0; font-size: 19px; }
 .message.user .role { color: var(--accent-2); }
 .message .body { line-height: 1.65; color: #dce9ed; overflow-wrap: anywhere; }
 .message .body p { margin: 0 0 10px; }
+.media-event img { display: block; max-width: min(100%, 720px); border-radius: 12px; margin: 8px 0; }
 .message code { padding: 2px 5px; border-radius: 5px; background: #111f2b; color: #bcecff; }
 .message pre { overflow: auto; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #061019; }
 .message pre code { padding: 0; background: none; }

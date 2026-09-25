@@ -213,6 +213,7 @@ class AgentLoop:
     catch_up: CatchUpResponder | None = None
     relationship_rhythms: RelationshipObserver | None = None
     ship_continuity: ShipContinuityObserver | None = None
+    scene_director: Any | None = None
 
     async def stream_turn(
         self,
@@ -314,6 +315,7 @@ class AgentLoop:
         turn = self.sessions.start_turn(session_id, "running")
         assistant_parts: list[str] = []
         persisted = False
+        completed = False
 
         def persist_assistant(partial: bool) -> None:
             nonlocal persisted
@@ -379,7 +381,16 @@ class AgentLoop:
                     persist_assistant(partial=False)
                     self.sessions.update_turn(turn["turn_id"], "completed")
                     await self.voice.emit("".join(assistant_parts))
+                    completed = True
                 yield event
+            if completed and self.scene_director is not None:
+                async for media_event in self.scene_director.render_for_turn(
+                    session_id=session_id,
+                    channel=normalized_channel,
+                    user_text=user_text,
+                    assistant_text="".join(assistant_parts),
+                ):
+                    yield media_event
         except (asyncio.CancelledError, GeneratorExit):
             persist_assistant(partial=True)
             self.sessions.update_turn(

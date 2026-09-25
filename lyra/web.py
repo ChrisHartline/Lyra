@@ -43,6 +43,7 @@ from lyra.ship_continuity import ShipContinuityService, run_ship_continuity
 from lyra.runtime import AgentLoop, ModelToolRunner
 from lyra.runtime_events import EventKind, RuntimeEvent
 from lyra.runtime_tools import build_conversation_registry
+from lyra.scene_media import SceneDirector, SceneMediaError
 from lyra.rituals import RitualService
 from lyra.briefings import BriefingService
 from lyra.service import configure_rotating_logging
@@ -113,6 +114,15 @@ class ControlRejection(BaseModel):
 class ControlForget(BaseModel):
     confirmed: bool
     reason: str | None = Field(default=None, max_length=500)
+
+
+class ScenePolicyUpdate(BaseModel):
+    enabled: bool
+    automatic_enabled: bool
+    allowed_channels: list[str]
+    max_per_day: int = Field(ge=1, le=20)
+    cooldown_minutes: int = Field(ge=1, le=1440)
+    max_storyboard_frames: int = Field(ge=2, le=4)
 
 
 class MemoryPolicyUpdate(BaseModel):
@@ -240,13 +250,19 @@ def is_loopback_client(host: str | None) -> bool:
 
 
 def _event_payload(event: RuntimeEvent) -> dict[str, Any]:
+    data = dict(event.data)
+    if event.kind is EventKind.MEDIA:
+        data["frames"] = [
+            {key: value for key, value in dict(frame).items() if key != "local_path"}
+            for frame in data.get("frames", [])
+        ]
     return {
         "kind": event.kind.value,
         "text": event.text,
         "name": event.name,
         "call_id": event.call_id,
         "arguments": dict(event.arguments) if event.arguments is not None else None,
-        "data": dict(event.data),
+        "data": data,
     }
 
 
@@ -255,7 +271,9 @@ def _sse(event: str, data: dict[str, Any], event_id: int) -> str:
     return f"id: {event_id}\nevent: {event}\ndata: {payload}\n\n"
 
 
-def default_loop_factory(sessions: SessionService) -> LoopFactory:
+def default_loop_factory(
+    sessions: SessionService, *, scene_director: SceneDirector | None = None
+) -> LoopFactory:
     embedding = EmbeddingService()
     corpus = CorpusService(
         embedding_service=embedding,
@@ -379,6 +397,7 @@ def default_loop_factory(sessions: SessionService) -> LoopFactory:
             catch_up=catch_up,
             relationship_rhythms=relationship_rhythms,
             ship_continuity=ship_continuity,
+            scene_director=scene_director,
         )
 
     return factory
@@ -402,9 +421,13 @@ def create_app(
     journal_service: SharedJournalService | None = None,
     relationship_service: RelationshipRhythmService | None = None,
     ship_service: ShipContinuityService | None = None,
+    scene_service: SceneDirector | None = None,
 ) -> FastAPI:
     session_service = sessions or SessionService()
-    factory = loop_factory or default_loop_factory(session_service)
+    scene_media = scene_service or SceneDirector()
+    factory = loop_factory or default_loop_factory(
+        session_service, scene_director=scene_media
+    )
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
@@ -564,6 +587,37 @@ def create_app(
     @app.get("/api/health")
     async def health():
         return {"status": "ready", "network": "loopback-only"}
+
+    @app.get("/api/scene-media/{request_id}/{filename}")
+    async def scene_media_artifact(request_id: str, filename: str, request: Request):
+        require_local_control_client(request)
+        try:
+            return FileResponse(scene_media.artifact_path(request_id, filename))
+        except SceneMediaError as exc:
+            raise HTTPException(status_code=404, detail="Scene artifact not found") from exc
+
+    @app.get("/api/control/scene-media")
+    async def get_scene_media_policy(request: Request):
+        require_control_access(request)
+        return {"policy": asdict(scene_media.get_policy())}
+
+    @app.put("/api/control/scene-media")
+    async def update_scene_media_policy(update: ScenePolicyUpdate, request: Request):
+        require_control_access(request)
+        try:
+            return {"policy": asdict(scene_media.set_policy(**update.model_dump()))}
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.delete("/api/control/scene-media/{request_id}")
+    async def delete_scene_media(request_id: str, request: Request):
+        require_control_access(request)
+        try:
+            if not scene_media.delete(request_id):
+                raise HTTPException(status_code=404, detail="Scene media not found")
+        except SceneMediaError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {"deleted": True, "conversation_changed": False}
 
     @app.get("/api/sessions")
     async def list_sessions():
