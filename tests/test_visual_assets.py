@@ -10,10 +10,10 @@ def test_w91_catalog_covers_every_active_visual_and_is_fail_closed():
     appearance = (ROOT / "personality" / "appearance.md").read_text(encoding="utf-8")
 
     assert validate_catalog() == []
-    assert len(catalog["assets"]) == 27
+    assert len(catalog["assets"]) == 40
     assert sum(asset["canon_status"] == "approved" for asset in catalog["assets"]) == 6
     assert sum(asset["canon_status"] == "candidate" for asset in catalog["assets"]) == 0
-    assert sum(asset["canon_status"] == "reference" for asset in catalog["assets"]) == 21
+    assert sum(asset["canon_status"] == "reference" for asset in catalog["assets"]) == 34
     assert all(not asset["approved_for_external_renderer"] for asset in catalog["assets"])
     assert all(
         asset["approval"]["decided_by"] == "Christopher"

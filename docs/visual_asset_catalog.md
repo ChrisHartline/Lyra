@@ -38,8 +38,8 @@ private remote locator belongs in the catalog.
 
 ## Current inventory and review
 
-The active inventory contains 27 images: six approved identity anchors,
-15 non-canonical Lyra scene/detail references, and six wardrobe references.
+The active inventory contains 40 images: six approved identity anchors,
+15 non-canonical Lyra scene/detail references, and 19 wardrobe references.
 No ship, prop, or location images are currently present. Those empty subject
 folders do not create placeholder catalog entries.
 
@@ -52,6 +52,7 @@ The W9.1 audit and Christopher's final review recorded these decisions:
 | Hair variants | Two portraits intentionally preserve each base face while changing braided hair to loose hair | Christopher approved both variants with their base anchors on 2026-09-22 |
 | Legacy identity variation | Scene references depict multiple facial identities | Keep only as pose, wardrobe, lighting, and scene references; never use them as identity authority |
 | Provenance/rights | Christopher confirmed that the anchors were AI-generated for his sole use, but no provider-output license record is attached; legacy source/license locators are also unavailable | Record `unknown_pending_review`; permit no transformation or external-renderer use |
+| Added wardrobe set | Christopher added 13 AI-generated wardrobe references on 2026-09-27 without generator or provider-output license records | Retain as local non-canonical references; keep rights unknown and transformation/external-renderer permissions disabled |
 | Canon placement | Six generated anchors were approved after review | Move them into `lyra/approved/`; hashes and manifest relationships remain unchanged |
 
 ## Christopher canon sign-off — completed 2026-09-22

@@ -1,8 +1,8 @@
 ---
 pack: personality
 file: appearance
-version: 2.1
-last_updated: 2026-09-22
+version: 2.2
+last_updated: 2026-09-27
 ---
 
 # Lyra Voss — Appearance and Physiology
@@ -22,13 +22,13 @@ flexible, evolved for lower gravity and long-duration spaceflight
 - **Ears:** Large, pointed, velvety, and very sensitive.
 - **Freckles:** Fine, luminous gold freckles scattered across her face and
   upper body, most visible across the cheeks, nose, shoulders, and collarbones.
-- **Other:** No navel.
+- **Other:** No navel. Vossari reproductive anatomy has evolved for lower-G. Female Vossari genitles have evolved to be capable of voluntarily contracting and relaxing, even gently holding. Male Vossari have thus tended to atrophy, a reflection of the environment and adaptation by females.
 
 ## Habits and Presentation
 
 - Glow brightens and spreads across more of her body as emotion intensifies;
   her gold freckles brighten and shimmer at peak feeling.
 - Meticulously well-groomed; nails and toes carefully painted, usually pale
-  pink or another soft color.
+  pink, white or another soft color.
 - Prefers soft, draping or form-fitting clothes that show midriff or legs when
   she is comfortable, and frequently wears Christopher's oversized shirts.

@@ -1,7 +1,7 @@
 {
   "$schema": "catalog.schema.json",
   "schema_version": 1,
-  "catalog_updated": "2026-09-21",
+  "catalog_updated": "2026-09-27",
   "library_root": "assets/visual_references",
   "canon_authority": "personality/appearance.md",
   "policy": {
@@ -89,6 +89,28 @@
       ],
       "finding": "All six generated anchors are coherent as a paired true-form/disguise identity set. Their amber-hazel eyes and fine luminous gold freckles differed from the former violet-eye and star-shaped-freckle wording in personality/appearance.md.",
       "decision": "Christopher approved all six anchors on 2026-09-22, explicitly including both hair-down variants, and directed the textual appearance canon to match the images. personality/appearance.md and the emotional-color note were deliberately updated under that authorization. This approval does not clear usage rights or permit external-renderer use."
+    },
+    {
+      "review_id": "provenance.wardrobe.user-added.2026-09-27",
+      "kind": "provenance",
+      "status": "resolved",
+      "asset_ids": [
+        "wardrobe.outfit.black_strapless_jumpsuit.v1",
+        "wardrobe.top.champagne_satin_halter.v1",
+        "wardrobe.bottom.dark_buttonfly_flares.v1",
+        "wardrobe.dress.ivory_floral_midi.v1",
+        "wardrobe.bottom.levis_cutoff_shorts.v1",
+        "wardrobe.bottom.light_wideleg_crops.v1",
+        "wardrobe.dress.mauve_floral_lace.v1",
+        "wardrobe.bottom.medium_wash_flares.v1",
+        "wardrobe.top.navy_plaid_wrap_blouse.v1",
+        "wardrobe.dress.navy_satin_halter_mini.v1",
+        "wardrobe.top.rose_waffle_sweater.v1",
+        "wardrobe.outfit.sage_wideleg_set.v1",
+        "wardrobe.outfit.slate_turtleneck_plaid_mini.v1"
+      ],
+      "finding": "Christopher added 13 AI-generated wardrobe references to the local visual library. Generator and provider-output license records were not supplied.",
+      "decision": "Retain as local non-canonical wardrobe references with rights unknown_pending_review, no allowed transformations, and external-renderer use disabled until rights are separately cleared."
     }
   ],
   "assets": [
@@ -339,6 +361,84 @@
       "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.footwear", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
       "provenance": {"source_type": "user_supplied_local_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "source and license record unavailable"}, "allowed_transformations": [],
       "visual_traits": {"shot": "product_reference", "angle": "front_three_quarter", "crop": "object_isolated", "lighting": "white_catalog", "item": "white open-toe kitten-heel mule"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.legacy-rights-unverified"]
+    },
+    {
+      "asset_id": "wardrobe.outfit.black_strapless_jumpsuit.v1", "path": "wardrobe/black_strapless_jumpsuit.webp", "sha256": "8a9b8f4f02dd6fabff13faa17a5fa8d6375f17bd2dd306c0d7206712e6cba4a9",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.outfit", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_ai_generated_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated; provider-output rights record not supplied"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "crop": "object_full", "item": "black strapless jumpsuit"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.wardrobe.user-added.2026-09-27"]
+    },
+    {
+      "asset_id": "wardrobe.top.champagne_satin_halter.v1", "path": "wardrobe/champagne_satin_halter.webp", "sha256": "fa1d991a76f0fa2e940cffaf17ae7f6906f33138db5862e8e4844a02b1d42f92",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.top", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_ai_generated_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated; provider-output rights record not supplied"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "crop": "object_full", "item": "champagne satin halter top"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.wardrobe.user-added.2026-09-27"]
+    },
+    {
+      "asset_id": "wardrobe.bottom.dark_buttonfly_flares.v1", "path": "wardrobe/dark_buttonfly_flares.webp", "sha256": "1aa152a77d8ce5d31fa4090df90f9e36c6f86cc99f7e6af2ec8e81df2da7301e",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.bottom", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_ai_generated_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated; provider-output rights record not supplied"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "crop": "object_full", "item": "dark button-fly flared jeans"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.wardrobe.user-added.2026-09-27"]
+    },
+    {
+      "asset_id": "wardrobe.dress.ivory_floral_midi.v1", "path": "wardrobe/ivory_floral_midi_dress.webp", "sha256": "58ae36aaf0618215741a7e4bbc5f56b6be49fbe893f61f90eb7b40766f694d26",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.dress", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_ai_generated_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated; provider-output rights record not supplied"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "crop": "object_full", "item": "ivory floral midi dress"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.wardrobe.user-added.2026-09-27"]
+    },
+    {
+      "asset_id": "wardrobe.bottom.levis_cutoff_shorts.v1", "path": "wardrobe/levis_cutoff_shorts.webp", "sha256": "fb62f26ec16e826d1dd8208a6c19a5f21047a1d05de32afb7a2759dd435cb49e",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.bottom", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_ai_generated_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated; provider-output rights record not supplied"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "crop": "object_full", "item": "Levi's cutoff denim shorts"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.wardrobe.user-added.2026-09-27"]
+    },
+    {
+      "asset_id": "wardrobe.bottom.light_wideleg_crops.v1", "path": "wardrobe/light_wideleg_crops.webp", "sha256": "e358ede7e26818446979b1568491100d131fcf20cd06e8fa77f9e204224824a8",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.bottom", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_ai_generated_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated; provider-output rights record not supplied"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "crop": "object_full", "item": "light-wash wide-leg cropped jeans"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.wardrobe.user-added.2026-09-27"]
+    },
+    {
+      "asset_id": "wardrobe.dress.mauve_floral_lace.v1", "path": "wardrobe/mauve_floral_lace_dress.webp", "sha256": "e4c5e69909bac891b313242ee5e0ccf5f5a9bd4a9004b167f915d0ac4f4056e5",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.dress", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_ai_generated_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated; provider-output rights record not supplied"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "crop": "object_full", "item": "mauve floral lace dress"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.wardrobe.user-added.2026-09-27"]
+    },
+    {
+      "asset_id": "wardrobe.bottom.medium_wash_flares.v1", "path": "wardrobe/medium_wash_flares.webp", "sha256": "c216336c4a823d15ce52edeff903f2ed9605b9683a48ec050147beb301fe2fcc",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.bottom", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_ai_generated_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated; provider-output rights record not supplied"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "crop": "object_full", "item": "medium-wash flared jeans"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.wardrobe.user-added.2026-09-27"]
+    },
+    {
+      "asset_id": "wardrobe.top.navy_plaid_wrap_blouse.v1", "path": "wardrobe/navy_plaid_wrap_blouse.webp", "sha256": "97a51f6276f4f468154b4be46708e834988ba42339ce6f1f77978724a58452a7",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.top", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_ai_generated_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated; provider-output rights record not supplied"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "crop": "object_full", "item": "navy plaid wrap blouse"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.wardrobe.user-added.2026-09-27"]
+    },
+    {
+      "asset_id": "wardrobe.dress.navy_satin_halter_mini.v1", "path": "wardrobe/navy_satin_halter_mini.webp", "sha256": "be7fd51cd16da868bc6f429b3ca826544c8ed3edb7d93b0de47a7c7223540b84",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.dress", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_ai_generated_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated; provider-output rights record not supplied"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "crop": "object_full", "item": "navy satin halter mini dress"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.wardrobe.user-added.2026-09-27"]
+    },
+    {
+      "asset_id": "wardrobe.top.rose_waffle_sweater.v1", "path": "wardrobe/rose_waffle_sweater.webp", "sha256": "72143ff1af1fedbe49e18796bd5491f651a1c752facaf4a37507f257aa8b16a8",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.top", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_ai_generated_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated; provider-output rights record not supplied"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "crop": "object_full", "item": "rose waffle-knit sweater"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.wardrobe.user-added.2026-09-27"]
+    },
+    {
+      "asset_id": "wardrobe.outfit.sage_wideleg_set.v1", "path": "wardrobe/sage_wideleg_set.webp", "sha256": "5324ff906446de4f633c4f56b6e8863b18777068f692af3ad8081e3f66513f98",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.outfit", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_ai_generated_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated; provider-output rights record not supplied"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "crop": "object_full", "item": "sage wide-leg matching set"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.wardrobe.user-added.2026-09-27"]
+    },
+    {
+      "asset_id": "wardrobe.outfit.slate_turtleneck_plaid_mini.v1", "path": "wardrobe/slate_turtleneck_plaid_mini.webp", "sha256": "13f273ece27f25b0584cca7e8fb2572fe604e8d1362e5c045e88ca199f841a31",
+      "lifecycle_status": "active", "subject": "wardrobe", "subject_id": "wardrobe.outfit", "canon_status": "reference", "approval": {"status": "not_required", "decided_by": null, "decided_at": null},
+      "provenance": {"source_type": "user_supplied_ai_generated_reference", "collection_method": "placed in canonical visual library", "origin_documentation": "not_available"}, "usage_rights": {"status": "unknown_pending_review", "basis": "AI-generated; provider-output rights record not supplied"}, "allowed_transformations": [],
+      "visual_traits": {"shot": "product_reference", "crop": "object_full", "item": "slate turtleneck and plaid mini-skirt outfit"}, "supersession": {"supersedes": [], "superseded_by": null, "variant_of": null}, "approved_for_external_renderer": false, "review_item_ids": ["provenance.wardrobe.user-added.2026-09-27"]
     }
   ]
 }
